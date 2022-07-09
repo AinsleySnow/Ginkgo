@@ -3,3 +3,6 @@
 *.out
 *.pdf
 *.html
+front/lexer.c
+front/parser.c
+front/parser.h
