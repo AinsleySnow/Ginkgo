@@ -23,7 +23,7 @@ WS  [ \t\v\n\f]
 
 %{
 #include <stdio.h>
-#include "parser.h"
+#include "parser.hh"
 
 extern void yyerror(const char *);  /* prints grammar violation message */
 
