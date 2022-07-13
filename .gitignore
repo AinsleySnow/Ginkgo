@@ -4,5 +4,5 @@
 *.pdf
 *.html
 front/lexer.c
-front/parser.c
-front/parser.h
+front/parser.cc
+front/parser.hh
