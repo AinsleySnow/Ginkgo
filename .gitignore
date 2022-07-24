@@ -3,6 +3,6 @@
 *.out
 *.pdf
 *.html
-front/lexer.c
+front/lexer.cc
 front/parser.cc
 front/parser.hh
