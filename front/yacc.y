@@ -18,9 +18,10 @@
 %start translation_unit
 
 %{
-extern "C" 
+#include <cstdio>
+extern "C"
 {
-    int yylex(void);
+	int yylex(void);
     void yyerror(const char *s);
 }
 %}
@@ -220,8 +221,8 @@ init_declarator_list
 	;
 
 init_declarator
-	: declarator '=' initializer
-	| declarator
+	: declarator '=' initializer 
+	| declarator 
 	;
 
 storage_class_specifier
@@ -234,16 +235,16 @@ storage_class_specifier
 	;
 
 type_specifier
-	: VOID
-	| CHAR
-	| SHORT
-	| INT
-	| LONG
-	| FLOAT
+	: VOID 
+	| CHAR 
+	| SHORT 
+	| INT 
+	| LONG 
+	| FLOAT 
 	| DOUBLE
-	| SIGNED
-	| UNSIGNED
-	| BOOL
+	| SIGNED 
+	| UNSIGNED 
+	| BOOL 
 	| COMPLEX
 	| IMAGINARY	  	/* non-mandated extension */
 	| atomic_type_specifier
@@ -532,7 +533,6 @@ declaration_list
 	;
 
 %%
-#include <stdio.h>
 
 void yyerror(const char *s)
 {

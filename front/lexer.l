@@ -22,14 +22,12 @@ ES  (\\(['"\?\\abfnrtv]|[0-7]{1,3}|x[a-fA-F0-9]+))
 WS  [ \t\v\n\f]
 
 %{
-#include <stdio.h>
 #include "parser.hh"
 
-extern void yyerror(const char *);  /* prints grammar violation message */
+extern "C" void yyerror(const char *);  /* prints grammar violation message */
+extern "C" int yylex(void);
 
 extern int sym_type(const char *);  /* returns type from symbol table */
-
-extern void save_symbol();
 
 #define sym_type(identifier) IDENTIFIER /* with no symbol table, fake it */
 
@@ -89,19 +87,19 @@ static int check_type(void);
 
 {L}{A}*					{ return check_type(); }
 
-{HP}{H}+{IS}?				{ save_symbol(); return I_CONSTANT; }
-{NZ}{D}*{IS}?				{ save_symbol(); return I_CONSTANT; }
-"0"{O}*{IS}?				{ save_symbol(); return I_CONSTANT; }
-{CP}?"'"([^'\\\n]|{ES})+"'"		{ save_symbol(); return I_CONSTANT; }
+{HP}{H}+{IS}?				{ return I_CONSTANT; }
+{NZ}{D}*{IS}?				{ return I_CONSTANT; }
+"0"{O}*{IS}?				{ return I_CONSTANT; }
+{CP}?"'"([^'\\\n]|{ES})+"'"		{ return I_CONSTANT; }
 
-{D}+{E}{FS}?				{ save_symbol(); return F_CONSTANT; }
-{D}*"."{D}+{E}?{FS}?			{ save_symbol(); return F_CONSTANT; }
-{D}+"."{E}?{FS}?			{ save_symbol(); return F_CONSTANT; }
-{HP}{H}+{P}{FS}?			{ save_symbol(); return F_CONSTANT; }
-{HP}{H}*"."{H}+{P}{FS}?			{ save_symbol(); return F_CONSTANT; }
-{HP}{H}+"."{P}{FS}?			{ save_symbol(); return F_CONSTANT; }
+{D}+{E}{FS}?				{ return F_CONSTANT; }
+{D}*"."{D}+{E}?{FS}?			{ return F_CONSTANT; }
+{D}+"."{E}?{FS}?			{ return F_CONSTANT; }
+{HP}{H}+{P}{FS}?			{ return F_CONSTANT; }
+{HP}{H}*"."{H}+{P}{FS}?			{ return F_CONSTANT; }
+{HP}{H}+"."{P}{FS}?			{ return F_CONSTANT; }
 
-({SP}?\"([^"\\\n]|{ES})*\"{WS}*)+	{ save_symbol(); return STRING_LITERAL; }
+({SP}?\"([^"\\\n]|{ES})*\"{WS}*)+	{ return STRING_LITERAL; }
 
 "..."					{ return ELLIPSIS; }
 ">>="					{ return RIGHT_ASSIGN; }
@@ -164,11 +162,11 @@ static void comment(void)
 {
     int c;
 
-    while ((c = input()) != 0)
+    while ((c = yyinput()) != 0)
     {
         if (c == '*')
         {
-            while ((c = input()) == '*')
+            while ((c = yyinput()) == '*')
                 ;
 
             if (c == '/')
