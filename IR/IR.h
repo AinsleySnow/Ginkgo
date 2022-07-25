@@ -5,24 +5,24 @@
 #include <string>
 #include "op.h"
 
-struct triple
+struct Triple
 {
-    op op;
+    Op op;
     std::string arg1;
     std::string arg2;
 
     std::string ToString();
 };
 
-using IRIter = std::vector<triple>::const_iterator;
+using IRIter = std::vector<Triple>::const_iterator;
 
 class IR
 {
 private:
-    std::vector<triple> data {};
+    std::vector<Triple> data {};
 
 public:
-    void Append(const triple&);
+    void Append(const Triple&);
     IRIter iter();
 };
 

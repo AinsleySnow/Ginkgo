@@ -1,7 +1,7 @@
 #ifndef _ENUMS_FOR_ENTRY_H_
 #define _ENUMS_FOR_ENTRY_H_
 
-enum class typespec // type specifier
+enum class TypeSpec // type specifier
 {
     int8,
     int16,
@@ -16,7 +16,7 @@ enum class typespec // type specifier
     _void, // void
 };
 
-enum class typequal // type qualifier
+enum class TypeQual // type qualifier
 {
     _const,
     _restrict,
