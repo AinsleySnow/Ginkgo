@@ -1,3 +1,18 @@
+%{
+#include <cstdio>
+
+#include "Node.h"
+#include "DeclSpec.h"
+
+#define YYSTYPE Node
+
+extern "C"
+{
+	int yylex(void);
+    void yyerror(const char *s);
+}
+%}
+
 %token	IDENTIFIER I_CONSTANT F_CONSTANT STRING_LITERAL FUNC_NAME SIZEOF
 %token	PTR_OP INC_OP DEC_OP LEFT_OP RIGHT_OP LE_OP GE_OP EQ_OP NE_OP
 %token	AND_OP OR_OP MUL_ASSIGN DIV_ASSIGN MOD_ASSIGN ADD_ASSIGN
@@ -16,15 +31,6 @@
 %token	ALIGNAS ALIGNOF ATOMIC GENERIC NORETURN STATIC_ASSERT THREAD_LOCAL
 
 %start translation_unit
-
-%{
-#include <cstdio>
-extern "C"
-{
-	int yylex(void);
-    void yyerror(const char *s);
-}
-%}
 %%
 primary_expression
 	: IDENTIFIER
@@ -206,9 +212,27 @@ declaration_specifiers
 	: storage_class_specifier declaration_specifiers
 	| storage_class_specifier
 	| type_specifier declaration_specifiers
+    {
+        $$ = DeclSpec();
+        $$.MarkSpec($1);
+        $$.Join($2);
+    }
 	| type_specifier
+    {  
+        $$ = DeclSpec();
+        $$.MarkSpec($1);
+    }
 	| type_qualifier declaration_specifiers
+    {
+        $$ = DeclSpec();
+        $$.MarkQual($1);
+        $$.Join($2);
+    }
 	| type_qualifier
+    {
+        $$ = DeclSpec();
+        $$.MarkQual($1);
+    }
 	| function_specifier declaration_specifiers
 	| function_specifier
 	| alignment_specifier declaration_specifiers
