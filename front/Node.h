@@ -8,7 +8,11 @@ enum class Tag
 {
     declaration,
     declaration_specifiers,
+    declarator, 
+    direct_declarator,
     identifier,
+    initializer, 
+    init_declarator, 
     init_declarator_list,
     static_assert_declaration,
 
@@ -26,12 +30,17 @@ class Node
 {
 private:
     Tag tag;
+    std::string literal{};
 
 public:
     Node(Tag);
+    Node(Tag, const std::string&);
+
     Tag GetTag() const;
+    std::string GetLiteral() const;
+
     virtual std::string ToString() const;
-    virtual IR gen();
+    virtual IR Gen();
 };
 
 #endif // _NODE_H_
