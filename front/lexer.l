@@ -88,7 +88,11 @@ static int check_type(void);
 "_Thread_local"                         { return THREAD_LOCAL; }
 "__func__"                              { return FUNC_NAME; }
 
-{L}{A}*					{ return check_type(); }
+{L}{A}*					{ 
+    int type = check_type(); 
+    if (type == IDENTIFIER)
+        yylval = Node(Tag::identifier, std::string(yytext));
+}
 
 {HP}{H}+{IS}?				{ return I_CONSTANT; }
 {NZ}{D}*{IS}?				{ return I_CONSTANT; }
