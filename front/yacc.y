@@ -2,7 +2,15 @@
 #include <cstdio>
 
 #include "Node.h"
-#include "DeclSpec.h"
+#include "declaration/Declarator.h"
+#include "declaration/Declaration.h"
+#include "declaration/DeclSpec.h"
+#include "declaration/DirDecl.h"
+#include "declaration/Init.h"
+#include "declaration/InitDecl.h"
+#include "declaration/InitDeclList.h"
+
+SymbolTable GlobalSymbols{};
 
 #define YYSTYPE Node
 
@@ -205,6 +213,7 @@ constant_expression
 declaration
 	: declaration_specifiers ';'
 	| declaration_specifiers init_declarator_list ';'
+    { $$ = Declaration($1, $2); }
 	| static_assert_declaration
 	;
 
@@ -240,13 +249,15 @@ declaration_specifiers
 	;
 
 init_declarator_list
-	: init_declarator
+	: init_declarator 
+    { $$ = InitDeclList(); $$.Append($1); }
 	| init_declarator_list ',' init_declarator
+    { $$ = InitDeclList(); $1.Append($3); $$.Join($1); }
 	;
 
 init_declarator
-	: declarator '=' initializer 
-	| declarator 
+	: declarator '=' initializer { $$ = InitDecl($1, $3); }
+	| declarator { $$ = InitDecl($1); }
 	;
 
 storage_class_specifier
@@ -358,11 +369,11 @@ alignment_specifier
 
 declarator
 	: pointer direct_declarator
-	| direct_declarator
+	| direct_declarator { $$ = Decl($1); }
 	;
 
 direct_declarator
-	: IDENTIFIER
+	: IDENTIFIER { $$ = $1; }
 	| '(' declarator ')'
 	| direct_declarator '[' ']'
 	| direct_declarator '[' '*' ']'
@@ -543,7 +554,7 @@ translation_unit
 
 external_declaration
 	: function_definition
-	| declaration
+	| declaration { GlobalSymbols.RegisterSymbol($1); }
 	;
 
 function_definition
