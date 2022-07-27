@@ -13,6 +13,9 @@ private:
 
 public:
     Declaration(const InitDeclList&, const DeclSpec&);
+
+    DeclSpec GetSpecifier() const;
+    InitDeclList GetInitList() const;
 };
 
 #endif // _DECLARATION_H_

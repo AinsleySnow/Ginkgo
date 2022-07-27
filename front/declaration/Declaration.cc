@@ -5,3 +5,13 @@ Declaration::Declaration(const InitDeclList& id, const DeclSpec& ds) : Node(Tag:
     initDeclList = id;
     declSpec = ds;
 }
+
+DeclSpec Declaration::GetSpecifier()
+{
+    return declSpec;
+}
+
+InitDeclList Declaration::GetInitList()
+{
+    return initDeclList;
+}
