@@ -12,6 +12,8 @@ private:
     
 public:
     Declarator(const DirDecl&);
+
+    std::string GetName() const;
 };
 
 #endif // _DECLARATOR_H_
