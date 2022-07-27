@@ -3,16 +3,25 @@
 
 #include <map>
 #include <string>
+#include "EnumsforEntry.h"
+#include "declaration/InitDeclList.h"
+#include "declaration/Declaration.h"
+
+struct Entry
+{
+    TypeSpec specifier;
+    unsigned quailfier;
+};
 
 class SymbolTable
 {
 private:
-    std::map<std::string, int> content {};
+    std::map<std::string, Entry> content {};
 
 public:
     SymbolTable();
-    int Get(const std::string&);
-    void Set(const std::string&, int);
+    Entry Get(const std::string&);
+    void RegisterSymbol(const Declaration&);
 };
 
 #endif // _SYMBOLTABLE_H_

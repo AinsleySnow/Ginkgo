@@ -1,11 +1,18 @@
 #include "SymbolTable.h"
 
-int SymbolTable::Get(const std::string& name)
+Entry SymbolTable::Get(const std::string& name)
 {
     return content[name];
 }
 
-void SymbolTable::Set(const std::string& name, int value)
+void SymbolTable::RegisterSymbol(const Declaration& decl)
 {
-    content[name] = value;
+    InitDeclList list = decl.GetInitList();
+    DeclSpec specifier = decl.GetSpecifier();
+
+    for (InitDecl id : list.GetIter())
+    {
+        Entry e{ specifier.GetSpec(), specifier.GetQual() };
+        content[id.GetName()] = e;
+    }
 }
