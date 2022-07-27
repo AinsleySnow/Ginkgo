@@ -9,3 +9,8 @@ InitDecl::InitDecl(const Declarator& d, const Init& i) : Node(Tag::init_declarat
 {
 
 }
+
+std::string InitDecl::GetName() const
+{
+    return declarator.GetName();
+}

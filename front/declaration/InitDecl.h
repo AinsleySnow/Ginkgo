@@ -14,6 +14,9 @@ private:
 public:
     InitDecl(const Declarator&);
     InitDecl(const Declarator&, const Init&);
+
+    std::string GetName() const;
+    Init GetInitializer() const;
 };
 
 #endif // _INITDECL_H_
