@@ -12,7 +12,7 @@ void InitDeclList::Join(InitDeclList& idl)
     initList.merge(idl.initList);
 }
 
-ListIter InitDeclList::GetIter()
+std::list<InitDecl> InitDeclList::GetIter()
 {
-    return initList.begin();
+    return initList;
 }

@@ -17,7 +17,7 @@ public:
 
     void Append(const InitDecl&);
     void Join(InitDeclList&);
-    ListIter GetIter();
+    std::list<InitDecl> GetIter();
 };
 
 #endif // _INITDECLLIST_H_
