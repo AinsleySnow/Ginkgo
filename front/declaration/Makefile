@@ -1,12 +1,21 @@
+ifndef CPP
 CPP = g++
+endif
+ifndef CFLAGS
 CFLAGS = -Wall -I.
+endif
 
+ifndef OPT
 OPT := 0
+endif
+
 ifeq ($(OPT), 0)
 	$(CFLAGS) += -Og -g
-else ($(OPT), 2)
+endif
+ifeq ($(OPT), 2)
 	$(CFLAGS) += -O2
-else ($(OPT), 3)
+endif
+ifeq ($(OPT), 3)
 	$(CFLAGS) += -O3
 endif
 
