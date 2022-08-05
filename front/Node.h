@@ -1,7 +1,7 @@
 #ifndef _NODE_H_
 #define _NODE_H_
 
-#include "IR/IR.h"
+#include "../IR/IR.h"
 #include <string>
 
 enum class Tag

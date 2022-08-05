@@ -6,12 +6,12 @@ Declaration::Declaration(const InitDeclList& id, const DeclSpec& ds) : Node(Tag:
     declSpec = ds;
 }
 
-DeclSpec Declaration::GetSpecifier()
+DeclSpec Declaration::GetSpecifier() const
 {
     return declSpec;
 }
 
-InitDeclList Declaration::GetInitList()
+InitDeclList Declaration::GetInitList() const
 {
     return initDeclList;
 }

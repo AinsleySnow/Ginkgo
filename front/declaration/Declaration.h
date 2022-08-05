@@ -1,11 +1,11 @@
 #ifndef _DECLARATION_H_
 #define _DECLARATION_H_
 
-#include "Node.h"
+#include "../Node.h"
 #include "InitDeclList.h"
 #include "DeclSpec.h"
 
-class Declaration : Node
+class Declaration : public Node
 {
 private:
     InitDeclList initDeclList;

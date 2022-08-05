@@ -1,11 +1,11 @@
 #ifndef _INITDECL_H_
 #define _INITDECL_H_
 
-#include "Node.h"
+#include "../Node.h"
 #include "Declarator.h"
 #include "Init.h"
 
-class InitDecl : Node
+class InitDecl : public Node
 {
 private:
     Declarator declarator;

@@ -2,14 +2,15 @@
 #define _DIRDECL_H_
 
 #include <string>
-#include "Node.h"
+#include "../Node.h"
 
-class DirDecl : Node
+class DirDecl : public Node
 {
 private:
     std::string identifier{};
 
 public:
+    DirDecl();
     DirDecl(const std::string&);
     DirDecl(const Node&);
     DirDecl(const DirDecl&) = default;

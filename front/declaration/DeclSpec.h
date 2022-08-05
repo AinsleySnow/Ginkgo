@@ -1,10 +1,10 @@
 #ifndef _DECLSPEC_H_
 #define _DECLSPEC_H_
 
-#include "front/Node.h"
-#include "front/EnumsforEntry.h"
+#include "../Node.h"
+#include "../EnumsforEntry.h"
 
-class DeclSpec : Node
+class DeclSpec : public Node
 {
 private:
     /*
@@ -40,6 +40,8 @@ private:
     inline void markQual(int);
 
 public:
+    DeclSpec();
+
     void MarkSpec(const Node&);
     void MarkQual(const Node&);
     void Join(const DeclSpec&);

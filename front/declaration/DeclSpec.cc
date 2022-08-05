@@ -34,7 +34,9 @@ void DeclSpec::MarkSpec(const Node& n)
     case Tag::_float:
         markType(_float); break;
     case Tag::_long:
-        markTypeLong();
+        markTypeLong(); break;
+    default:
+        return;
     }
 }
 
@@ -65,7 +67,9 @@ void DeclSpec::MarkQual(const Node& n)
     case Tag::_float:
         markType(_float); break;
     case Tag::_long:
-        markTypeLong();
+        markTypeLong(); break;
+    default:
+        return;
     }
 }
 

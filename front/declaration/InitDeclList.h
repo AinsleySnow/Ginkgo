@@ -2,12 +2,12 @@
 #define _INITDECLLIST_H_
 
 #include <list>
-#include "Node.h"
+#include "../Node.h"
 #include "InitDecl.h"
 
 using ListIter = std::list<InitDecl>::iterator;
 
-class InitDeclList : Node
+class InitDeclList : public Node
 {
 private:
     std::list<InitDecl> initList{};

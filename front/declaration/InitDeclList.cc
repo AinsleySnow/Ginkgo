@@ -9,7 +9,8 @@ void InitDeclList::Append(const InitDecl& id)
 
 void InitDeclList::Join(InitDeclList& idl)
 {
-    initList.merge(idl.initList);
+    for (const InitDecl& id : idl.initList)
+        initList.push_back(id);
 }
 
 std::list<InitDecl> InitDeclList::GetIter()
