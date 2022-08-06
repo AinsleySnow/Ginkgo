@@ -19,6 +19,8 @@ enum class Tag
 class Node
 {
 public:
+    virtual ~Node() = default;
+
     virtual std::string ToString() const;
     virtual IR Generate() const;
 };
