@@ -1,17 +1,7 @@
 #include "Declaration.h"
 
-Declaration::Declaration(const InitDeclList& id, const DeclSpec& ds) : Node(Tag::declaration)
+Declaration::Declaration(std::unique_ptr<InitDeclList>& id, std::unique_ptr<DeclSpec>& ds)
 {
-    initDeclList = id;
-    declSpec = ds;
-}
-
-DeclSpec Declaration::GetSpecifier() const
-{
-    return declSpec;
-}
-
-InitDeclList Declaration::GetInitList() const
-{
-    return initDeclList;
+    initDeclList = std::move(id);
+    declSpec = std::move(ds);
 }

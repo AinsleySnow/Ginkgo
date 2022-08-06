@@ -1,16 +1,12 @@
 #include "InitDecl.h"
 
-InitDecl::InitDecl(const Declarator& d) : Node(Tag::init_declarator)
+InitDecl::InitDecl(std::unique_ptr<Declarator>& d)
 {
-    
+    declarator = std::move(d);
 }
 
-InitDecl::InitDecl(const Declarator& d, const Init& i) : Node(Tag::init_declarator)
+InitDecl::InitDecl(std::unique_ptr<Declarator>& d, std::unique_ptr<Init>& i)
 {
-
-}
-
-std::string InitDecl::GetName() const
-{
-    return declarator.GetName();
+    initializer = std::move(i);
+    declarator = std::move(d);
 }

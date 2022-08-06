@@ -1,21 +1,19 @@
 #ifndef _DIRDECL_H_
 #define _DIRDECL_H_
 
+#include <memory>
 #include <string>
 #include "../Node.h"
 
 class DirDecl : public Node
 {
-private:
-    std::string identifier{};
-
 public:
+    std::string identifier{};
+    std::unique_ptr<DirDecl> dirDecl{ nullptr };
+
     DirDecl();
     DirDecl(const std::string&);
-    DirDecl(const Node&);
-    DirDecl(const DirDecl&) = default;
-
-    std::string GetIdentifier() const;
+    DirDecl(std::unique_ptr<DirDecl>&);
 };
 
 #endif // _DIRDECL_H_

@@ -1,11 +1,6 @@
 #include "Declarator.h"
 
-Declarator::Declarator(const DirDecl& dd) : Node(Tag::declaration)
+Declarator::Declarator(std::unique_ptr<DirDecl>& dd)
 {
-    directdecl = DirDecl(dd);
-}
-
-std::string Declarator::GetName() const
-{
-    return directdecl.GetIdentifier();
+    directdecl = std::move(dd);
 }

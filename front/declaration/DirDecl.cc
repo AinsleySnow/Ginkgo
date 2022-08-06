@@ -1,16 +1,11 @@
 #include "DirDecl.h"
 
-DirDecl::DirDecl(const std::string& s) : Node(Tag::direct_declarator)
+DirDecl::DirDecl(const std::string& s)
 {
     identifier = s;
 }
 
-DirDecl::DirDecl(const Node& n) : Node(Tag::direct_declarator)
+DirDecl::DirDecl(std::unique_ptr<DirDecl>& dd)
 {
-    identifier = n.GetLiteral();
-}
-
-std::string DirDecl::GetIdentifier() const
-{
-    return identifier;
+    dirDecl = std::move(dd);
 }

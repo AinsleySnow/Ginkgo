@@ -1,22 +1,21 @@
 #ifndef _INITDECL_H_
 #define _INITDECL_H_
 
+#include <memory>
 #include "../Node.h"
 #include "Declarator.h"
 #include "Init.h"
 
 class InitDecl : public Node
 {
-private:
-    Declarator declarator;
-    Init initializer;
-
 public:
-    InitDecl(const Declarator&);
-    InitDecl(const Declarator&, const Init&);
+    std::unique_ptr<Declarator> declarator{ nullptr };
+    std::unique_ptr<Init> initializer{ nullptr };
 
-    std::string GetName() const;
-    Init GetInitializer() const;
+    InitDecl(std::unique_ptr<Declarator>&);
+    InitDecl(std::unique_ptr<Declarator>&, std::unique_ptr<Init>&);
+
+    const std::string& GetName();
 };
 
 #endif // _INITDECL_H_

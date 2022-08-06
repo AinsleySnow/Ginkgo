@@ -13,9 +13,9 @@ inline void DeclSpec::markTypeLong()
     else throw 0;
 }
 
-void DeclSpec::MarkSpec(const Node& n)
+void DeclSpec::MarkSpec(Tag t)
 {
-    switch (n.GetTag())
+    switch (t)
     {
     case Tag::_int:
         markType(_int); break;
@@ -46,9 +46,9 @@ inline void DeclSpec::markQual(int qual)
     else throw 0;
 }
 
-void DeclSpec::MarkQual(const Node& n)
+void DeclSpec::MarkQual(Tag t)
 {
-    switch (n.GetTag())
+    switch (t)
     {
     case Tag::_const:
         markType(_int); break;
@@ -123,14 +123,14 @@ unsigned int DeclSpec::GetQual()
     return rawQualifiers;
 }
 
-void DeclSpec::Join(const DeclSpec& ds)
+void DeclSpec::Join(const DeclSpec* ds)
 {
-    unsigned int sum = rawQualifiers + ds.rawQualifiers;
-    rawQualifiers ^= ds.rawQualifiers;
+    unsigned int sum = rawQualifiers + ds->rawQualifiers;
+    rawQualifiers ^= ds->rawQualifiers;
     if (sum != rawQualifiers)
         throw 0;
     
-    if ((rawSpecifiers & _long) && (ds.rawSpecifiers & _long))
+    if ((rawSpecifiers & _long) && (ds->rawSpecifiers & _long))
     {
         rawSpecifiers &= ~_long;
         if (!((rawSpecifiers >> 5) & 1))
@@ -139,8 +139,8 @@ void DeclSpec::Join(const DeclSpec& ds)
             throw 0;
     }
     
-    sum = rawSpecifiers + ds.rawSpecifiers;
-    rawSpecifiers ^= ds.rawSpecifiers;
+    sum = rawSpecifiers + ds->rawSpecifiers;
+    rawSpecifiers ^= ds->rawSpecifiers;
     if (sum != rawSpecifiers)
         throw 0;
 }

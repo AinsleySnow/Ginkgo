@@ -42,9 +42,9 @@ private:
 public:
     DeclSpec();
 
-    void MarkSpec(const Node&);
-    void MarkQual(const Node&);
-    void Join(const DeclSpec&);
+    void MarkSpec(Tag);
+    void MarkQual(Tag);
+    void Join(const DeclSpec*);
     TypeSpec GetSpec();
     unsigned int GetQual();
 };
