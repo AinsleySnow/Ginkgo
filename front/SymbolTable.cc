@@ -7,7 +7,7 @@ Entry SymbolTable::GetSymbol(const std::string& name)
     return content[name];
 }
 
-void SymbolTable::RegisterSymbol(Declaration&& decl)
+void SymbolTable::RegisterSymbol(Declaration& decl)
 {
     std::unique_ptr<InitDeclList> list = std::move(decl.initDeclList);
     std::unique_ptr<DeclSpec> specifier = std::move(decl.declSpec);

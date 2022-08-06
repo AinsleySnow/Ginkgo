@@ -22,7 +22,7 @@ public:
     SymbolTable();
 
     Entry GetSymbol(const std::string&);
-    void RegisterSymbol(Declaration&&);
+    void RegisterSymbol(Declaration&);
 
     void PrintSymbols();
 };
