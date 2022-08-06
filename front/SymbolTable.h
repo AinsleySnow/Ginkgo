@@ -20,8 +20,11 @@ private:
 
 public:
     SymbolTable();
+
     Entry GetSymbol(const std::string&);
-    void RegisterSymbol(const Declaration&);
+    void RegisterSymbol(Declaration&&);
+
+    void PrintSymbols();
 };
 
 #endif // _SYMBOLTABLE_H_
