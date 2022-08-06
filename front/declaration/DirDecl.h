@@ -13,7 +13,7 @@ public:
 
     DirDecl();
     DirDecl(const std::string&);
-    DirDecl(std::unique_ptr<DirDecl>&);
+    DirDecl(std::unique_ptr<DirDecl>&&);
 };
 
 #endif // _DIRDECL_H_

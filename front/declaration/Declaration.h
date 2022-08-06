@@ -12,7 +12,7 @@ public:
     std::unique_ptr<InitDeclList> initDeclList{ nullptr };
     std::unique_ptr<DeclSpec> declSpec{ nullptr };
     
-    Declaration(std::unique_ptr<InitDeclList>&, std::unique_ptr<DeclSpec>&);
+    Declaration(std::unique_ptr<DeclSpec>&&, std::unique_ptr<InitDeclList>&&);
 };
 
 #endif // _DECLARATION_H_

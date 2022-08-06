@@ -10,8 +10,8 @@ class Declarator : public Node
 {
 public:
     Declarator();
-    Declarator(std::unique_ptr<DirDecl>&);
-    Declarator(std::unique_ptr<Ptr>&, std::unique_ptr<DirDecl>&);
+    Declarator(std::unique_ptr<DirDecl>&&);
+    Declarator(std::unique_ptr<Ptr>&&, std::unique_ptr<DirDecl>&&);
 
     std::unique_ptr<DirDecl> directdecl{ nullptr };
     std::unique_ptr<Ptr> ptr{ nullptr };
