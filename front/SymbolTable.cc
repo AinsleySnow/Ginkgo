@@ -1,6 +1,6 @@
 #include "SymbolTable.h"
 
-Entry SymbolTable::Get(const std::string& name)
+Entry SymbolTable::GetSymbol(const std::string& name)
 {
     return content[name];
 }

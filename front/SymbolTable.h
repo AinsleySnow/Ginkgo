@@ -20,7 +20,7 @@ private:
 
 public:
     SymbolTable();
-    Entry Get(const std::string&);
+    Entry GetSymbol(const std::string&);
     void RegisterSymbol(const Declaration&);
 };
 
