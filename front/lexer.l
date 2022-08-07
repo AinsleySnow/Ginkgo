@@ -22,13 +22,13 @@ ES  (\\(['"\?\\abfnrtv]|[0-7]{1,3}|x[a-fA-F0-9]+))
 WS  [ \t\v\n\f]
 
 %{
+#include <memory>
+#include <string>
+#include "Node.h"
 #include "parser.hh"
 
-#include "Node.h"
-extern Node yylval;
-
-extern "C" void yyerror(const char *);  /* prints grammar violation message */
-extern "C" int yylex(void);
+void yyerror(std::unique_ptr<Node>&, const char *);  /* prints grammar violation message */
+int yylex(void);
 
 extern int sym_type(const char *);  /* returns type from symbol table */
 
@@ -45,41 +45,41 @@ static int check_type(void);
 "auto"					{ return(AUTO); }
 "break"					{ return(BREAK); }
 "case"					{ return(CASE); }
-"char"					{ yylval = Node(Tag::_char); return(CHAR); }
+"char"					{ yylval.literal = new std::string("char"); return(CHAR); }
 "const"					{ return(CONST); }
 "continue"				{ return(CONTINUE); }
 "default"				{ return(DEFAULT); }
 "do"					{ return(DO); }
-"double"				{ yylval = Node(Tag::_double); return(DOUBLE); }
+"double"				{ yylval.literal = new std::string("double"); return(DOUBLE); }
 "else"					{ return(ELSE); }
 "enum"					{ return(ENUM); }
 "extern"				{ return(EXTERN); }
-"float"					{ yylval = Node(Tag::_float); return(FLOAT); }
+"float"					{ yylval.literal = new std::string("float"); return(FLOAT); }
 "for"					{ return(FOR); }
 "goto"					{ return(GOTO); }
 "if"					{ return(IF); }
 "inline"				{ return(INLINE); }
-"int"					{ yylval = Node(Tag::_int); return(INT); }
-"long"					{ yylval = Node(Tag::_long); return(LONG); }
+"int"					{ yylval.literal = new std::string("int"); return(INT); }
+"long"					{ yylval.literal = new std::string("long"); return(LONG); }
 "register"				{ return(REGISTER); }
 "restrict"				{ return(RESTRICT); }
 "return"				{ return(RETURN); }
-"short"					{ yylval = Node(Tag::_short); return(SHORT); }
-"signed"				{ yylval = Node(Tag::_signed); return(SIGNED); }
+"short"					{ yylval.literal = new std::string("short"); return(SHORT); }
+"signed"				{ yylval.literal = new std::string("signed"); return(SIGNED); }
 "sizeof"				{ return(SIZEOF); }
 "static"				{ return(STATIC); }
 "struct"				{ return(STRUCT); }
 "switch"				{ return(SWITCH); }
 "typedef"				{ return(TYPEDEF); }
 "union"					{ return(UNION); }
-"unsigned"				{ yylval = Node(Tag::_unsigned); return(UNSIGNED); }
+"unsigned"				{ yylval.literal = new std::string("unsigned"); return(UNSIGNED); }
 "void"					{ return(VOID); }
 "volatile"				{ return(VOLATILE); }
 "while"					{ return(WHILE); }
 "_Alignas"                              { return ALIGNAS; }
 "_Alignof"                              { return ALIGNOF; }
 "_Atomic"                               { return ATOMIC; }
-"_Bool"                                 { yylval = Node(Tag::_bool); return BOOL; }
+"_Bool"                                 { yylval.literal = new std::string("bool"); return BOOL; }
 "_Complex"                              { return COMPLEX; }
 "_Generic"                              { return GENERIC; }
 "_Imaginary"                            { return IMAGINARY; }
@@ -91,7 +91,10 @@ static int check_type(void);
 {L}{A}*					{ 
     int type = check_type(); 
     if (type == IDENTIFIER)
-        yylval = Node(Tag::identifier, std::string(yytext));
+    {
+        yylval.literal = new std::string(yytext);
+        return IDENTIFIER;
+    }  
 }
 
 {HP}{H}+{IS}?				{ return I_CONSTANT; }
@@ -183,7 +186,8 @@ static void comment(void)
                 break;
         }
     }
-    yyerror("unterminated comment");
+    std::unique_ptr<Node> temp{};
+    yyerror(temp, "unterminated comment");
 }
 
 static int check_type(void)
