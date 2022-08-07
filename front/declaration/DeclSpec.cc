@@ -78,7 +78,7 @@ TypeSpec DeclSpec::GetSpec()
     switch (rawSpecifiers)
     {
     // int and its equivalent
-    case _int: case _int | _signed:
+    case _int: case _signed: case _int | _signed:
         return TypeSpec::int32;
     case _int | _unsigned: case _unsigned:
         return TypeSpec::uint32;
@@ -93,9 +93,12 @@ TypeSpec DeclSpec::GetSpec()
     // long and its equivalent
     case _longlong: case _long: case _long | _signed:
     case _long | _int: case _signed | _long | _int:
+    case _longlong | _signed: case _longlong | _int:
+    case _signed | _longlong | _int:
         return TypeSpec::int64;
     case _unsigned | _longlong: case _unsigned | _long:
-    case _long | _int | _unsigned:
+    case _long | _int | _unsigned: 
+    case _unsigned | _longlong | _int:
         return TypeSpec::uint64;
 
     // char
