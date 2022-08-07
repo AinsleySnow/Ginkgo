@@ -45,41 +45,41 @@ static int check_type(void);
 "auto"					{ return(AUTO); }
 "break"					{ return(BREAK); }
 "case"					{ return(CASE); }
-"char"					{ yylval.literal = new std::string("char"); return(CHAR); }
+"char"					{ yylval.tag = Tag::_char; return(CHAR); }
 "const"					{ return(CONST); }
 "continue"				{ return(CONTINUE); }
 "default"				{ return(DEFAULT); }
 "do"					{ return(DO); }
-"double"				{ yylval.literal = new std::string("double"); return(DOUBLE); }
+"double"				{ yylval.tag = Tag::_double; return(DOUBLE); }
 "else"					{ return(ELSE); }
 "enum"					{ return(ENUM); }
 "extern"				{ return(EXTERN); }
-"float"					{ yylval.literal = new std::string("float"); return(FLOAT); }
+"float"					{ yylval.tag = Tag::_float; return(FLOAT); }
 "for"					{ return(FOR); }
 "goto"					{ return(GOTO); }
 "if"					{ return(IF); }
 "inline"				{ return(INLINE); }
-"int"					{ yylval.literal = new std::string("int"); return(INT); }
-"long"					{ yylval.literal = new std::string("long"); return(LONG); }
+"int"					{ yylval.tag = Tag::_int; return(INT); }
+"long"					{ yylval.tag = Tag::_long; return(LONG); }
 "register"				{ return(REGISTER); }
 "restrict"				{ return(RESTRICT); }
 "return"				{ return(RETURN); }
-"short"					{ yylval.literal = new std::string("short"); return(SHORT); }
-"signed"				{ yylval.literal = new std::string("signed"); return(SIGNED); }
+"short"					{ yylval.tag = Tag::_short; return(SHORT); }
+"signed"				{ yylval.tag = Tag::_signed; return(SIGNED); }
 "sizeof"				{ return(SIZEOF); }
 "static"				{ return(STATIC); }
 "struct"				{ return(STRUCT); }
 "switch"				{ return(SWITCH); }
 "typedef"				{ return(TYPEDEF); }
 "union"					{ return(UNION); }
-"unsigned"				{ yylval.literal = new std::string("unsigned"); return(UNSIGNED); }
+"unsigned"				{ yylval.tag = Tag::_unsigned; return(UNSIGNED); }
 "void"					{ return(VOID); }
 "volatile"				{ return(VOLATILE); }
 "while"					{ return(WHILE); }
 "_Alignas"                              { return ALIGNAS; }
 "_Alignof"                              { return ALIGNOF; }
 "_Atomic"                               { return ATOMIC; }
-"_Bool"                                 { yylval.literal = new std::string("bool"); return BOOL; }
+"_Bool"                                 { yylval.tag = Tag::_bool; return BOOL; }
 "_Complex"                              { return COMPLEX; }
 "_Generic"                              { return GENERIC; }
 "_Imaginary"                            { return IMAGINARY; }
