@@ -1,7 +1,10 @@
 %{
 #include <cstdio>
+#include <memory>
+#include <string>
 
 #include "Node.h"
+#include "../utilities/SymbolTable.h"
 #include "declaration/Declarator.h"
 #include "declaration/Declaration.h"
 #include "declaration/DeclSpec.h"
@@ -12,16 +15,21 @@
 
 SymbolTable GlobalSymbols{};
 
-#define YYSTYPE Node
+int yylex(void);
+void yyerror(std::unique_ptr<Node>& ast, const char *s);
 
-extern "C"
-{
-	int yylex(void);
-    void yyerror(const char *s);
-}
 %}
 
-%token	IDENTIFIER I_CONSTANT F_CONSTANT STRING_LITERAL FUNC_NAME SIZEOF
+%parse-param { std::unique_ptr<Node>& ast }
+
+%union
+{
+	std::string* literal;
+	Node* node;
+    Tag tag;
+}
+
+%token	<literal> IDENTIFIER I_CONSTANT F_CONSTANT STRING_LITERAL FUNC_NAME SIZEOF
 %token	PTR_OP INC_OP DEC_OP LEFT_OP RIGHT_OP LE_OP GE_OP EQ_OP NE_OP
 %token	AND_OP OR_OP MUL_ASSIGN DIV_ASSIGN MOD_ASSIGN ADD_ASSIGN
 %token	SUB_ASSIGN LEFT_ASSIGN RIGHT_ASSIGN AND_ASSIGN
@@ -30,13 +38,18 @@ extern "C"
 
 %token	TYPEDEF EXTERN STATIC AUTO REGISTER INLINE
 %token	CONST RESTRICT VOLATILE
-%token	BOOL CHAR SHORT INT LONG SIGNED UNSIGNED FLOAT DOUBLE VOID
+%token <tag> BOOL CHAR SHORT INT LONG SIGNED UNSIGNED FLOAT DOUBLE VOID
 %token	COMPLEX IMAGINARY 
 %token	STRUCT UNION ENUM ELLIPSIS
 
 %token	CASE DEFAULT IF ELSE SWITCH WHILE DO FOR GOTO CONTINUE BREAK RETURN
 
 %token	ALIGNAS ALIGNOF ATOMIC GENERIC NORETURN STATIC_ASSERT THREAD_LOCAL
+
+%type <node> declarator declaration declaration_specifiers direct_declarator 
+%type <node> initializer init_declarator init_declarator_list 
+%type <literal> constant
+%type <tag> type_specifier type_qualifier
 
 %start translation_unit
 %%
@@ -213,7 +226,12 @@ constant_expression
 declaration
 	: declaration_specifiers ';'
 	| declaration_specifiers init_declarator_list ';'
-    { $$ = Declaration($1, $2); }
+    { 
+        $$ = new Declaration(
+            std::unique_ptr<DeclSpec>(dynamic_cast<DeclSpec*>($1)),
+            std::unique_ptr<InitDeclList>(dynamic_cast<InitDeclList*>($2))
+        );
+    }
 	| static_assert_declaration
 	;
 
@@ -222,25 +240,31 @@ declaration_specifiers
 	| storage_class_specifier
 	| type_specifier declaration_specifiers
     {
-        $$ = DeclSpec();
-        $$.MarkSpec($1);
-        $$.Join($2);
+        DeclSpec* temp = new DeclSpec();
+        temp->MarkSpec($1);
+        temp->Join(dynamic_cast<DeclSpec*>($2));
+        delete $2;
+        $$ = temp;
     }
 	| type_specifier
-    {  
-        $$ = DeclSpec();
-        $$.MarkSpec($1);
+    {
+        DeclSpec* temp = new DeclSpec();
+        temp->MarkSpec($1);
+        $$ = temp;
     }
 	| type_qualifier declaration_specifiers
     {
-        $$ = DeclSpec();
-        $$.MarkQual($1);
-        $$.Join($2);
+        DeclSpec* temp = new DeclSpec();
+        temp->MarkQual($1);
+        temp->Join(dynamic_cast<DeclSpec*>($2));
+        delete $2;
+        $$ = temp;
     }
 	| type_qualifier
     {
-        $$ = DeclSpec();
-        $$.MarkQual($1);
+        DeclSpec* temp = new DeclSpec();
+        temp->MarkQual($1);
+        $$ = temp;
     }
 	| function_specifier declaration_specifiers
 	| function_specifier
@@ -250,14 +274,33 @@ declaration_specifiers
 
 init_declarator_list
 	: init_declarator 
-    { $$ = InitDeclList(); $$.Append($1); }
+    { 
+        InitDeclList* temp = new InitDeclList();
+        temp->initList.push_back(*dynamic_cast<InitDecl*>($1));
+        $$ = temp;
+    }
 	| init_declarator_list ',' init_declarator
-    { $$ = InitDeclList(); $1.Append($3); $$.Join($1); }
+    {
+        InitDeclList* temp = dynamic_cast<InitDeclList*>($1);
+        temp->initList.push_back(*dynamic_cast<InitDecl*>($3));
+        $$ = temp;
+    }
 	;
 
 init_declarator
-	: declarator '=' initializer { $$ = InitDecl($1, $3); }
-	| declarator { $$ = InitDecl($1); }
+	: declarator '=' initializer 
+    {
+        $$ = new InitDecl(
+            std::unique_ptr<Declarator>(dynamic_cast<Declarator*>($1)),
+            std::unique_ptr<Init>(dynamic_cast<Init*>($3))
+        );
+    }
+	| declarator 
+    {
+        $$ = new InitDecl(
+            std::unique_ptr<Declarator>(dynamic_cast<Declarator*>($1))
+        );
+    }
 	;
 
 storage_class_specifier
@@ -369,11 +412,13 @@ alignment_specifier
 
 declarator
 	: pointer direct_declarator
-	| direct_declarator { $$ = Decl($1); }
+	| direct_declarator 
+    { $$ = new Declarator(std::unique_ptr<DirDecl>(dynamic_cast<DirDecl*>($1))); }
 	;
 
 direct_declarator
-	: IDENTIFIER { $$ = $1; }
+	: IDENTIFIER
+    { $$ = new DirDecl(*$1); delete $1;}
 	| '(' declarator ')'
 	| direct_declarator '[' ']'
 	| direct_declarator '[' '*' ']'
@@ -554,7 +599,11 @@ translation_unit
 
 external_declaration
 	: function_definition
-	| declaration { GlobalSymbols.RegisterSymbol($1); }
+	| declaration 
+    {
+        GlobalSymbols.RegisterSymbol(*dynamic_cast<Declaration*>($1));
+        delete $1;
+    }
 	;
 
 function_definition
@@ -569,14 +618,8 @@ declaration_list
 
 %%
 
-void yyerror(const char *s)
+void yyerror(std::unique_ptr<Node>& ast, const char *s)
 {
 	fflush(stdout);
 	fprintf(stderr, "*** %s\n", s);
-}
-
-int main(void)
-{
-    yyparse();
-    return 0;
 }
