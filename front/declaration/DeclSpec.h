@@ -2,7 +2,7 @@
 #define _DECLSPEC_H_
 
 #include "../Node.h"
-#include "../EnumsforEntry.h"
+#include "../../utilities/EnumsforEntry.h"
 
 class DeclSpec : public Node
 {
@@ -40,8 +40,6 @@ private:
     inline void markQual(int);
 
 public:
-    DeclSpec();
-
     void MarkSpec(Tag);
     void MarkQual(Tag);
     void Join(const DeclSpec*);
