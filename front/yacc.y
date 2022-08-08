@@ -13,14 +13,12 @@
 #include "declaration/InitDecl.h"
 #include "declaration/InitDeclList.h"
 
-SymbolTable GlobalSymbols{};
-
 int yylex(void);
-void yyerror(std::unique_ptr<Node>& ast, const char *s);
+void yyerror(SymbolTable& globalSymbols, const char *s);
 
 %}
 
-%parse-param { std::unique_ptr<Node>& ast }
+%parse-param { SymbolTable& globalSymbols }
 
 %union
 {
@@ -601,7 +599,7 @@ external_declaration
 	: function_definition
 	| declaration 
     {
-        GlobalSymbols.RegisterSymbol(*dynamic_cast<Declaration*>($1));
+        globalSymbols.RegisterSymbol(*dynamic_cast<Declaration*>($1));
         delete $1;
     }
 	;
@@ -618,7 +616,7 @@ declaration_list
 
 %%
 
-void yyerror(std::unique_ptr<Node>& ast, const char *s)
+void yyerror(SymbolTable& globalSymbols, const char *s)
 {
 	fflush(stdout);
 	fprintf(stderr, "*** %s\n", s);

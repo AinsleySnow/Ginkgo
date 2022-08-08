@@ -22,12 +22,12 @@ ES  (\\(['"\?\\abfnrtv]|[0-7]{1,3}|x[a-fA-F0-9]+))
 WS  [ \t\v\n\f]
 
 %{
-#include <memory>
 #include <string>
 #include "Node.h"
+#include "../utilities/SymbolTable.h"
 #include "parser.hh"
 
-void yyerror(std::unique_ptr<Node>&, const char *);  /* prints grammar violation message */
+void yyerror(SymbolTable&, const char *);  /* prints grammar violation message */
 int yylex(void);
 
 extern int sym_type(const char *);  /* returns type from symbol table */
@@ -186,7 +186,7 @@ static void comment(void)
                 break;
         }
     }
-    std::unique_ptr<Node> temp{};
+    SymbolTable temp{};
     yyerror(temp, "unterminated comment");
 }
 
