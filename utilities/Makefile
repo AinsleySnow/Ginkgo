@@ -1,6 +1,13 @@
 CC = g++
 CFLAGS = -Wall -Og -g
 
+
+all: ir.o SymbolTable.o
+
+clean:
+	rm -f *.o
+
+
 ir.o: IR.cc IR.h
 	$(CC) $(CFLAGS) IR.cc -c -o $@
 
