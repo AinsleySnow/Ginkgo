@@ -1,25 +1,7 @@
-ifndef CPP
 CPP = g++
-endif
-ifndef CFLAGS
-CFLAGS = -Wall -I.
-endif
+CFLAGS = -Wall -I. -Og -g
 
-ifndef OPT
-OPT := 0
-endif
-
-ifeq ($(OPT), 0)
-	$(CFLAGS) += -Og -g
-endif
-ifeq ($(OPT), 2)
-	$(CFLAGS) += -O2
-endif
-ifeq ($(OPT), 3)
-	$(CFLAGS) += -O3
-endif
-
-all: Declaration Declarator DeclSpec DirDecl Init InitDecl InitDeclList
+all: Declaration Declarator DeclSpec DirDecl Init InitDecl
 
 clean:
 	rm -f *.o
@@ -41,6 +23,3 @@ Init: Init.cc Init.h
 
 InitDecl: InitDecl.cc InitDecl.h
 	$(CPP) $(CFLAGS) -o InitDecl.o -c InitDecl.cc
-
-InitDeclList: InitDeclList.cc InitDeclList.h
-	$(CPP) $(CFLAGS) -o InitDeclList.o -c InitDeclList.cc
