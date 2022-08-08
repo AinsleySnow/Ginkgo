@@ -17,7 +17,7 @@ UTILS = $U/SymbolTable.o	\
 		$U/IR.o
 
 
-test: $(MAIN)/test-main.cc parser lexer make-lexer make-parser
-	$(MAKE) -C $D all
+test:
+	$(MAKE) -C $F all
 	$(MAKE) -C $U all
 	$(CC) $(CFLAGS) $(UTILS) $(NODES) $F/parser.o $F/lexer.o  $(MAIN)/test-main.cc -o parser-test
