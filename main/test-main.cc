@@ -7,15 +7,24 @@
 #include <string>
 
 #include "../front/Node.h"
-#include "../front/parser.hh"
 #include "../utilities/SymbolTable.h"
+
+#include "../front/parser.hh"
 
 #ifdef YYDEBUG
 extern int yydebug;
 #endif
 
 extern FILE* yyin;
-extern SymbolTable GlobalSymbols;
+
+using pair = std::pair<std::string, std::function<bool(void)>>;
+using pair_array = std::array<pair, 1>;
+
+bool test_speccomb();
+
+static const pair_array files{
+    pair("main/test-cases/spec-combination.c", test_speccomb)
+};
 
 
 bool test_speccomb()
@@ -24,20 +33,12 @@ bool test_speccomb()
     yyin = fopen(files[0].first.c_str(), "r");
     assert(yyin);
 
-    std::unique_ptr<Node> temp{};
-    yyparse(temp);
-    GlobalSymbols.PrintSymbols();
+    SymbolTable globalSymbols{};
+    yyparse(globalSymbols);
+    globalSymbols.PrintSymbols();
 
     return true;
 }
-
-
-using pair = std::pair<std::string, std::function<bool(void)>>;
-using pair_array = std::array<pair, 1>;
-
-static const pair_array files{
-    pair("main/test-cases/spec-combination.c", test_speccomb)
-};
 
 
 int main(void)
