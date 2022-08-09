@@ -6,3 +6,4 @@
 front/lexer.cc
 front/parser.cc
 front/parser.hh
+main/test
