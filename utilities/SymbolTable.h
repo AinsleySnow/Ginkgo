@@ -19,7 +19,7 @@ private:
     std::map<std::string, Entry> content {};
 
 public:
-    Entry GetSymbol(const std::string&);
+    Entry GetSymbol(const std::string&) const;
     void RegisterSymbol(Declaration&);
 
     void PrintSymbols() const;

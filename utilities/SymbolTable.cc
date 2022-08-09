@@ -2,9 +2,9 @@
 #include <memory>
 #include <cstdio>
 
-Entry SymbolTable::GetSymbol(const std::string& name)
+Entry SymbolTable::GetSymbol(const std::string& name) const
 {
-    return content[name];
+    return content.at(name);
 }
 
 void SymbolTable::RegisterSymbol(Declaration& decl)
