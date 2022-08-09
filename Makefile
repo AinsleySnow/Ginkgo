@@ -6,6 +6,9 @@ MAIN = main
 U = utilities
 
 
+CHECK = $(MAIN)/test-declaration.o	\
+		$(MAIN)/test-main.o
+
 NODES = $D/Declaration.o 	\
 	   $D/Declarator.o		\
 	   $D/DeclSpec.o 		\
@@ -16,8 +19,10 @@ NODES = $D/Declaration.o 	\
 UTILS = $U/SymbolTable.o	\
 		$U/IR.o
 
+$(MAIN)/test: $(UTILS) $(NODES) $(CHECK)
+	$(CC) $(UTILS) $(NODES) $F/parser.o $F/lexer.o $(CHECK) -o $@
 
-test:
+test: 
 	$(MAKE) -C $F all
 	$(MAKE) -C $U all
-	$(CC) $(CFLAGS) $(UTILS) $(NODES) $F/parser.o $F/lexer.o  $(MAIN)/test-main.cc -o parser-test
+	$(MAKE) $(MAIN)/test
