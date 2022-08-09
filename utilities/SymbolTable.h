@@ -22,7 +22,7 @@ public:
     Entry GetSymbol(const std::string&);
     void RegisterSymbol(Declaration&);
 
-    void PrintSymbols();
+    void PrintSymbols() const;
 };
 
 #endif // _SYMBOLTABLE_H_

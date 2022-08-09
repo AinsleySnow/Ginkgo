@@ -19,7 +19,7 @@ void SymbolTable::RegisterSymbol(Declaration& decl)
     }
 }
 
-void SymbolTable::PrintSymbols()
+void SymbolTable::PrintSymbols() const
 {
     for (auto pair : content)
     {
