@@ -26,3 +26,8 @@ test:
 	$(MAKE) -C $F all
 	$(MAKE) -C $U all
 	$(MAKE) $(MAIN)/test
+
+clean:
+	$(MAKE) -C $F clean
+	$(MAKE) -C $U clean
+	$(MAKE) -C $(MAIN) clean
