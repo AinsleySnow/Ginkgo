@@ -28,13 +28,6 @@ static const map files{
 };
 
 
-bool test_speccomb(const SymbolTable& st)
-{
-    st.PrintSymbols();
-    return true;
-}
-
-
 bool run(const std::string& name,
     const std::function<bool(const SymbolTable&)>& func)
 {
