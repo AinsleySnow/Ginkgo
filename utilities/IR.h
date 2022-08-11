@@ -3,6 +3,7 @@
 
 #include <list>
 #include <string>
+#include <string_view>
 #include "op.h"
 
 struct Quadruple
@@ -23,6 +24,7 @@ private:
 public:
     void Append(const Quadruple&);
     void Join(IR&);
+    std::string_view GetLastVar() const;
 };
 
 #endif // _IR_H_

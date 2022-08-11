@@ -17,3 +17,8 @@ void IR::Join(IR& ir)
 {
     data.splice(ir.data.end(), ir.data);
 }
+
+std::string_view IR::GetLastVar() const
+{
+    return data.end()->arg3;
+}
