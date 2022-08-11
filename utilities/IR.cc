@@ -1,15 +1,16 @@
 #include "IR.h"
 
-std::string Triple::ToString()
+std::string Quadruple::ToString()
 {
     return "op = " + std::to_string(static_cast<int>(op)) + ' ' +
         "arg1 = " + arg1 + ' ' +
-        "arg2 = " + arg2 + ' ';
+        "arg2 = " + arg2 + ' ' +
+        "arg3 = " + arg3;
 }
 
-void IR::Append(const Triple& t)
+void IR::Append(const Quadruple& q)
 {
-    data.push_back(t);
+    data.push_back(q);
 }
 
 void IR::Join(IR& ir)

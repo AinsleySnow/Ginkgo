@@ -5,11 +5,12 @@
 #include <string>
 #include "op.h"
 
-struct Triple
+struct Quadruple
 {
     Op op;
     std::string arg1;
     std::string arg2;
+    std::string arg3;
 
     std::string ToString();
 };
@@ -17,10 +18,10 @@ struct Triple
 class IR
 {
 private:
-    std::list<Triple> data {};
+    std::list<Quadruple> data {};
 
 public:
-    void Append(const Triple&);
+    void Append(const Quadruple&);
     void Join(IR&);
 };
 
