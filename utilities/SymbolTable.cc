@@ -2,6 +2,13 @@
 #include <memory>
 #include <cstdio>
 
+std::string SymbolTable::GenerateTempVar(TypeSpec ts)
+{
+    std::string name{ '$' + std::to_string(uniqueVarIndex) };
+    content[name] = { ts };
+    return name;
+}
+
 Entry SymbolTable::GetSymbol(const std::string& name) const
 {
     return content.at(name);
