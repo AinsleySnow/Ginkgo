@@ -4,11 +4,11 @@
 #include <list>
 #include <string>
 #include <string_view>
-#include "op.h"
+#include "IROper.h"
 
 struct Quadruple
 {
-    Op op;
+    IROper op;
     std::string arg1;
     std::string arg2;
     std::string arg3;
