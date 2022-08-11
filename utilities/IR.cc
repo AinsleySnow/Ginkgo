@@ -11,3 +11,8 @@ void IR::Append(const Triple& t)
 {
     data.push_back(t);
 }
+
+void IR::Join(IR& ir)
+{
+    data.splice(ir.data.end(), ir.data);
+}

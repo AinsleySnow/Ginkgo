@@ -1,7 +1,7 @@
 #ifndef _IR_H_
 #define _IR_H_
 
-#include <vector>
+#include <list>
 #include <string>
 #include "op.h"
 
@@ -17,10 +17,11 @@ struct Triple
 class IR
 {
 private:
-    std::vector<Triple> data {};
+    std::list<Triple> data {};
 
 public:
     void Append(const Triple&);
+    void Join(IR&);
 };
 
 #endif // _IR_H_
