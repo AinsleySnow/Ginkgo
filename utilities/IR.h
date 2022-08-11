@@ -14,8 +14,6 @@ struct Triple
     std::string ToString();
 };
 
-using IRIter = std::vector<Triple>::const_iterator;
-
 class IR
 {
 private:
@@ -23,7 +21,6 @@ private:
 
 public:
     void Append(const Triple&);
-    IRIter iter();
 };
 
 #endif // _IR_H_

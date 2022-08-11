@@ -11,8 +11,3 @@ void IR::Append(const Triple& t)
 {
     data.push_back(t);
 }
-
-IRIter IR::iter()
-{
-    return data.cbegin();
-}
