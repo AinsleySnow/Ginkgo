@@ -13,7 +13,11 @@ enum class Tag
     _bool, _complex, _imaginary, atomic_type_specifier,
     struct_or_union_specifier, enum_specifier, typedef_name,
 
-    _const, _restrict, _volatile, _atomic
+    _const, _restrict, _volatile, _atomic,
+
+    arrow, inc, dec, dot,
+    _and, star, plus, minus, tilde, exclamation,
+    _sizeof, _alignof
 };
 
 class Node
