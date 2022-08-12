@@ -1,11 +1,23 @@
+#include "Constant.h"
 #include "IR.h"
 
 std::string Quadruple::ToString()
 {
-    return "op = " + std::to_string(static_cast<int>(op)) + ' ' +
-        "arg1 = " + arg1 + ' ' +
-        "arg2 = " + arg2 + ' ' +
-        "arg3 = " + arg3;
+    std::string repr{ std::to_string(static_cast<int>(op)) + '|' };
+    if (arg1.index() == 0)
+        repr += std::get<0>(arg1).ToString();
+    else
+        repr += std::get<1>(arg1);
+    repr += '|';
+
+    if (arg2.index() == 0)
+        repr += std::get<0>(arg2).ToString();
+    else
+        repr += std::get<1>(arg2);
+    repr += '|';
+
+    repr += arg3;
+    return repr;
 }
 
 void IR::Append(const Quadruple& q)
@@ -18,7 +30,7 @@ void IR::Join(IR& ir)
     data.splice(ir.data.end(), ir.data);
 }
 
-std::string_view IR::GetLastVar() const
+std::string IR::GetLastVar() const
 {
     return data.end()->arg3;
 }
