@@ -11,6 +11,7 @@ struct Entry
 {
     TypeSpec specifier;
     unsigned quailfier;
+    uint64_t size;
 };
 
 class SymbolTable
