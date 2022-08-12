@@ -23,6 +23,8 @@ private:
     std::map<std::string, Entry> content {};
 
 public:
+    Entry SymbolTable::operator[](const std::string&) const;
+
     std::string GenerateTempVar(TypeSpec);
     Entry GetSymbol(const std::string&) const;
     void RegisterSymbol(Declaration&);

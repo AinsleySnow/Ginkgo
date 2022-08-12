@@ -2,6 +2,11 @@
 #include <memory>
 #include <cstdio>
 
+Entry SymbolTable::operator[](const std::string& name) const
+{
+    return GetSymbol(name);
+}
+
 std::string SymbolTable::GenerateTempVar(TypeSpec ts)
 {
     std::string name{ '$' + std::to_string(uniqueVarIndex) };
