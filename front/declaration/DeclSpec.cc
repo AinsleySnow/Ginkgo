@@ -3,14 +3,14 @@
 inline void DeclSpec::markType(int type)
 {
     if (!(rawSpecifiers & type)) rawSpecifiers |= type;
-    else throw 0;
+    else throw 1001;
 }
 
 inline void DeclSpec::markTypeLong()
 {
     if (!(rawSpecifiers & 8)) rawSpecifiers |= 8;
     else if (!(rawSpecifiers & 16)) rawSpecifiers |= 16;
-    else throw 0;
+    else throw 1001;
 }
 
 void DeclSpec::MarkSpec(Tag t)
@@ -43,7 +43,7 @@ void DeclSpec::MarkSpec(Tag t)
 inline void DeclSpec::markQual(int qual)
 {
     if (!(rawQualifiers & qual)) rawQualifiers |= qual;
-    else throw 0;
+    else throw 1001;
 }
 
 void DeclSpec::MarkQual(Tag t)
@@ -117,7 +117,7 @@ TypeSpec DeclSpec::GetSpec()
 
     // error
     default:
-        throw 0;
+        throw 1001;
     }
 }
 
@@ -131,7 +131,7 @@ void DeclSpec::Join(const DeclSpec* ds)
     unsigned int sum = rawQualifiers + ds->rawQualifiers;
     rawQualifiers ^= ds->rawQualifiers;
     if (sum != rawQualifiers)
-        throw 0;
+        throw 1001;
     
     if ((rawSpecifiers & _long) && (ds->rawSpecifiers & _long))
     {
@@ -139,11 +139,11 @@ void DeclSpec::Join(const DeclSpec* ds)
         if (!((rawSpecifiers >> 5) & 1))
             rawSpecifiers |= _long << 1;
         else
-            throw 0;
+            throw 1001;
     }
     
     sum = rawSpecifiers + ds->rawSpecifiers;
     rawSpecifiers ^= ds->rawSpecifiers;
     if (sum != rawSpecifiers)
-        throw 0;
+        throw 1001;
 }
