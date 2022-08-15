@@ -32,6 +32,8 @@ private:
 public:
     static std::string GetLable();
     
+    std::variant<Constant, std::string> Identifier;
+
     void Append(const Quadruple&);
     void AppendLable(const std::string&);
     void Join(IR&);
