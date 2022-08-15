@@ -14,6 +14,7 @@ enum class TypeSpec // type specifier
     float32,
     float64,
     _void, // void
+    undef
 };
 
 enum class TypeQual // type qualifier
