@@ -26,10 +26,14 @@ struct Quadruple
 class IR
 {
 private:
-    std::list<Quadruple> data {};
+    static unsigned long lableIndex;
+    std::list<Quadruple> data{};
 
 public:
+    static std::string GetLable();
+    
     void Append(const Quadruple&);
+    void AppendLable(const std::string&);
     void Join(IR&);
     std::string GetLastVar() const;
 };

@@ -25,6 +25,15 @@ void IR::Append(const Quadruple& q)
     data.push_back(q);
 }
 
+void IR::AppendLable(const std::string& lable)
+{
+    Quadruple quad{
+        IROper::lable,
+        lable
+    };
+    data.push_back(quad);
+}
+
 void IR::Join(IR& ir)
 {
     data.splice(ir.data.end(), ir.data);
@@ -33,4 +42,9 @@ void IR::Join(IR& ir)
 std::string IR::GetLastVar() const
 {
     return data.end()->arg3;
+}
+
+std::string IR::GetLable()
+{
+    return "L" + lableIndex++;
 }
