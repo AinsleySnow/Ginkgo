@@ -19,6 +19,11 @@ Entry SymbolTable::GetSymbol(const std::string& name) const
     return content.at(name);
 }
 
+void SymbolTable::DeleteSymbol(const std::string& name)
+{
+    content.erase(name);
+}
+
 void SymbolTable::RegisterSymbol(Declaration& decl)
 {
     std::unique_ptr<InitDeclList> list = std::move(decl.initDeclList);

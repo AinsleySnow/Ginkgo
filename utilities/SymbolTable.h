@@ -27,6 +27,7 @@ public:
 
     std::string GenerateTempVar(TypeSpec);
     Entry GetSymbol(const std::string&) const;
+    void DeleteSymbol(const std::string&);
     void RegisterSymbol(Declaration&);
 
     void PrintSymbols() const;
