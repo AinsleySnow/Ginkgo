@@ -18,7 +18,7 @@ enum class Tag
     arrow, inc, dec, dot,
     _and, star, plus, minus, tilde, exclamation, 
     slash, percent, lshift, rshift, greathan,
-    lessthan, greatequal, lessequal, euqal,
+    lessthan, greatequal, lessequal, equal,
     notequal, cap, 
     _sizeof, _alignof,
 
