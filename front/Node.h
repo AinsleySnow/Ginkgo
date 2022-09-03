@@ -20,7 +20,11 @@ enum class Tag
     slash, percent, lshift, rshift, greathan,
     lessthan, greatequal, lessequal, euqal,
     notequal, cap, 
-    _sizeof, _alignof
+    _sizeof, _alignof,
+
+    mul_assign, div_assign, mod_assign, add_assign,
+    sub_assign, left_assign, right_assign, and_assign,
+    xor_assign, or_assign
 };
 
 class Node
