@@ -21,6 +21,7 @@ enum class Tag
     lessthan, greatequal, lessequal, equal,
     notequal, cap, 
     _sizeof, _alignof,
+    left, right,
 
     mul_assign, div_assign, mod_assign, add_assign,
     sub_assign, left_assign, right_assign, and_assign,
