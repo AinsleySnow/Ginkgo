@@ -5,6 +5,7 @@
 #include <string>
 #include <variant>
 #include "IROper.h"
+#include "Constant.h"
 
 struct Quadruple
 {
