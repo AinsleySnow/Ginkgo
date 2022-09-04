@@ -45,3 +45,39 @@ bool test_speccomb(const SymbolTable& st)
     
     return true;
 }
+
+bool test_speclist(const SymbolTable& st)
+{
+    check_if(st["a"].specifier == TypeSpec::int32);
+    check_if(st["b"].specifier == TypeSpec::int32);
+    check_if(st["c"].specifier == TypeSpec::int32);
+
+    check_if(st["d"].specifier == TypeSpec::int8);
+    check_if(st["e"].specifier == TypeSpec::int8);
+    check_if(st["f"].specifier == TypeSpec::int8);
+    check_if(st["g"].specifier == TypeSpec::int8);
+
+    check_if(st["m"].specifier == TypeSpec::int64);
+    check_if(st["n"].specifier == TypeSpec::int64);
+    check_if(st["o"].specifier == TypeSpec::int64);
+    check_if(st["p"].specifier == TypeSpec::int64);
+    check_if(st["q"].specifier == TypeSpec::int64);
+
+    check_if(st["r"].specifier == TypeSpec::int16);
+    check_if(st["s"].specifier == TypeSpec::int16);
+    check_if(st["t"].specifier == TypeSpec::int16);
+    check_if(st["u"].specifier == TypeSpec::int16); 
+    check_if(st["v"].specifier == TypeSpec::int16);
+
+    check_if(st["w"].specifier == TypeSpec::float64);
+    check_if(st["x"].specifier == TypeSpec::float64);
+    check_if(st["y"].specifier == TypeSpec::float64);
+    check_if(st["z"].specifier == TypeSpec::float64);
+
+    check_if(st["aa"].specifier == TypeSpec::float32); 
+    check_if(st["ab"].specifier == TypeSpec::float32);
+    check_if(st["ac"].specifier == TypeSpec::float32); 
+    check_if(st["ad"].specifier == TypeSpec::float32);
+    
+    return true;
+}

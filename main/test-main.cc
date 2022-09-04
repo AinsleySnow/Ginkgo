@@ -22,9 +22,11 @@ static const std::string extend{ ".c" };
 
 
 bool test_speccomb(const SymbolTable&);
+bool test_speclist(const SymbolTable&);
 
 static const map files{
-    {"spec-combination", test_speccomb}
+    {"spec-combination", test_speccomb},
+    {"spec-list", test_speclist}
 };
 
 
