@@ -42,8 +42,7 @@ void DeclSpec::MarkSpec(Tag t)
 
 inline void DeclSpec::markQual(int qual)
 {
-    if (!(rawQualifiers & qual)) rawQualifiers |= qual;
-    else throw 1001;
+    rawQualifiers |= qual;
 }
 
 void DeclSpec::MarkQual(Tag t)
@@ -51,23 +50,13 @@ void DeclSpec::MarkQual(Tag t)
     switch (t)
     {
     case Tag::_const:
-        markType(_int); break;
-    case Tag::_char:
-        markType(_char); break;
-    case Tag::_short:
-        markType(_short); break;
-    case Tag::_signed:
-        markType(_signed); break;
-    case Tag::_unsigned:
-        markType(_unsigned); break;
-    case Tag::_bool:
-        markType(_bool); break;
-    case Tag::_double:
-        markType(_double); break;
-    case Tag::_float:
-        markType(_float); break;
-    case Tag::_long:
-        markTypeLong(); break;
+        markQual(_const); break;
+    case Tag::_atomic:
+        markQual(_atomic); break;
+    case Tag::_restrict:
+        markQual(_restrict); break;
+    case Tag::_volatile:
+        markQual(_volatile); break;
     default:
         return;
     }
@@ -128,10 +117,7 @@ unsigned int DeclSpec::GetQual()
 
 void DeclSpec::Join(const DeclSpec* ds)
 {
-    unsigned int sum = rawQualifiers + ds->rawQualifiers;
-    rawQualifiers ^= ds->rawQualifiers;
-    if (sum != rawQualifiers)
-        throw 1001;
+    rawQualifiers |= ds->rawQualifiers;
     
     if ((rawSpecifiers & _long) && (ds->rawSpecifiers & _long))
     {
@@ -142,7 +128,7 @@ void DeclSpec::Join(const DeclSpec* ds)
             throw 1001;
     }
     
-    sum = rawSpecifiers + ds->rawSpecifiers;
+    unsigned int sum = rawSpecifiers + ds->rawSpecifiers;
     rawSpecifiers ^= ds->rawSpecifiers;
     if (sum != rawSpecifiers)
         throw 1001;
