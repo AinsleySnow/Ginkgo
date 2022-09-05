@@ -46,7 +46,7 @@ static int check_type(void);
 "break"					{ return(BREAK); }
 "case"					{ return(CASE); }
 "char"					{ yylval.tag = Tag::_char; return(CHAR); }
-"const"					{ return(CONST); }
+"const"					{ yylval.tag = Tag::_const; return(CONST); }
 "continue"				{ return(CONTINUE); }
 "default"				{ return(DEFAULT); }
 "do"					{ return(DO); }
@@ -62,7 +62,7 @@ static int check_type(void);
 "int"					{ yylval.tag = Tag::_int; return(INT); }
 "long"					{ yylval.tag = Tag::_long; return(LONG); }
 "register"				{ return(REGISTER); }
-"restrict"				{ return(RESTRICT); }
+"restrict"				{ yylval.tag = Tag::_restrict; return(RESTRICT); }
 "return"				{ return(RETURN); }
 "short"					{ yylval.tag = Tag::_short; return(SHORT); }
 "signed"				{ yylval.tag = Tag::_signed; return(SIGNED); }
@@ -74,11 +74,11 @@ static int check_type(void);
 "union"					{ return(UNION); }
 "unsigned"				{ yylval.tag = Tag::_unsigned; return(UNSIGNED); }
 "void"					{ return(VOID); }
-"volatile"				{ return(VOLATILE); }
+"volatile"				{ yylval.tag = Tag::_volatile; return(VOLATILE); }
 "while"					{ return(WHILE); }
 "_Alignas"                              { return ALIGNAS; }
 "_Alignof"                              { return ALIGNOF; }
-"_Atomic"                               { return ATOMIC; }
+"_Atomic"                               { yylval.tag = Tag::_atomic; return ATOMIC; }
 "_Bool"                                 { yylval.tag = Tag::_bool; return BOOL; }
 "_Complex"                              { return COMPLEX; }
 "_Generic"                              { return GENERIC; }
