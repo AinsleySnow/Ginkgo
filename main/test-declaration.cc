@@ -81,3 +81,24 @@ bool test_speclist(const SymbolTable& st)
     
     return true;
 }
+
+bool test_qualspec(const SymbolTable& st)
+{
+    check_if(st["a"].quailfier == 1);
+    check_if(st["b"].quailfier == 1);
+    check_if(st["c"].quailfier == 5);
+    check_if(st["d"].quailfier == 5);
+    check_if(st["e"].quailfier == 4);
+    check_if(st["f"].quailfier == 12);
+    check_if(st["g"].quailfier == 9);
+
+    check_if(st["a"].specifier == TypeSpec::int32);
+    check_if(st["b"].specifier == TypeSpec::int32);
+    check_if(st["c"].specifier == TypeSpec::int32);
+    check_if(st["d"].specifier == TypeSpec::int32);
+    check_if(st["e"].specifier == TypeSpec::int32);
+    check_if(st["f"].specifier == TypeSpec::int32);
+    check_if(st["g"].specifier == TypeSpec::int32);
+    
+    return true;
+}
