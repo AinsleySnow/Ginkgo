@@ -5,6 +5,7 @@
 
 #include "Node.h"
 #include "../utilities/SymbolTable.h"
+#include "../utilities/Constant.h"
 #include "declaration/Declarator.h"
 #include "declaration/Declaration.h"
 #include "declaration/DeclSpec.h"
@@ -12,6 +13,7 @@
 #include "declaration/Init.h"
 #include "declaration/InitDecl.h"
 #include "declaration/InitDeclList.h"
+#include "expression/ExprCommon.h"
 
 int yylex(void);
 void yyerror(SymbolTable& globalSymbols, const char *s);
@@ -23,7 +25,8 @@ void yyerror(SymbolTable& globalSymbols, const char *s);
 %union
 {
 	std::string* literal;
-	Node* node;
+	Constant* constant;
+    Node* node;
     Tag tag;
 }
 
@@ -46,22 +49,42 @@ void yyerror(SymbolTable& globalSymbols, const char *s);
 
 %type <node> declarator declaration declaration_specifiers direct_declarator 
 %type <node> initializer init_declarator init_declarator_list 
-%type <literal> constant
+
+%type <tag> unary_operator assignment_operator
+%type <node> primary_expression postfix_expression argument_expression_list 
+unary_expression cast_expression multiplicative_expression
+additive_expression shift_expression relational_expression
+equality_expression and_expression exclusive_or_expression
+inclusive_or_expression logical_and_expression logical_or_expression
+conditional_expression assignment_expression expression constant_expression
+
+%type <constant> constant
+%type <literal> enumerator_list string
 %type <tag> type_specifier type_qualifier
 
 %start translation_unit
 %%
 primary_expression
-	: IDENTIFIER
+	: IDENTIFIER 
+    { $$ = new PrimaryExpr(std::unique_ptr<PrimaryExpr>($1)); }
 	| constant
+    {
+        $$ = new PrimaryExpr($1);
+        delete $1;
+    }
 	| string
+    { $$ = new PrimaryExpr(std::unique_ptr<std::string>($1)); }
 	| '(' expression ')'
+    { $$ = new PrimaryExpr(std::unique_ptr<Expression>($2)); }
 	| generic_selection
 	;
 
 constant
-	: I_CONSTANT		/* includes character_constant */
+	: I_CONSTANT 
+    { $$ = new Constant; $$->data = std::stoi($1); }		
+    /* includes character_constant */
 	| F_CONSTANT
+    { $$ = new Constant; $$->data = std::stoi($1); }
 	| ENUMERATION_CONSTANT	/* after it has been defined as such */
 	;
 
@@ -90,112 +113,335 @@ generic_association
 
 postfix_expression
 	: primary_expression
+    { $$ = new PostfixExpr(std::unique_ptr<PrimaryExpr>($1)); }
 	| postfix_expression '[' expression ']'
+    {
+        $$ = new PostfixExpr(
+            std::unique_ptr<PostfixExpr>($1),
+            std::unique_ptr<Expression>($2)
+        );
+    }
 	| postfix_expression '(' ')'
+    { $$ = new PostfixExpr(std::unique_ptr<PostfixExpr>($1)); }
 	| postfix_expression '(' argument_expression_list ')'
+    {
+        $$ = new PostfixExpr(
+            std::unique_ptr<PostfixExpr>($1),
+            std::unique_ptr<ArgvExprList>($3)
+        ); 
+    }
 	| postfix_expression '.' IDENTIFIER
+    {
+        $$ = new PostfixExpr(
+            std::unique_ptr<PostfixExpr>($1),
+            Tag::dot,
+            std::unique_ptr<string>($3)
+        );
+    }
 	| postfix_expression PTR_OP IDENTIFIER
+    {
+        $$ = new PostfixExpr(
+            std::unique_ptr<PostfixExpr>($1),
+            Tag::arrow,
+            std::unique_ptr<string>($3)
+        );
+    }
 	| postfix_expression INC_OP
+    {
+        $$ = new PostfixExpr(
+            std::unique_ptr<PostfixExpr>($1),
+            Tag::inc,
+            nullptr
+        );
+    }
 	| postfix_expression DEC_OP
+    {
+        $$ = new PostfixExpr(
+            std::unique_ptr<PostfixExpr>($1),
+            Tag::dec,
+            nullptr
+        );
+    }
 	| '(' type_name ')' '{' initializer_list '}'
+    {
+        $$ = new PostfixExpr(
+            std::unique_ptr<TypeName>($2),
+            std::unique_ptr<InitList>($5)
+        );
+    }
 	| '(' type_name ')' '{' initializer_list ',' '}'
+    {
+        $$ = new PostfixExpr(
+            std::unique_ptr<TypeName>($2),
+            std::unique_ptr<InitList>($5)
+        );
+    }
 	;
 
 argument_expression_list
 	: assignment_expression
+    {
+        $$ = new ArgvExprList();
+        dynamic_cast<ArgvExprList*>($$)->
+            argvExprList.push_back(*dynamic_cast<ArgvExprList*>($1));
+        delete $1;
+    }
 	| argument_expression_list ',' assignment_expression
+    {
+        dynamic_cast<ArgvExprList*>($1)->
+            argvExprList.push_back(*dynamic_cast<ArgvExprList*>($3));
+        $$ = $1;
+        delete $3;
+    }
 	;
 
 unary_expression
 	: postfix_expression
+    { $$ = new UnaryExpr(std::unique_ptr<PostfixExpr>($1)); }
 	| INC_OP unary_expression
+    { $$ = new UnaryExpr(Tag::inc, std::unique_ptr<UnaryExpr>($2)); }
 	| DEC_OP unary_expression
+    { $$ = new UnaryExpr(Tag::dec, std::unique_ptr<UnaryExpr>($2)); }
 	| unary_operator cast_expression
+    { $$ = new UnaryExpr($1, std::unique_ptr<CastExpr>($2)); }
 	| SIZEOF unary_expression
+    { $$ = new UnaryExpr(Tag::_sizeof, std::unique_ptr<UnaryExpr>($2)); }
 	| SIZEOF '(' type_name ')'
+    { $$ = new UnaryExpr(Tag::_sizeof, std::unique_ptr<TypeName>($3)); }
 	| ALIGNOF '(' type_name ')'
+    { $$ = new UnaryExpr(Tag::_alignof, std::unique_ptr<TypeName>($3)); }
 	;
 
 unary_operator
-	: '&'
-	| '*'
-	| '+'
-	| '-'
-	| '~'
-	| '!'
+	: '&'   { $$ = Tag::_and; }
+	| '*'   { $$ = Tag::star; }
+	| '+'   { $$ = Tag::plus; }
+	| '-'   { $$ = Tag::minus; }
+	| '~'   { $$ = Tag::plus; }
+	| '!'   { $$ = Tag::plus; }
 	;
 
 cast_expression
 	: unary_expression
+	{ $$ = new CastExpr(std::unique_ptr<UnaryExpr>($1)); }
 	| '(' type_name ')' cast_expression
+	{ 
+		$$ = new CastExpr(std::unique_ptr<TypeName>($2), 
+						  std::unique_ptr<UnaryExpr>($4)); 
+	}
 	;
 
 multiplicative_expression
 	: cast_expression
+	{ $$ = new MultiExpr(std::unique_ptr<CastExpr>($1)); }
 	| multiplicative_expression '*' cast_expression
+	{
+		$$ = new MultiExpr(
+			std::unique_ptr<MultiExpr>($1), 
+			Tag::star, 
+			std::unique_ptr<CastExpr>($3)
+		); 
+	}
 	| multiplicative_expression '/' cast_expression
+	{
+		$$ = new MultiExpr(
+			std::unique_ptr<MultiExpr>($1), 
+			Tag::slash, 
+			std::unique_ptr<CastExpr>($3)
+		); 
+	}
 	| multiplicative_expression '%' cast_expression
+	{
+		$$ = new MultiExpr(
+			std::unique_ptr<MultiExpr>($1), 
+			Tag::percent, 
+			std::unique_ptr<CastExpr>($3)
+		);
+	}
 	;
 
 additive_expression
 	: multiplicative_expression
+	{ $$ = new MultiExpr(std::unique_ptr<CastExpr>($1)); }
 	| additive_expression '+' multiplicative_expression
+    {
+		$$ = new AddExpr(
+			std::unique_ptr<AddExpr>($1), 
+			Tag::plus, 
+			std::unique_ptr<MultiExpr>($3)
+		);
+	}
 	| additive_expression '-' multiplicative_expression
-	;
+	{
+		$$ = new AddExpr(
+			std::unique_ptr<AddExpr>($1), 
+			Tag::minus, 
+			std::unique_ptr<MuitlExpr>($3)
+		);
+	}
+    ;
 
 shift_expression
 	: additive_expression
+    { $$ = new ShiftExpr(std::unique_ptr<AddExpr>($1)); }
 	| shift_expression LEFT_OP additive_expression
+	{
+		$$ = new ShiftExpr(
+			std::unique_ptr<ShiftExpr>($1), 
+			Tag::lshift, 
+			std::unique_ptr<AddExpr>($3)
+		);
+	}
 	| shift_expression RIGHT_OP additive_expression
+    {
+		$$ = new ShiftExpr(
+			std::unique_ptr<ShiftExpr>($1), 
+			Tag::rshift, 
+			std::unique_ptr<AddExpr>($3)
+		);
+	}
 	;
 
 relational_expression
 	: shift_expression
+    { $$ = new RelationExpr(std::unique_ptr<ShiftExpr>($1)); }
 	| relational_expression '<' shift_expression
+    {
+		$$ = new RelationExpr(
+			std::unique_ptr<RelationExpr>($1), 
+			Tag::lessthan, 
+			std::unique_ptr<AddExpr>($3)
+		);
+	}
 	| relational_expression '>' shift_expression
+    {
+		$$ = new RelationExpr(
+			std::unique_ptr<RealtionExpr>($1), 
+			Tag::greathan, 
+			std::unique_ptr<ShiftExpr>($3)
+		);
+	}
 	| relational_expression LE_OP shift_expression
+    {
+		$$ = new RelationExpr(
+			std::unique_ptr<RealtionExpr>($1), 
+			Tag::lessequal, 
+			std::unique_ptr<ShiftExpr>($3)
+		);
+	}
 	| relational_expression GE_OP shift_expression
+    {
+		$$ = new RelationExpr(
+			std::unique_ptr<RealtionExpr>($1), 
+			Tag::greatequal, 
+			std::unique_ptr<ShiftExpr>($3)
+		);
+	}
 	;
 
 equality_expression
 	: relational_expression
+    { $$ = new EqualityExpr(std::unique_ptr<RelationExpr>($1)); }
 	| equality_expression EQ_OP relational_expression
+    {
+		$$ = new EqualityExpr(
+			std::unique_ptr<RealtionExpr>($1), 
+			Tag::equal, 
+			std::unique_ptr<ShiftExpr>($3)
+		);
+	}
 	| equality_expression NE_OP relational_expression
+    {
+		$$ = new EqualityExpr(
+			std::unique_ptr<EqualityExpr>($1), 
+			Tag::notequal, 
+			std::unique_ptr<RelationExpr>($3)
+		);
+	}
 	;
 
 and_expression
 	: equality_expression
+    { $$ = new AndExpr(std::unique_ptr<EqualityExpr>($1)); }
 	| and_expression '&' equality_expression
+    {
+		$$ = new EqualityExpr(
+			std::unique_ptr<AndExpr>($1), 
+			std::unique_ptr<EqualityExpr>($3)
+		);
+	}
 	;
 
 exclusive_or_expression
 	: and_expression
+    { $$ = new XorExpr(std::unique_ptr<AndExpr>($1)); }
 	| exclusive_or_expression '^' and_expression
+    {
+		$$ = new XorExpr(
+			std::unique_ptr<XorExpr>($1),
+			std::unique_ptr<AndExpr>($3)
+		);
+	}
 	;
 
 inclusive_or_expression
 	: exclusive_or_expression
+    { $$ = new InclOrExpr(std::unique_ptr<XorExpr>($1)); }
 	| inclusive_or_expression '|' exclusive_or_expression
+    {
+		$$ = new InclOrExpr(
+			std::unique_ptr<InclOrExpr>($1),
+			std::unique_ptr<XorExpr>($3)
+		);
+	}
 	;
 
 logical_and_expression
 	: inclusive_or_expression
+    { $$ = new LogicalAndExpr(std::unique_ptr<InclOrExpr>($1)); }
 	| logical_and_expression AND_OP inclusive_or_expression
+    {
+		$$ = new LogicalAndExpr(
+			std::unique_ptr<LogicalAndExpr>($1),
+			std::unique_ptr<InclOrExpr>($3)
+		);
+	}
 	;
 
 logical_or_expression
 	: logical_and_expression
+    { $$ = new LogicalOrExpr(std::unique_ptr<LogicalAndExpr>($1)); }
 	| logical_or_expression OR_OP logical_and_expression
+    {
+		$$ = new LogicalOrExpr(
+			std::unique_ptr<LogicalOrExpr>($1),
+			std::unique_ptr<LogicalAndExpr>($3)
+		);
+	}
 	;
 
 conditional_expression
 	: logical_or_expression
+    { $$ = new LogicalOrExpr(std::unique_ptr<LogicalAndExpr>($1)); }
 	| logical_or_expression '?' expression ':' conditional_expression
+    {
+		$$ = new LogicalOrExpr(
+			std::unique_ptr<LogicalOrExpr>($1),
+			std::unique_ptr<LogicalAndExpr>($3)
+		);
+	}
 	;
 
 assignment_expression
 	: conditional_expression
+    { $$ = new LogicalOrExpr(std::unique_ptr<LogicalAndExpr>($1)); }
 	| unary_expression assignment_operator assignment_expression
+    {
+		$$ = new LogicalOrExpr(
+			std::unique_ptr<LogicalOrExpr>($1),
+			std::unique_ptr<LogicalAndExpr>($3)
+		);
+	}
 	;
 
 assignment_operator
@@ -214,7 +460,17 @@ assignment_operator
 
 expression
 	: assignment_expression
+    { 
+        $$ = new Expression();
+        dynamic_cast<Expression*>($$)->exprs.push_back(*$1);
+        delete $1;
+    }
 	| expression ',' assignment_expression
+    {
+        dynamic_cast<Expression*>($1)->exprs.push_back(*$3);
+        delete $3;
+        $$ = $1;
+    }
 	;
 
 constant_expression
