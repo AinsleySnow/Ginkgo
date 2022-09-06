@@ -31,14 +31,19 @@ void SymbolTable::RegisterSymbol(Declaration& decl)
 
     for (const InitDecl& id : list->initList)
     {
-        Entry e{ specifier->GetSpec(), specifier->GetQual() };
+        Entry e { 
+            specifier->GetSpec(), 
+            specifier->GetQual(),
+            0,
+            std::move(id.initializer->assignExpr)
+        };
         content[id.GetName()] = e;
     }
 }
 
 void SymbolTable::PrintSymbols() const
 {
-    for (auto pair : content)
+    for (const auto& pair : content)
     {
         printf("name: %s\n", pair.first.c_str());
         printf("TypeSpec: %d\n", static_cast<int>(pair.second.specifier));

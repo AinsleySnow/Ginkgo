@@ -12,6 +12,7 @@ struct Entry
     TypeSpec specifier;
     unsigned quailfier;
     uint64_t size;
+    std::shared_ptr<Node> initial;
 };
 
 class SymbolTable
