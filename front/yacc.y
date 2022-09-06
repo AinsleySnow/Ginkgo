@@ -758,9 +758,9 @@ direct_abstract_declarator
 	;
 
 initializer
-	: '{' initializer_list '}'
-	| '{' initializer_list ',' '}'
-	| assignment_expression
+	: '{' initializer_list '}'      { $$ = new Init($2); }
+	| '{' initializer_list ',' '}'  { $$ = new Init($2); }
+	| assignment_expression         { $$ = new Init($1); }
 	;
 
 initializer_list
