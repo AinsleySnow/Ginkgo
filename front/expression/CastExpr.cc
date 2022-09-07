@@ -10,6 +10,14 @@ IR CastExpr::Generate(SymbolTable& st) const
     {
         TypeSpec type = typeName->GetSpec(st);
         IR castGen = castExpr->Generate(st);
+        if (castGen.Identifier.has_value())
+        {
+            if (castGen.Identifier.value().index() == 0) // Constant
+            {
+                std::get<0>(castGen.Identifier.value()).type = type;
+                return castGen;
+            }
+        }
         Quadruple quad = {
             IROper::assign,
             castGen.GetLastVar(),
