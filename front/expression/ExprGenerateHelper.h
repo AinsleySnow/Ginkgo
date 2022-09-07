@@ -10,9 +10,34 @@
 #ifndef _EXPR_GENERATE_HELPER_H_
 #define _EXPR_GENERATE_HELPER_H_
 
-#define ExprGenerateHelper(op, first, second, st)   \
-IR firstGen = first->Generate(st);                  \
-IR secondGen = second->Generate(st);                \
+#define DeclareHelper(first, second) \
+IR firstGen = first->Generate(st);   \
+IR secondGen = second->Generate(st)
+
+
+#define YieldHelper()                               \
+if (firstGen.Identifier.has_value() &&              \
+    secondGen.Identifier.has_value())               \
+{                                                   \
+    if (firstGen.Identifier.value().index() == 0 && \
+        secondGen.Identifier.value().index() == 0)  \
+    {                                               \
+        Constant temp1 = std::get<0>(               \
+            firstGen.Identifier.value());           \
+        Constant temp2 = std::get<0>(               \
+            secondGen.Identifier.value())           \
+
+
+#define OperationHelper(op_sym, irop, irop_value)       \
+        if (irop == irop_value)                         \
+            firstGen.Identifier = temp1 op_sym temp2;   \
+
+
+#define ExprGenerateHelper(op, st)                  \
+        return firstGen;                            \
+    }                                               \
+}                                                   \
+                                                    \
 std::string firstAns = firstGen.GetLastVar();       \
 std::string secondAns = secondGen.GetLastVar();     \
                                                     \
