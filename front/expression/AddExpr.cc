@@ -3,7 +3,7 @@
 
 IR AddExpr::Generate(SymbolTable& st) const 
 {
-    if (multiExpr)
+    if (!addExpr)
     // add-expr -> multiplicative-expr
         return multiExpr->Generate(st);
     else
@@ -13,6 +13,10 @@ IR AddExpr::Generate(SymbolTable& st) const
         IROper irop{};
         if (op == Tag::plus) irop = IROper::add;
         else irop = IROper::subtract;
-        ExprGenerateHelper(irop, addExpr, multiExpr, st);
+        DeclareHelper(addExpr, multiExpr);
+        YieldHelper();
+        OperationHelper(+, irop, IROper::add);
+        OperationHelper(-, irop, IROper::subtract);
+        ExprGenerateHelper(irop, st);
     }
 }
