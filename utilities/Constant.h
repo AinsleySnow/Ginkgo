@@ -21,6 +21,97 @@ struct Constant
         repr += " " + static_cast<int>(type);
         return repr;
     }
+
+    Constant& operator++()
+    {
+        if (data.index() == 0)
+            data = (std::get<0>(data))++;
+        else
+            data = (std::get<1>(data))++;
+        return *this;
+    }
+
+    Constant& operator--()
+    {
+        if (data.index() == 0)
+            data = (std::get<0>(data))--;
+        else
+            data = (std::get<1>(data))--;
+        return *this;
+    }
+
+    Constant operator+()
+    {
+        return *this;
+    }
+
+    Constant operator-()
+    {
+        if (data.index() == 0)
+            data = -(std::get<0>(data));
+        else
+            data = -(std::get<1>(data));
+        return *this;
+    }
+
+    Constant operator~()
+    {
+        if (data.index() == 0)
+            data = ~(std::get<0>(data));
+        return *this;
+    }
+
+    Constant operator!()
+    {
+        if (data.index() == 0)
+            data = !(std::get<0>(data));
+        else
+            data = !(std::get<1>(data));
+        return *this;
+    }
+
+    Constant operator+(Constant& right)
+    {
+        if (data.index() == 0)
+            data = std::get<0>(data) + std::get<0>(right.data);
+        else
+            data = std::get<1>(data) + std::get<1>(right.data);
+        return *this;
+    }
+    
+    Constant operator-(Constant& right)
+    {
+        if (data.index() == 0)
+            data = std::get<0>(data) - std::get<0>(right.data);
+        else
+            data = std::get<1>(data) - std::get<1>(right.data);
+        return *this;
+    }
+
+    Constant operator*(Constant& right)
+    {
+        if (data.index() == 0)
+            data = std::get<0>(data) * std::get<0>(right.data);
+        else
+            data = std::get<1>(data) * std::get<1>(right.data);
+        return *this;
+    }
+
+    Constant operator/(Constant& right)
+    {
+        if (data.index() == 0)
+            data = std::get<0>(data) / std::get<0>(right.data);
+        else
+            data = std::get<1>(data) / std::get<1>(right.data);
+        return *this;
+    }
+
+    Constant operator%(Constant& right)
+    {
+        if (data.index() == 0)
+            data = std::get<0>(data) % std::get<0>(right.data);
+        return *this;
+    }
 };
 
 #endif // _CONSTANT_H_
