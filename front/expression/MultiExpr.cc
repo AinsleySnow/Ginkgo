@@ -1,8 +1,9 @@
 #include "MultiExpr.h"
+#include "ExprGenerateHelper.h"
 
 IR MultiExpr::Generate(SymbolTable& st) const 
 {
-    if (castExpr)
+    if (!multiExpr)
     // multiplicative-expr -> cast-expr
         return castExpr->Generate(st);
     else
@@ -10,23 +11,16 @@ IR MultiExpr::Generate(SymbolTable& st) const
     // multiplicative-expr -> multiplicative-expr / cast-expr
     // multiplicative-expr -> multiplicative-expr % cast-expr
     {
-        IR multiGen = multiExpr->Generate(st);
-        IR castGen = castExpr->Generate(st);
-        std::string multiAns = multiGen.GetLastVar();
-        std::string castAns = castGen.GetLastVar();
+        IROper irop{};
+        if (op == Tag::star) irop = IROper::multiple;
+        else if (op == Tag::slash) irop = IROper::divide;
+        else irop = IROper::mod;
 
-        Quadruple quad{
-            op == Tag::star ? IROper::multiple :
-            op == Tag::slash ? IROper::divide :
-            IROper::mod,
-            multiAns, castAns,
-            st.GenerateTempVar(
-                std::max(st[multiAns].specifier, 
-                         st[castAns].specifier))
-        };
-
-        multiGen.Join(castGen);
-        multiGen.Append(quad);
-        return multiGen;
+        DeclareHelper(multiExpr, castExpr);
+        YieldHelper();
+        OperationHelper(*, irop, IROper::multiple);
+        OperationHelper(/, irop, IROper::divide);
+        OperationHelper(%, irop, IROper::mod);
+        ExprGenerateHelper(irop, st);
     }
 }
