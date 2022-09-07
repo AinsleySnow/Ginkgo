@@ -7,6 +7,15 @@ inline IR UnaryExpr::Inc_Dec_Sizeof_UnaryExpr(SymbolTable &st) const
     // unary-expr -> -- unary-expr
     {
         IR unaryGen = unaryExpr->Generate(st);
+        if (unaryGen.Identifier.has_value())
+        {
+            if (unaryGen.Identifier.value().index() == 0) // Constant
+            {
+                Constant temp = std::get<0>(unaryGen.Identifier.value());
+                unaryGen.Identifier = op == Tag::inc ? ++temp : --temp;
+                return unaryGen;
+            }
+        }
 
         std::string lastVar = unaryGen.GetLastVar();
         if (lastVar[0] != '@')
@@ -73,6 +82,20 @@ inline IR UnaryExpr::UnaryOp_CastExpr(SymbolTable &st) const
     // unary-expr -> ~ cast-expr
     // unary-expr -> ! cast-expr
     {
+        if (castGen.Identifier.has_value())
+        {
+            if (castGen.Identifier.value().index() == 0) // Constant
+            {
+                Constant temp = std::get<0>(castGen.Identifier.value());
+                if (op != Tag::plus)
+                {
+                    castGen.Identifier = op == Tag::minus ? -temp : 
+                        op == Tag::tilde ? ~temp : !temp;
+                }
+                return castGen;
+            }
+        }
+        
         std::string lastVar = castGen.GetLastVar();
         IROper iroper = op == Tag::plus ? IROper::positive : 
                         op == Tag::minus ? IROper::negative : 
