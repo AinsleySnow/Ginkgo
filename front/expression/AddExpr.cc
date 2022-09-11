@@ -14,7 +14,6 @@ IR AddExpr::Generate(SymbolTable& st) const
         if (op == Tag::plus) irop = IROper::add;
         else irop = IROper::subtract;
         DeclareHelper(addExpr, multiExpr);
-        YieldHelper();
         OperationHelper(+, irop, IROper::add);
         OperationHelper(-, irop, IROper::subtract);
         ExprGenerateHelper(irop, st);

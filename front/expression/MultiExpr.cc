@@ -17,7 +17,6 @@ IR MultiExpr::Generate(SymbolTable& st) const
         else irop = IROper::mod;
 
         DeclareHelper(multiExpr, castExpr);
-        YieldHelper();
         OperationHelper(*, irop, IROper::multiple);
         OperationHelper(/, irop, IROper::divide);
         OperationHelper(%, irop, IROper::mod);
