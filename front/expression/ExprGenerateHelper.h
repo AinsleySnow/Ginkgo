@@ -10,12 +10,10 @@
 #ifndef _EXPR_GENERATE_HELPER_H_
 #define _EXPR_GENERATE_HELPER_H_
 
-#define DeclareHelper(first, second) \
-IR firstGen = first->Generate(st);   \
-IR secondGen = second->Generate(st)
-
-
-#define YieldHelper()                               \
+#define DeclareHelper(first, second)                \
+IR firstGen = first->Generate(st);                  \
+IR secondGen = second->Generate(st);                \
+                                                    \
 if (firstGen.Identifier.has_value() &&              \
     secondGen.Identifier.has_value())               \
 {                                                   \
@@ -25,7 +23,7 @@ if (firstGen.Identifier.has_value() &&              \
         Constant temp1 = std::get<0>(               \
             firstGen.Identifier.value());           \
         Constant temp2 = std::get<0>(               \
-            secondGen.Identifier.value())           \
+            secondGen.Identifier.value())          \
 
 
 #define OperationHelper(op_sym, irop, irop_value)       \
