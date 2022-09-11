@@ -112,6 +112,31 @@ struct Constant
             data = std::get<0>(data) % std::get<0>(right.data);
         return *this;
     }
+
+    Constant operator>>(Constant& right)
+    {
+        if (data.index() == 0)
+        {
+            if (type == TypeSpec::int8 || type == TypeSpec::int16 || 
+                type == TypeSpec::int32 || type == TypeSpec::int64)
+                data = static_cast<uint64_t>(
+                    static_cast<int64_t>(std::get<0>(data)) >> std::get<0>(right.data));
+            else
+                data = std::get<0>(data) >> std::get<0>(right.data);
+        }
+        return *this;
+    }
+
+    Constant operator<<(Constant& right)
+    {
+        if (type == TypeSpec::int8 || type == TypeSpec::int16 || 
+            type == TypeSpec::int32 || type == TypeSpec::int64)
+            data = static_cast<uint64_t>(
+                static_cast<int64_t>(std::get<0>(data)) >> std::get<0>(right.data));
+        else
+            data = std::get<0>(data) >> std::get<0>(right.data);
+        return *this;
+    }
 };
 
 #endif // _CONSTANT_H_
