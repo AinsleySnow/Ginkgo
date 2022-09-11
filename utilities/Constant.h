@@ -64,9 +64,9 @@ struct Constant
     Constant operator!()
     {
         if (data.index() == 0)
-            data = !(std::get<0>(data));
+            data = static_cast<uint64_t>(!(std::get<0>(data)));
         else
-            data = !(std::get<1>(data));
+            data = static_cast<uint64_t>(!(std::get<1>(data)));
         return *this;
     }
 
@@ -136,6 +136,167 @@ struct Constant
         else
             data = std::get<0>(data) >> std::get<0>(right.data);
         return *this;
+    }
+
+    Constant operator<(Constant& right)
+    {
+        Constant copy{*this};
+        if (copy.data.index() == 0)
+        {
+            copy.data = static_cast<uint64_t>(std::get<0>(copy.data) < std::get<0>(right.data));
+            copy.type = TypeSpec::_bool;
+        }
+        else
+        {
+            copy.data = static_cast<uint64_t>(std::get<1>(copy.data) < std::get<1>(right.data));
+            copy.type = TypeSpec::_bool;
+        }
+        return copy;
+    }
+
+    Constant operator>(Constant& right)
+    {
+        Constant copy{*this};
+        if (copy.data.index() == 0)
+        {
+            copy.data = static_cast<uint64_t>(std::get<0>(copy.data) > std::get<0>(right.data));
+            copy.type = TypeSpec::_bool;
+        }
+        else
+        {
+            copy.data = static_cast<uint64_t>(std::get<1>(copy.data) > std::get<1>(right.data));
+            copy.type = TypeSpec::_bool;
+        }
+        return copy;
+    }
+
+    Constant operator<=(Constant& right)
+    {
+        Constant copy{*this};
+        if (copy.data.index() == 0)
+        {
+            copy.data = static_cast<uint64_t>(std::get<0>(copy.data) <= std::get<0>(right.data));
+            copy.type = TypeSpec::_bool;
+        }
+        else
+        {
+            copy.data = static_cast<uint64_t>(std::get<1>(copy.data) <= std::get<1>(right.data));
+            copy.type = TypeSpec::_bool;
+        }
+        return copy;
+    }
+
+    Constant operator>=(Constant& right)
+    {
+        Constant copy{*this};
+        if (copy.data.index() == 0)
+        {
+            copy.data = static_cast<uint64_t>(std::get<0>(copy.data) >= std::get<0>(right.data));
+            copy.type = TypeSpec::_bool;
+        }
+        else
+        {
+            copy.data = static_cast<uint64_t>(std::get<1>(copy.data) >= std::get<1>(right.data));
+            copy.type = TypeSpec::_bool;
+        }
+        return copy;
+    }
+
+    Constant operator==(Constant& right)
+    {
+        Constant copy{*this};
+        if (copy.data.index() == 0)
+        {
+            copy.data = static_cast<uint64_t>(std::get<0>(copy.data) == std::get<0>(right.data));
+            copy.type = TypeSpec::_bool;
+        }
+        else
+        {
+            copy.data = static_cast<uint64_t>(std::get<1>(copy.data) == std::get<1>(right.data));
+            copy.type = TypeSpec::_bool;
+        }
+        return copy;
+    }
+
+    Constant operator!=(Constant& right)
+    {
+        Constant copy{*this};
+        if (copy.data.index() == 0)
+        {
+            copy.data = static_cast<uint64_t>(std::get<0>(copy.data) != std::get<0>(right.data));
+            copy.type = TypeSpec::_bool;
+        }
+        else
+        {
+            copy.data = static_cast<uint64_t>(std::get<1>(copy.data) != std::get<1>(right.data));
+            copy.type = TypeSpec::_bool;
+        }
+        return copy;
+    }
+
+    Constant operator&(Constant& right)
+    {
+        Constant copy{*this};
+        if (copy.data.index() == 0)
+        {
+            copy.data = std::get<0>(copy.data) & std::get<0>(right.data);
+            copy.type = TypeSpec::_bool;
+        }
+        return copy;
+    }
+
+    Constant operator^(Constant& right)
+    {
+        Constant copy{*this};
+        if (copy.data.index() == 0)
+        {
+            copy.data = std::get<0>(copy.data) ^ std::get<0>(right.data);
+            copy.type = TypeSpec::_bool;
+        }
+        return copy;
+    }
+
+    Constant operator|(Constant& right)
+    {
+        Constant copy{*this};
+        if (copy.data.index() == 0)
+        {
+            copy.data = std::get<0>(copy.data) | std::get<0>(right.data);
+            copy.type = TypeSpec::_bool;
+        }
+        return copy;
+    }
+
+    Constant operator&&(Constant& right)
+    {
+        Constant copy{*this};
+        if (copy.data.index() == 0)
+        {
+            copy.data = static_cast<uint64_t>(std::get<0>(copy.data) && std::get<0>(right.data));
+            copy.type = TypeSpec::_bool;
+        }
+        else
+        {
+            copy.data = static_cast<uint64_t>(std::get<1>(copy.data) && std::get<1>(right.data));
+            copy.type = TypeSpec::_bool;
+        }
+        return copy;
+    }
+
+    Constant operator||(Constant& right)
+    {
+        Constant copy{*this};
+        if (copy.data.index() == 0)
+        {
+            copy.data = static_cast<uint64_t>(std::get<0>(copy.data) || std::get<0>(right.data));
+            copy.type = TypeSpec::_bool;
+        }
+        else
+        {
+            copy.data = static_cast<uint64_t>(std::get<1>(copy.data) || std::get<1>(right.data));
+            copy.type = TypeSpec::_bool;
+        }
+        return copy;
     }
 };
 
