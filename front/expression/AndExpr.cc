@@ -9,6 +9,8 @@ IR AndExpr::Generate(SymbolTable& st) const
     else
     // and-expr -> and-expr & equality-expr
     {
-        ExprGenerateHelper(IROper::bitwiseand, andExpr, equalExpr, st);
+        DeclareHelper(andExpr, equalExpr);
+        firstGen.Identifier = temp1 & temp2;
+        ExprGenerateHelper(IROper::bitwiseand, st);
     }   
 }

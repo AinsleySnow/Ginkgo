@@ -9,6 +9,8 @@ IR LogicalAndExpr::Generate(SymbolTable& st) const
     else
     // logical-and-expr -> logical-and-expr && inclusive-or-expr
     {
-        ExprGenerateHelper(IROper::logicaland, logicalAndExpr, inclOrExpr, st);
+        DeclareHelper(logicalAndExpr, inclOrExpr);
+        firstGen.Identifier = temp1 && temp2;
+        ExprGenerateHelper(IROper::logicaland, st); 
     }
 }

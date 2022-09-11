@@ -11,8 +11,12 @@ IR EqualExpr::Generate(SymbolTable& st) const
     // equality-expr -> equality-expr != relational-expr
     {
         IROper irop{};
-        if (op == Tag::euqal) irop = IROper::equal;
+        if (op == Tag::equal) irop = IROper::equal;
         else irop = IROper::notequal;
-        ExprGenerateHelper(irop, equalExpr, relationExpr, st);
+        
+        DeclareHelper(equalExpr, relationExpr);
+        OperationHelper(==, irop, IROper::equal);
+        OperationHelper(!=, irop, IROper::notequal);
+        ExprGenerateHelper(irop, st);    
     }
 }

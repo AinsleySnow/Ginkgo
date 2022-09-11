@@ -3,7 +3,7 @@
 
 IR ShiftExpr::Generate(SymbolTable& st) const 
 {
-    if (addExpr)
+    if (!shiftExpr)
     // shift-expr -> add-expr
         return addExpr->Generate(st);
     else
@@ -13,6 +13,9 @@ IR ShiftExpr::Generate(SymbolTable& st) const
         IROper irop{};
         if (op == Tag::lshift) irop = IROper::lshift;
         else irop = IROper::rshift;
-        ExprGenerateHelper(irop, shiftExpr, addExpr, st);
+        DeclareHelper(shiftExpr, addExpr);
+        OperationHelper(<<, irop, IROper::multiple);
+        OperationHelper(>>, irop, IROper::divide);
+        ExprGenerateHelper(irop, st);    
     }
 }

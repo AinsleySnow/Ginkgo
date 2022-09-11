@@ -9,6 +9,8 @@ IR XorExpr::Generate(SymbolTable& st) const
     else
     // xor-expr -> xor-expr ^ and-expr
     {
-        ExprGenerateHelper(IROper::bitwisexor, xorExpr, andExpr, st);
+        DeclareHelper(xorExpr, andExpr);
+        firstGen.Identifier = temp1 ^ temp2;
+        ExprGenerateHelper(IROper::bitwisexor, st);    
     }
 }

@@ -9,6 +9,8 @@ IR InclOrExpr::Generate(SymbolTable& st) const
     else
     // inclusive-or-expr -> inclusive-or-expr | xor-expr
     {
-        ExprGenerateHelper(IROper::bitwiseor, inclOrExpr, xorExpr, st);
+        DeclareHelper(inclOrExpr, xorExpr);
+        firstGen.Identifier = temp1 | temp2;
+        ExprGenerateHelper(IROper::bitwiseor, st);     
     }
 }
