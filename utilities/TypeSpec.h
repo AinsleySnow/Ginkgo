@@ -10,6 +10,8 @@ private:
     std::variant<int, std::string> type;
 
 public:
+    TypeSpec() : type(TypeSpec::undef) {}
+    TypeSpec(const TypeSpec& ts) { type = ts.type; }
     TypeSpec(int t) : type(t) {}
     explicit TypeSpec(const std::string& s) : type(s) {}
 
@@ -18,6 +20,19 @@ public:
     uint16 = 3, int32 = 4, uint32 = 5,
     int64 = 6, uint64 = 7, float32 = 8, 
     float64 = 9, _void = -2, undef = -3;
+
+    TypeSpec& operator=(int t)
+    {
+        type = t;
+        return *this;
+    }
+
+    operator int()
+    {
+        if (type.index() == 0)
+            return std::get<0>(type);
+        throw std::bad_variant_access();
+    }
 
     bool operator<(const TypeSpec ts) const
     {
