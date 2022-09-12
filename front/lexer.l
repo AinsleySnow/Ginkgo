@@ -112,27 +112,27 @@ static int check_type(void);
 ({SP}?\"([^"\\\n]|{ES})*\"{WS}*)+	{ return STRING_LITERAL; }
 
 "..."					{ return ELLIPSIS; }
-">>="					{ return RIGHT_ASSIGN; }
-"<<="					{ return LEFT_ASSIGN; }
-"+="					{ return ADD_ASSIGN; }
-"-="					{ return SUB_ASSIGN; }
-"*="					{ return MUL_ASSIGN; }
-"/="					{ return DIV_ASSIGN; }
-"%="					{ return MOD_ASSIGN; }
-"&="					{ return AND_ASSIGN; }
-"^="					{ return XOR_ASSIGN; }
-"|="					{ return OR_ASSIGN; }
-">>"					{ return RIGHT_OP; }
-"<<"					{ return LEFT_OP; }
-"++"					{ return INC_OP; }
-"--"					{ return DEC_OP; }
-"->"					{ return PTR_OP; }
-"&&"					{ return AND_OP; }
-"||"					{ return OR_OP; }
-"<="					{ return LE_OP; }
-">="					{ return GE_OP; }
-"=="					{ return EQ_OP; }
-"!="					{ return NE_OP; }
+">>="					{ yylval.tag = Tag::right_assign; return RIGHT_ASSIGN; }
+"<<="					{ yylval.tag = Tag::left_assign; return LEFT_ASSIGN; }
+"+="					{ yylval.tag = Tag::add_assign; return ADD_ASSIGN; }
+"-="					{ yylval.tag = Tag::sub_assign; return SUB_ASSIGN; }
+"*="					{ yylval.tag = Tag::mul_assign; return MUL_ASSIGN; }
+"/="					{ yylval.tag = Tag::div_assign; return DIV_ASSIGN; }
+"%="					{ yylval.tag = Tag::mod_assign; return MOD_ASSIGN; }
+"&="					{ yylval.tag = Tag::and_assign; return AND_ASSIGN; }
+"^="					{ yylval.tag = Tag::xor_assign; return XOR_ASSIGN; }
+"|="					{ yylval.tag = Tag::or_assign; return OR_ASSIGN; }
+">>"					{ yylval.tag = Tag::rshift; return RIGHT_OP; }
+"<<"					{ yylval.tag = Tag::lshift; return LEFT_OP; }
+"++"					{ yylval.tag = Tag::inc; return INC_OP; }
+"--"					{ yylval.tag = Tag::dec; return DEC_OP; }
+"->"					{ yylval.tag = Tag::arrow; return PTR_OP; }
+"&&"					{ yylval.tag = Tag::_and; return AND_OP; }
+"||"					{ yylval.tag = Tag::_or; return OR_OP; }
+"<="					{ yylval.tag = Tag::lessequal; return LE_OP; }
+">="					{ yylval.tag = Tag::greatequal; return GE_OP; }
+"=="					{ yylval.tag = Tag::equal; return EQ_OP; }
+"!="					{ yylval.tag = Tag::notequal; return NE_OP; }
 ";"					    { return ';'; }
 ("{"|"<%")				{ return '{'; }
 ("}"|"%>")				{ return '}'; }
