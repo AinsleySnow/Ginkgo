@@ -13,7 +13,6 @@
 #include "declaration/Init.h"
 #include "declaration/InitDecl.h"
 #include "declaration/InitDeclList.h"
-#include "expression/ExprCommon.h"
 
 int yylex(void);
 void yyerror(SymbolTable& globalSymbols, const char *s);
@@ -31,14 +30,14 @@ void yyerror(SymbolTable& globalSymbols, const char *s);
 }
 
 %token	<literal> IDENTIFIER I_CONSTANT F_CONSTANT STRING_LITERAL FUNC_NAME SIZEOF
-%token	PTR_OP INC_OP DEC_OP LEFT_OP RIGHT_OP LE_OP GE_OP EQ_OP NE_OP
-%token	AND_OP OR_OP MUL_ASSIGN DIV_ASSIGN MOD_ASSIGN ADD_ASSIGN
-%token	SUB_ASSIGN LEFT_ASSIGN RIGHT_ASSIGN AND_ASSIGN
-%token	XOR_ASSIGN OR_ASSIGN
+%token	<tag> PTR_OP INC_OP DEC_OP LEFT_OP RIGHT_OP LE_OP GE_OP EQ_OP NE_OP
+%token	<tag> AND_OP OR_OP MUL_ASSIGN DIV_ASSIGN MOD_ASSIGN ADD_ASSIGN
+%token	<tag> SUB_ASSIGN LEFT_ASSIGN RIGHT_ASSIGN AND_ASSIGN
+%token	<tag> XOR_ASSIGN OR_ASSIGN
 %token	TYPEDEF_NAME ENUMERATION_CONSTANT
 
 %token	TYPEDEF EXTERN STATIC AUTO REGISTER INLINE
-%token	CONST RESTRICT VOLATILE
+%token	<tag> CONST RESTRICT VOLATILE
 %token  <tag> BOOL CHAR SHORT INT LONG SIGNED UNSIGNED FLOAT DOUBLE VOID
 %token	COMPLEX IMAGINARY 
 %token	STRUCT UNION ENUM ELLIPSIS
@@ -49,6 +48,7 @@ void yyerror(SymbolTable& globalSymbols, const char *s);
 
 %type <node> declarator declaration declaration_specifiers direct_declarator 
 %type <node> initializer init_declarator init_declarator_list 
+%type <node> type_name initializer_list
 
 %type <tag> unary_operator assignment_operator
 %type <node> primary_expression postfix_expression argument_expression_list 
@@ -118,7 +118,7 @@ postfix_expression
     {
         $$ = new PostfixExpr(
             std::unique_ptr<PostfixExpr>($1),
-            std::unique_ptr<Expression>($2)
+            std::unique_ptr<Expression>($3)
         );
     }
 	| postfix_expression '(' ')'
@@ -445,7 +445,7 @@ assignment_expression
 	;
 
 assignment_operator
-	: '='
+	: '=' { $$ = Tag::assign; }
 	| MUL_ASSIGN
 	| DIV_ASSIGN
 	| MOD_ASSIGN
