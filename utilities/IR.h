@@ -4,6 +4,7 @@
 #include <list>
 #include <string>
 #include <variant>
+#include <optional>
 #include "IROper.h"
 #include "Constant.h"
 
