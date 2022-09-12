@@ -2,6 +2,7 @@
 #define _DECLSPEC_H_
 
 #include "../Node.h"
+#include "../../utilities/TypeSpec.h"
 #include "../../utilities/EnumsforEntry.h"
 
 class DeclSpec : public Node

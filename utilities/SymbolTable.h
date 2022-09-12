@@ -3,6 +3,7 @@
 
 #include <map>
 #include <string>
+#include "TypeSpec.h"
 #include "EnumsforEntry.h"
 #include "../front/declaration/InitDeclList.h"
 #include "../front/declaration/Declaration.h"
@@ -12,7 +13,7 @@ struct Entry
     TypeSpec specifier;
     unsigned quailfier;
     uint64_t size;
-    std::shared_ptr<Node> initial;
+    std::shared_ptr<IR> initial;
 };
 
 class SymbolTable
