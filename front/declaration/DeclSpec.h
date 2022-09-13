@@ -29,6 +29,13 @@ private:
     */
     unsigned int rawQualifiers{};
 
+    /*
+     * In rawStorageCls, we set the first, the second, the third,
+     * the forth bit to indicate that the variable has been qualified
+     * using const, restrict, volatile or atomic, respectively.
+    */
+    unsigned int rawStorageCls{};
+
     static constexpr unsigned int _char = 1, _int = 2, _short = 4,
         _long = 8, _longlong = 24, _float = 32, _double = 64, 
         _signed = 128, _unsigned = 256, _bool = 512, _void = 1024;
@@ -43,9 +50,11 @@ private:
 public:
     void MarkSpec(Tag);
     void MarkQual(Tag);
+    void SetStorage(Tag);
     void Join(const DeclSpec*);
     TypeSpec GetSpec();
     unsigned int GetQual();
+    StorageSpec GetStorage();
 };
 
 #endif // _DECLSPEC_H_

@@ -45,6 +45,40 @@ inline void DeclSpec::markQual(int qual)
     rawQualifiers |= qual;
 }
 
+void DeclSpec::SetStorage(Tag t)
+{
+    switch (t)
+    {
+        case Tag::_static:
+            if (!rawStorageCls) throw 1010;
+            rawStorageCls = 
+                static_cast<int>(StorageSpec::_static);
+            break;
+        case Tag::_auto:
+            if (!rawStorageCls) throw 1010;
+            rawStorageCls = 
+                static_cast<int>(StorageSpec::_auto);
+            break;
+        case Tag::_thread_local:
+            if (!rawStorageCls) throw 1010;
+            rawStorageCls = 
+                static_cast<int>(StorageSpec::_thread_local);
+            break;
+        case Tag::_register:
+            if (!rawStorageCls) throw 1010;
+            rawStorageCls = 
+                static_cast<int>(StorageSpec::_register);
+            break;
+        case Tag::_extern:
+            if (!rawStorageCls) throw 1010;
+            rawStorageCls = 
+                static_cast<int>(StorageSpec::_extern);
+            break;
+        default:
+            break;
+    }
+}
+
 void DeclSpec::MarkQual(Tag t)
 {
     switch (t)
@@ -115,6 +149,11 @@ unsigned int DeclSpec::GetQual()
     return rawQualifiers;
 }
 
+StorageSpec DeclSpec::GetStorage()
+{
+    return static_cast<StorageSpec>(rawStorageCls);
+}
+
 void DeclSpec::Join(const DeclSpec* ds)
 {
     rawQualifiers |= ds->rawQualifiers;
@@ -128,6 +167,13 @@ void DeclSpec::Join(const DeclSpec* ds)
             throw 1001;
     }
     
+    if (ds->rawStorageCls)
+    {
+        if (!rawStorageCls)
+            rawStorageCls = ds->rawStorageCls;
+        throw 1010;
+    }
+
     unsigned int sum = rawSpecifiers + ds->rawSpecifiers;
     rawSpecifiers ^= ds->rawSpecifiers;
     if (sum != rawSpecifiers)
