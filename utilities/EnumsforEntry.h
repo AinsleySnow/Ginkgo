@@ -9,4 +9,13 @@ enum class TypeQual // type qualifier
     _atomic
 };
 
+enum class StorageSpec
+{
+    _extern = 1,
+    _static = 2,
+    _thread_local = 4,
+    _auto = 8,
+    _register = 16
+};
+
 #endif // _ENUMS_FOR_ENTRY_H_
