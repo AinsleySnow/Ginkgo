@@ -434,12 +434,13 @@ conditional_expression
 
 assignment_expression
 	: conditional_expression
-    { $$ = new LogicalOrExpr(std::unique_ptr<LogicalAndExpr>($1)); }
+    { $$ = new AssignExpr(std::unique_ptr<CondExpr>($1)); }
 	| unary_expression assignment_operator assignment_expression
     {
-		$$ = new LogicalOrExpr(
-			std::unique_ptr<LogicalOrExpr>($1),
-			std::unique_ptr<LogicalAndExpr>($3)
+		$$ = new AssignExpr(
+			std::unique_ptr<UnaryExpr>($1),
+			$2,
+			std::unique_ptr<AssignExpr>($3)
 		);
 	}
 	;
