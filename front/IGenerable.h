@@ -1,9 +1,8 @@
 #ifndef _IGENERABLE_H_
 #define _IGENERABLE_H_
 
-#include "../utilities/Constant.h"
-#include "../utilities/IR.h"
-#include "../utilities/SymbolTable.h"
+class IR;
+class SymbolTable;
 
 class IGenerable
 {

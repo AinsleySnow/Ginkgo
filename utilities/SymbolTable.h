@@ -2,11 +2,14 @@
 #define _SYMBOLTABLE_H_
 
 #include <map>
+#include <memory>
 #include <string>
-#include "TypeSpec.h"
+#include "IR.h"
 #include "EnumsforEntry.h"
-#include "../front/declaration/InitDeclList.h"
-#include "../front/declaration/Declaration.h"
+#include "TypeSpec.h"
+
+class Declaration;
+class InitDeclList;
 
 struct Entry
 {

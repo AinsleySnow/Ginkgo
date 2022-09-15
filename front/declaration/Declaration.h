@@ -3,8 +3,8 @@
 
 #include <memory>
 #include "../Node.h"
-#include "InitDeclList.h"
 #include "DeclSpec.h"
+#include "InitDeclList.h"
 
 class Declaration : public Node
 {

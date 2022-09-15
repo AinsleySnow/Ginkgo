@@ -27,7 +27,7 @@ public:
         return *this;
     }
 
-    operator int()
+    operator int() const
     {
         if (type.index() == 0)
             return std::get<0>(type);

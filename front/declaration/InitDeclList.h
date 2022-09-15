@@ -3,6 +3,8 @@
 
 #include <list>
 #include "../Node.h"
+
+class InitDecl;
 #include "InitDecl.h"
 
 class InitDeclList : public Node

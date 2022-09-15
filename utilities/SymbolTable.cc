@@ -2,6 +2,9 @@
 #include <memory>
 #include <cstdio>
 
+#include "../front/declaration/Declaration.h"
+#include "../front/declaration/InitDeclList.h"
+
 Entry SymbolTable::operator[](const std::string& name) const
 {
     return GetSymbol(name);
@@ -35,7 +38,7 @@ void SymbolTable::RegisterSymbol(Declaration& decl)
             specifier->GetSpec(), 
             specifier->GetQual(),
             0,
-            std::move(id.initializer->assignExpr)
+            std::make_shared<IR>(id.initializer->assignExpr->Generate(*this))
         };
         content[id.GetName()] = e;
     }
@@ -46,7 +49,7 @@ void SymbolTable::PrintSymbols() const
     for (const auto& pair : content)
     {
         printf("name: %s\n", pair.first.c_str());
-        printf("TypeSpec: %d\n", static_cast<int>(pair.second.specifier));
+        printf("TypeSpec: %d\n", int(pair.second.specifier));
         printf("TypeQual: %d\n\n", static_cast<int>(pair.second.quailfier));
     }
 }
