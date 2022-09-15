@@ -4,6 +4,7 @@ F = front
 D = front/declaration
 MAIN = main
 U = utilities
+E = front/expression
 
 
 CHECK = $(MAIN)/test-declaration.o	\
@@ -15,6 +16,23 @@ NODES = $D/Declaration.o 	\
 	   $D/DirDecl.o 		\
 	   $D/Init.o			\
 	   $D/InitDecl.o		\
+	   $E/AddExpr.o			\
+	   $E/AndExpr.o			\
+	   $E/AssignExpr.o		\
+	   $E/CastExpr.o		\
+	   $E/CondExpr.o		\
+	   $E/EqualExpr.o		\
+	   $E/Expression.o		\
+	   $E/InclOrExpr.o		\
+	   $E/LogicalAndExpr.o	\
+	   $E/LogicalOrExpr.o	\
+	   $E/MultiExpr.o		\
+	   $E/PostfixExpr.o		\
+	   $E/PrimaryExpr.o		\
+	   $E/RelationExpr.o	\
+	   $E/ShiftExpr.o		\
+	   $E/UnaryExpr.o		\
+	   $E/XorExpr.o
 
 UTILS = $U/SymbolTable.o	\
 		$U/IR.o

@@ -1,9 +1,15 @@
 CC = g++
 CFLAGS = -Wall -I. -Og -g
 D = declaration
+E = expression
 
-all: $D/Declaration.o $D/Declarator.o $D/DeclSpec.o \
-	$D/DirDecl.o $D/Init.o $D/InitDecl.o   		    \
+all: $D/Declaration.o $D/Declarator.o $D/DeclSpec.o 				   \
+	$D/DirDecl.o $D/Init.o $D/InitDecl.o   		    				   \
+	$E/AddExpr.o $E/AndExpr.o $E/AssignExpr.o $E/CastExpr.o 			\
+	$E/CondExpr.o $E/EqualExpr.o $E/EqualExpr.o $E/Expression.o 		\
+	$E/InclOrExpr.o $E/LogicalAndExpr.o $E/LogicalOrExpr.o				\
+	$E/MultiExpr.o $E/PostfixExpr.o $E/PrimaryExpr.o $E/RelationExpr.o  \
+	$E/ShiftExpr.o $E/UnaryExpr.o $E/XorExpr.o							\
 	parser.o lexer.o
 
 clean:
@@ -27,6 +33,57 @@ $D/Init.o: $D/Init.cc $D/Init.h
 
 $D/InitDecl.o: $D/InitDecl.cc $D/InitDecl.h
 	$(CC) $(CFLAGS) -o $@ -c $D/InitDecl.cc
+
+$E/AddExpr.o: $E/AddExpr.cc $E/AddExpr.h
+	$(CC) $(CFLAGS) -o $@ -c $E/AddExpr.cc
+
+$E/AndExpr.o: $E/AndExpr.cc $E/AndExpr.h
+	$(CC) $(CFLAGS) -o $@ -c $E/AndExpr.cc
+
+$E/AssignExpr.o: $E/AssignExpr.cc $E/AssignExpr.h
+	$(CC) $(CFLAGS) -o $@ -c $E/AssignExpr.cc
+
+$E/CastExpr.o: $E/CastExpr.cc $E/CastExpr.h
+	$(CC) $(CFLAGS) -o $@ -c $E/CastExpr.cc
+
+$E/CondExpr.o: $E/CondExpr.cc $E/CondExpr.h
+	$(CC) $(CFLAGS) -o $@ -c $E/CondExpr.cc
+
+$E/EqualExpr.o: $E/EqualExpr.cc $E/EqualExpr.h
+	$(CC) $(CFLAGS) -o $@ -c $E/EqualExpr.cc
+
+$E/Expression.o: $E/Expression.cc $E/Expression.h
+	$(CC) $(CFLAGS) -o $@ -c $E/Expression.cc
+
+$E/InclOrExpr.o: $E/InclOrExpr.cc $E/InclOrExpr.h
+	$(CC) $(CFLAGS) -o $@ -c $E/InclOrExpr.cc
+
+$E/LogicalAndExpr.o: $E/LogicalAndExpr.cc $E/LogicalAndExpr.h
+	$(CC) $(CFLAGS) -o $@ -c $E/LogicalAndExpr.cc
+
+$E/LogicalOrExpr.o: $E/LogicalOrExpr.cc $E/LogicalOrExpr.h
+	$(CC) $(CFLAGS) -o $@ -c $E/LogicalOrExpr.cc
+
+$E/MultiExpr.o: $E/MultiExpr.cc $E/MultiExpr.h
+	$(CC) $(CFLAGS) -o $@ -c $E/MultiExpr.cc
+
+$E/PostfixExpr.o: $E/PostfixExpr.cc $E/PostfixExpr.h
+	$(CC) $(CFLAGS) -o $@ -c $E/PostfixExpr.cc
+
+$E/PrimaryExpr.o: $E/PrimaryExpr.cc $E/PrimaryExpr.h
+	$(CC) $(CFLAGS) -o $@ -c $E/PrimaryExpr.cc
+
+$E/RelationExpr.o: $E/RelationExpr.cc $E/RelationExpr.h
+	$(CC) $(CFLAGS) -o $@ -c $E/RelationExpr.cc
+
+$E/ShiftExpr.o: $E/ShiftExpr.cc $E/ShiftExpr.h
+	$(CC) $(CFLAGS) -o $@ -c $E/ShiftExpr.cc
+
+$E/UnaryExpr.o: $E/UnaryExpr.cc $E/UnaryExpr.h
+	$(CC) $(CFLAGS) -o $@ -c $E/UnaryExpr.cc
+
+$E/XorExpr.o: $E/XorExpr.cc $E/XorExpr.h
+	$(CC) $(CFLAGS) -o $@ -c $E/XorExpr.cc
 
 parser.cc: yacc.y
 	yacc -o $@ -dy -t yacc.y
