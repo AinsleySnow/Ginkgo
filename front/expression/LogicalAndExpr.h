@@ -3,17 +3,21 @@
 
 #include "../Node.h"
 #include "../IGenerable.h"
-#include "InclOrExpr.h"
 #include <memory>
+
+class InclOrExpr;
+#include "InclOrExpr.h"
 
 class LogicalAndExpr : public Node, public IGenerable
 {
 public:
-    std::unique_ptr<InclOrExpr> inclOrExpr{};
     std::unique_ptr<LogicalAndExpr> logicalAndExpr{};
+    std::unique_ptr<InclOrExpr> inclOrExpr{};
 
-    LogicalAndExpr(std::unique_ptr<InclOrExpr>&&);
-    LogicalAndExpr(std::unique_ptr<LogicalAndExpr>&&, std::unique_ptr<InclOrExpr>&&);
+    LogicalAndExpr(std::unique_ptr<InclOrExpr>&& ioe) :
+        inclOrExpr(std::move(ioe)) {};
+    LogicalAndExpr(std::unique_ptr<LogicalAndExpr>&& lae, std::unique_ptr<InclOrExpr>&& ioe) :
+        logicalAndExpr(std::move(lae)), inclOrExpr(std::move(ioe)) {};
 
     IR Generate(SymbolTable&) const override;
 };

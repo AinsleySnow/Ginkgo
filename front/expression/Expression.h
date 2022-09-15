@@ -3,8 +3,10 @@
 
 #include "../Node.h"
 #include "../IGenerable.h"
-#include "AssignExpr.h"
 #include <list>
+
+class AssignExpr;
+#include "AssignExpr.h"
 
 class Expression : public Node, public IGenerable
 {

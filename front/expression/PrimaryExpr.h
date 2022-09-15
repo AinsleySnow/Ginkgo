@@ -3,10 +3,12 @@
 
 #include "../Node.h"
 #include "../IGenerable.h"
-#include "Expression.h"
 #include <memory>
 #include <optional>
 #include <string>
+
+class Expression;
+#include "Expression.h"
 
 class PrimaryExpr : public Node, public IGenerable
 {

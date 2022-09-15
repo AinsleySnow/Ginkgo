@@ -3,8 +3,10 @@
 
 #include "../Node.h"
 #include "../IGenerable.h"
-#include "MultiExpr.h"
 #include <memory>
+
+class MultiExpr;
+#include "MultiExpr.h"
 
 class AddExpr : public Node, public IGenerable
 {

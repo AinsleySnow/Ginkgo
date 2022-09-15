@@ -1,5 +1,13 @@
 #include "AssignExpr.h"
 
+AssignExpr::AssignExpr(const AssignExpr& ae)
+{
+    AssignExpr& non_const = const_cast<AssignExpr&>(ae);
+    condExpr = std::move(non_const.condExpr);
+    unaryExpr = std::move(non_const.unaryExpr);
+    assignExpr = std::move(non_const.assignExpr);
+}
+
 IR AssignExpr::Generate(SymbolTable& st) const
 {
     if (condExpr)

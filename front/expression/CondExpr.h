@@ -3,9 +3,12 @@
 
 #include "../Node.h"
 #include "../IGenerable.h"
-#include "Expression.h"
-#include "LogicalOrExpr.h"
 #include <memory>
+
+class Expression;
+#include "Expression.h"
+class LogicalOrExpr;
+#include "LogicalOrExpr.h"
 
 class CondExpr : public Node, public IGenerable
 {

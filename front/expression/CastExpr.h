@@ -3,8 +3,12 @@
 
 #include "../Node.h"
 #include "../IGenerable.h"
-#include "UnaryExpr.h"
 #include <memory>
+
+class UnaryExpr;
+#include "UnaryExpr.h"
+class TypeName;
+#include "../declaration/TypeName.h"
 
 class CastExpr : public Node, public IGenerable
 {

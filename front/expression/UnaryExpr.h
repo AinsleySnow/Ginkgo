@@ -3,9 +3,13 @@
 
 #include "../Node.h"
 #include "../IGenerable.h"
-#include "CastExpr.h"
-#include "PostfixExpr.h"
 #include <memory>
+#include "../declaration/TypeName.h"
+
+class CastExpr;
+#include "CastExpr.h"
+class PostfixExpr;
+#include "PostfixExpr.h"
 
 class UnaryExpr : public Node, public IGenerable
 {

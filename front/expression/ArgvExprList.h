@@ -2,8 +2,10 @@
 #define _ARGVEXPRLIST_H_
 
 #include "../Node.h"
-#include "AssignExpr.h"
 #include <list>
+
+class AssignExpr;
+#include "AssignExpr.h"
 
 class ArgvExprList : public Node
 {

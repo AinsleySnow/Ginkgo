@@ -4,10 +4,13 @@
 #include "../Node.h"
 #include "../IGenerable.h"
 #include "ArgvExprList.h"
-#include "Expression.h"
-#include "PrimaryExpr.h"
 #include "../declaration/InitList.h"
 #include "../declaration/TypeName.h"
+
+class Expression;
+#include "Expression.h"
+class PrimaryExpr;
+#include "PrimaryExpr.h"
 
 class PostfixExpr : public Node, public IGenerable
 {

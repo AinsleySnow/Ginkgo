@@ -43,7 +43,7 @@ if (firstGen.Identifier.has_value())                    \
         std::get<0>(firstGen.Identifier.value()).type); \
     firstGen.Append(Quadruple(                          \
         IROper::assign,                                 \
-        firstGen.Identifier,                            \
+        firstGen.Identifier.value(),                    \
         firstAns                                        \
     ));                                                 \
     firstGen.Identifier.reset();                        \
@@ -54,7 +54,7 @@ else if (secondGen.Identifier.has_value())              \
         std::get<0>(secondGen.Identifier.value()).type);\
     firstGen.Append(Quadruple(                          \
         IROper::assign,                                 \
-        secondGen.Identifier,                           \
+        secondGen.Identifier.value(),                   \
         secondAns                                       \
     ));                                                 \
 }                                                       \

@@ -3,15 +3,17 @@
 
 #include "../Node.h"
 #include "../IGenerable.h"
-#include "AddExpr.h"
 #include <memory>
+
+class AddExpr;
+#include "AddExpr.h"
 
 class ShiftExpr : public Node, public IGenerable
 {
-public:
+public:   
+    std::unique_ptr<ShiftExpr> shiftExpr{};
     Tag op;
     std::unique_ptr<AddExpr> addExpr{};
-    std::unique_ptr<ShiftExpr> shiftExpr{};
 
     ShiftExpr(std::unique_ptr<AddExpr>&& ae) :
         addExpr(std::move(ae)) {};

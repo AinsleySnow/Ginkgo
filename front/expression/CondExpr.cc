@@ -1,6 +1,7 @@
 #include "CondExpr.h"
 #include <string>
 
+const int TypeSpec::undef;
 IR CondExpr::Generate(SymbolTable &st) const
 {
     if (!condExpr)

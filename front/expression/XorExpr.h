@@ -3,15 +3,17 @@
 
 #include "../Node.h"
 #include "../IGenerable.h"
-#include "AndExpr.h"
 #include <memory>
+
+class AndExpr;
+#include "AndExpr.h"
 
 class XorExpr : public Node, public IGenerable
 {
 public:
-    std::unique_ptr<AndExpr> andExpr{};
     std::unique_ptr<XorExpr> xorExpr{};
-
+    std::unique_ptr<AndExpr> andExpr{};
+    
     XorExpr(std::unique_ptr<AndExpr>&& ae) :
         andExpr(std::move(ae)) {};
     XorExpr(std::unique_ptr<XorExpr>&& xe, std::unique_ptr<AndExpr>&& ae) :
