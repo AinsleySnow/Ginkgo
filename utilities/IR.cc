@@ -36,7 +36,7 @@ void IR::AppendLable(const std::string& lable)
 
 void IR::Join(IR& ir)
 {
-    data.splice(ir.data.end(), ir.data);
+    data.splice(data.end(), ir.data);
 }
 
 std::string IR::GetLastVar() const
