@@ -13,6 +13,26 @@
 #include "declaration/Init.h"
 #include "declaration/InitDecl.h"
 #include "declaration/InitDeclList.h"
+#include "declaration/TypeName.h"
+
+#include "expression/AddExpr.h"
+#include "expression/AndExpr.h"
+#include "expression/ArgvExprList.h"
+#include "expression/AssignExpr.h"
+#include "expression/CastExpr.h"
+#include "expression/CondExpr.h"
+#include "expression/EqualExpr.h"
+#include "expression/Expression.h"
+#include "expression/InclOrExpr.h"
+#include "expression/LogicalAndExpr.h"
+#include "expression/LogicalOrExpr.h"
+#include "expression/MultiExpr.h"
+#include "expression/PostfixExpr.h"
+#include "expression/PrimaryExpr.h"
+#include "expression/RelationExpr.h"
+#include "expression/ShiftExpr.h"
+#include "expression/UnaryExpr.h"
+#include "expression/XorExpr.h"
 
 int yylex(void);
 void yyerror(SymbolTable& globalSymbols, const char *s);
@@ -66,25 +86,25 @@ conditional_expression assignment_expression expression constant_expression
 %%
 primary_expression
 	: IDENTIFIER 
-    { $$ = new PrimaryExpr(std::unique_ptr<PrimaryExpr>($1)); }
+    { $$ = new PrimaryExpr(std::unique_ptr<std::string>($1)); }
 	| constant
     {
-        $$ = new PrimaryExpr($1);
+        $$ = new PrimaryExpr(*$1);
         delete $1;
     }
 	| string
     { $$ = new PrimaryExpr(std::unique_ptr<std::string>($1)); }
 	| '(' expression ')'
-    { $$ = new PrimaryExpr(std::unique_ptr<Expression>($2)); }
+    { $$ = new PrimaryExpr(std::unique_ptr<Expression>(dynamic_cast<Expression*>($2))); }
 	| generic_selection
 	;
 
 constant
 	: I_CONSTANT 
-    { $$ = new Constant; $$->data = std::stoi($1); }		
+    { $$ = new Constant; $$->data = static_cast<long unsigned int>(std::stoi(*$1)); }		
     /* includes character_constant */
 	| F_CONSTANT
-    { $$ = new Constant; $$->data = std::stoi($1); }
+    { $$ = new Constant; $$->data = static_cast<long unsigned int>(std::stoi(*$1)); }
 	| ENUMERATION_CONSTANT	/* after it has been defined as such */
 	;
 
@@ -113,43 +133,43 @@ generic_association
 
 postfix_expression
 	: primary_expression
-    { $$ = new PostfixExpr(std::unique_ptr<PrimaryExpr>($1)); }
+    { $$ = new PostfixExpr(std::unique_ptr<PrimaryExpr>(dynamic_cast<PrimaryExpr*>($1))); }
 	| postfix_expression '[' expression ']'
     {
         $$ = new PostfixExpr(
-            std::unique_ptr<PostfixExpr>($1),
-            std::unique_ptr<Expression>($3)
+            std::unique_ptr<PostfixExpr>(dynamic_cast<PostfixExpr*>($1)),
+            std::unique_ptr<Expression>(dynamic_cast<Expression*>($3))
         );
     }
 	| postfix_expression '(' ')'
-    { $$ = new PostfixExpr(std::unique_ptr<PostfixExpr>($1)); }
+    { $$ = new PostfixExpr(std::unique_ptr<PostfixExpr>(dynamic_cast<PostfixExpr*>($1))); }
 	| postfix_expression '(' argument_expression_list ')'
     {
         $$ = new PostfixExpr(
-            std::unique_ptr<PostfixExpr>($1),
-            std::unique_ptr<ArgvExprList>($3)
+            std::unique_ptr<PostfixExpr>(dynamic_cast<PostfixExpr*>($1)),
+            std::unique_ptr<ArgvExprList>(dynamic_cast<ArgvExprList*>($3))
         ); 
     }
 	| postfix_expression '.' IDENTIFIER
     {
         $$ = new PostfixExpr(
-            std::unique_ptr<PostfixExpr>($1),
+            std::unique_ptr<PostfixExpr>(dynamic_cast<PostfixExpr*>($1)),
             Tag::dot,
-            std::unique_ptr<string>($3)
+            std::unique_ptr<std::string>($3)
         );
     }
 	| postfix_expression PTR_OP IDENTIFIER
     {
         $$ = new PostfixExpr(
-            std::unique_ptr<PostfixExpr>($1),
+            std::unique_ptr<PostfixExpr>(dynamic_cast<PostfixExpr*>($1)),
             Tag::arrow,
-            std::unique_ptr<string>($3)
+            std::unique_ptr<std::string>($3)
         );
     }
 	| postfix_expression INC_OP
     {
         $$ = new PostfixExpr(
-            std::unique_ptr<PostfixExpr>($1),
+            std::unique_ptr<PostfixExpr>(dynamic_cast<PostfixExpr*>($1)),
             Tag::inc,
             nullptr
         );
@@ -157,7 +177,7 @@ postfix_expression
 	| postfix_expression DEC_OP
     {
         $$ = new PostfixExpr(
-            std::unique_ptr<PostfixExpr>($1),
+            std::unique_ptr<PostfixExpr>(dynamic_cast<PostfixExpr*>($1)),
             Tag::dec,
             nullptr
         );
@@ -165,15 +185,15 @@ postfix_expression
 	| '(' type_name ')' '{' initializer_list '}'
     {
         $$ = new PostfixExpr(
-            std::unique_ptr<TypeName>($2),
-            std::unique_ptr<InitList>($5)
+            std::unique_ptr<TypeName>(dynamic_cast<TypeName*>($2)),
+            std::unique_ptr<InitList>(dynamic_cast<InitList*>($5))
         );
     }
 	| '(' type_name ')' '{' initializer_list ',' '}'
     {
         $$ = new PostfixExpr(
-            std::unique_ptr<TypeName>($2),
-            std::unique_ptr<InitList>($5)
+            std::unique_ptr<TypeName>(dynamic_cast<TypeName*>($2)),
+            std::unique_ptr<InitList>(dynamic_cast<InitList*>($5))
         );
     }
 	;
@@ -182,14 +202,17 @@ argument_expression_list
 	: assignment_expression
     {
         $$ = new ArgvExprList();
-        dynamic_cast<ArgvExprList*>($$)->
-            argvExprList.push_back(*dynamic_cast<ArgvExprList*>($1));
+        ArgvExprList* ael = dynamic_cast<ArgvExprList*>($$);
+        ael->argvExprList.splice(
+            ael->argvExprList.end(), 
+            dynamic_cast<ArgvExprList*>($1)->argvExprList
+        );
         delete $1;
     }
 	| argument_expression_list ',' assignment_expression
     {
-        dynamic_cast<ArgvExprList*>($1)->
-            argvExprList.push_back(*dynamic_cast<ArgvExprList*>($3));
+        ArgvExprList* ael = dynamic_cast<ArgvExprList*>($1);
+        ael->argvExprList.splice(ael->argvExprList.end(), dynamic_cast<ArgvExprList*>($3)->argvExprList);
         $$ = $1;
         delete $3;
     }
@@ -197,19 +220,19 @@ argument_expression_list
 
 unary_expression
 	: postfix_expression
-    { $$ = new UnaryExpr(std::unique_ptr<PostfixExpr>($1)); }
+    { $$ = new UnaryExpr(std::unique_ptr<PostfixExpr>(dynamic_cast<PostfixExpr*>($1))); }
 	| INC_OP unary_expression
-    { $$ = new UnaryExpr(Tag::inc, std::unique_ptr<UnaryExpr>($2)); }
+    { $$ = new UnaryExpr(Tag::inc, std::unique_ptr<UnaryExpr>(dynamic_cast<UnaryExpr*>($2))); }
 	| DEC_OP unary_expression
-    { $$ = new UnaryExpr(Tag::dec, std::unique_ptr<UnaryExpr>($2)); }
+    { $$ = new UnaryExpr(Tag::dec, std::unique_ptr<UnaryExpr>(dynamic_cast<UnaryExpr*>($2))); }
 	| unary_operator cast_expression
-    { $$ = new UnaryExpr($1, std::unique_ptr<CastExpr>($2)); }
+    { $$ = new UnaryExpr($1, std::unique_ptr<CastExpr>(dynamic_cast<CastExpr*>($2))); }
 	| SIZEOF unary_expression
-    { $$ = new UnaryExpr(Tag::_sizeof, std::unique_ptr<UnaryExpr>($2)); }
+    { $$ = new UnaryExpr(Tag::_sizeof, std::unique_ptr<UnaryExpr>(dynamic_cast<UnaryExpr*>($2))); }
 	| SIZEOF '(' type_name ')'
-    { $$ = new UnaryExpr(Tag::_sizeof, std::unique_ptr<TypeName>($3)); }
+    { $$ = new UnaryExpr(Tag::_sizeof, std::unique_ptr<TypeName>(dynamic_cast<TypeName*>($3))); }
 	| ALIGNOF '(' type_name ')'
-    { $$ = new UnaryExpr(Tag::_alignof, std::unique_ptr<TypeName>($3)); }
+    { $$ = new UnaryExpr(Tag::_alignof, std::unique_ptr<TypeName>(dynamic_cast<TypeName*>($3))); }
 	;
 
 unary_operator
@@ -223,230 +246,230 @@ unary_operator
 
 cast_expression
 	: unary_expression
-	{ $$ = new CastExpr(std::unique_ptr<UnaryExpr>($1)); }
+	{ $$ = new CastExpr(std::unique_ptr<UnaryExpr>(dynamic_cast<UnaryExpr*>($1))); }
 	| '(' type_name ')' cast_expression
 	{ 
-		$$ = new CastExpr(std::unique_ptr<TypeName>($2), 
-						  std::unique_ptr<UnaryExpr>($4)); 
+		$$ = new CastExpr(std::unique_ptr<TypeName>(dynamic_cast<TypeName*>($2)), 
+						  std::unique_ptr<CastExpr>(dynamic_cast<CastExpr*>($4))); 
 	}
 	;
 
 multiplicative_expression
 	: cast_expression
-	{ $$ = new MultiExpr(std::unique_ptr<CastExpr>($1)); }
+	{ $$ = new MultiExpr(std::unique_ptr<CastExpr>(dynamic_cast<CastExpr*>($1))); }
 	| multiplicative_expression '*' cast_expression
 	{
 		$$ = new MultiExpr(
-			std::unique_ptr<MultiExpr>($1), 
+			std::unique_ptr<MultiExpr>(dynamic_cast<MultiExpr*>($1)), 
 			Tag::star, 
-			std::unique_ptr<CastExpr>($3)
+			std::unique_ptr<CastExpr>(dynamic_cast<CastExpr*>($3))
 		); 
 	}
 	| multiplicative_expression '/' cast_expression
 	{
 		$$ = new MultiExpr(
-			std::unique_ptr<MultiExpr>($1), 
+			std::unique_ptr<MultiExpr>(dynamic_cast<MultiExpr*>($1)), 
 			Tag::slash, 
-			std::unique_ptr<CastExpr>($3)
+			std::unique_ptr<CastExpr>(dynamic_cast<CastExpr*>($3))
 		); 
 	}
 	| multiplicative_expression '%' cast_expression
 	{
 		$$ = new MultiExpr(
-			std::unique_ptr<MultiExpr>($1), 
+			std::unique_ptr<MultiExpr>(dynamic_cast<MultiExpr*>($1)), 
 			Tag::percent, 
-			std::unique_ptr<CastExpr>($3)
+			std::unique_ptr<CastExpr>(dynamic_cast<CastExpr*>($3))
 		);
 	}
 	;
 
 additive_expression
 	: multiplicative_expression
-	{ $$ = new MultiExpr(std::unique_ptr<CastExpr>($1)); }
+	{ $$ = new MultiExpr(std::unique_ptr<CastExpr>(dynamic_cast<CastExpr*>($1))); }
 	| additive_expression '+' multiplicative_expression
     {
 		$$ = new AddExpr(
-			std::unique_ptr<AddExpr>($1), 
+			std::unique_ptr<AddExpr>(dynamic_cast<AddExpr*>($1)), 
 			Tag::plus, 
-			std::unique_ptr<MultiExpr>($3)
+			std::unique_ptr<MultiExpr>(dynamic_cast<MultiExpr*>($3))
 		);
 	}
 	| additive_expression '-' multiplicative_expression
 	{
 		$$ = new AddExpr(
-			std::unique_ptr<AddExpr>($1), 
+			std::unique_ptr<AddExpr>(dynamic_cast<AddExpr*>($1)), 
 			Tag::minus, 
-			std::unique_ptr<MuitlExpr>($3)
+			std::unique_ptr<MultiExpr>(dynamic_cast<MultiExpr*>($3))
 		);
 	}
     ;
 
 shift_expression
 	: additive_expression
-    { $$ = new ShiftExpr(std::unique_ptr<AddExpr>($1)); }
+    { $$ = new ShiftExpr(std::unique_ptr<AddExpr>(dynamic_cast<AddExpr*>($1))); }
 	| shift_expression LEFT_OP additive_expression
 	{
 		$$ = new ShiftExpr(
-			std::unique_ptr<ShiftExpr>($1), 
+			std::unique_ptr<ShiftExpr>(dynamic_cast<ShiftExpr*>($1)), 
 			Tag::lshift, 
-			std::unique_ptr<AddExpr>($3)
+			std::unique_ptr<AddExpr>(dynamic_cast<AddExpr*>($3))
 		);
 	}
 	| shift_expression RIGHT_OP additive_expression
     {
 		$$ = new ShiftExpr(
-			std::unique_ptr<ShiftExpr>($1), 
+			std::unique_ptr<ShiftExpr>(dynamic_cast<ShiftExpr*>($1)), 
 			Tag::rshift, 
-			std::unique_ptr<AddExpr>($3)
+			std::unique_ptr<AddExpr>(dynamic_cast<AddExpr*>($3))
 		);
 	}
 	;
 
 relational_expression
 	: shift_expression
-    { $$ = new RelationExpr(std::unique_ptr<ShiftExpr>($1)); }
+    { $$ = new RelationExpr(std::unique_ptr<ShiftExpr>(dynamic_cast<ShiftExpr*>($1))); }
 	| relational_expression '<' shift_expression
     {
 		$$ = new RelationExpr(
-			std::unique_ptr<RelationExpr>($1), 
+			std::unique_ptr<RelationExpr>(dynamic_cast<RelationExpr*>($1)), 
 			Tag::lessthan, 
-			std::unique_ptr<AddExpr>($3)
+			std::unique_ptr<ShiftExpr>(dynamic_cast<ShiftExpr*>($3))
 		);
 	}
 	| relational_expression '>' shift_expression
     {
 		$$ = new RelationExpr(
-			std::unique_ptr<RealtionExpr>($1), 
+			std::unique_ptr<RelationExpr>(dynamic_cast<RelationExpr*>($1)), 
 			Tag::greathan, 
-			std::unique_ptr<ShiftExpr>($3)
+			std::unique_ptr<ShiftExpr>(dynamic_cast<ShiftExpr*>($3))
 		);
 	}
 	| relational_expression LE_OP shift_expression
     {
 		$$ = new RelationExpr(
-			std::unique_ptr<RealtionExpr>($1), 
+			std::unique_ptr<RelationExpr>(dynamic_cast<RelationExpr*>($1)), 
 			Tag::lessequal, 
-			std::unique_ptr<ShiftExpr>($3)
+			std::unique_ptr<ShiftExpr>(dynamic_cast<ShiftExpr*>($3))
 		);
 	}
 	| relational_expression GE_OP shift_expression
     {
 		$$ = new RelationExpr(
-			std::unique_ptr<RealtionExpr>($1), 
+			std::unique_ptr<RelationExpr>(dynamic_cast<RelationExpr*>($1)), 
 			Tag::greatequal, 
-			std::unique_ptr<ShiftExpr>($3)
+			std::unique_ptr<ShiftExpr>(dynamic_cast<ShiftExpr*>($3))
 		);
 	}
 	;
 
 equality_expression
 	: relational_expression
-    { $$ = new EqualityExpr(std::unique_ptr<RelationExpr>($1)); }
+    { $$ = new EqualExpr(std::unique_ptr<RelationExpr>(dynamic_cast<RelationExpr*>($1))); }
 	| equality_expression EQ_OP relational_expression
     {
-		$$ = new EqualityExpr(
-			std::unique_ptr<RealtionExpr>($1), 
+		$$ = new EqualExpr(
+			std::unique_ptr<EqualExpr>(dynamic_cast<EqualExpr*>($1)), 
 			Tag::equal, 
-			std::unique_ptr<ShiftExpr>($3)
+			std::unique_ptr<RelationExpr>(dynamic_cast<RelationExpr*>($3))
 		);
 	}
 	| equality_expression NE_OP relational_expression
     {
-		$$ = new EqualityExpr(
-			std::unique_ptr<EqualityExpr>($1), 
+		$$ = new EqualExpr(
+			std::unique_ptr<EqualExpr>(dynamic_cast<EqualExpr*>($1)), 
 			Tag::notequal, 
-			std::unique_ptr<RelationExpr>($3)
+			std::unique_ptr<RelationExpr>(dynamic_cast<RelationExpr*>($3))
 		);
 	}
 	;
 
 and_expression
 	: equality_expression
-    { $$ = new AndExpr(std::unique_ptr<EqualityExpr>($1)); }
+    { $$ = new AndExpr(std::unique_ptr<EqualExpr>(dynamic_cast<EqualExpr*>($1))); }
 	| and_expression '&' equality_expression
     {
-		$$ = new EqualityExpr(
-			std::unique_ptr<AndExpr>($1), 
-			std::unique_ptr<EqualityExpr>($3)
+		$$ = new AndExpr(
+			std::unique_ptr<AndExpr>(dynamic_cast<AndExpr*>($1)), 
+			std::unique_ptr<EqualExpr>(dynamic_cast<EqualExpr*>($3))
 		);
 	}
 	;
 
 exclusive_or_expression
 	: and_expression
-    { $$ = new XorExpr(std::unique_ptr<AndExpr>($1)); }
+    { $$ = new XorExpr(std::unique_ptr<AndExpr>(dynamic_cast<AndExpr*>($1))); }
 	| exclusive_or_expression '^' and_expression
     {
 		$$ = new XorExpr(
-			std::unique_ptr<XorExpr>($1),
-			std::unique_ptr<AndExpr>($3)
+			std::unique_ptr<XorExpr>(dynamic_cast<XorExpr*>($1)),
+			std::unique_ptr<AndExpr>(dynamic_cast<AndExpr*>($3))
 		);
 	}
 	;
 
 inclusive_or_expression
 	: exclusive_or_expression
-    { $$ = new InclOrExpr(std::unique_ptr<XorExpr>($1)); }
+    { $$ = new InclOrExpr(std::unique_ptr<XorExpr>(dynamic_cast<XorExpr*>($1))); }
 	| inclusive_or_expression '|' exclusive_or_expression
     {
 		$$ = new InclOrExpr(
-			std::unique_ptr<InclOrExpr>($1),
-			std::unique_ptr<XorExpr>($3)
+			std::unique_ptr<InclOrExpr>(dynamic_cast<InclOrExpr*>($1)),
+			std::unique_ptr<XorExpr>(dynamic_cast<XorExpr*>($3))
 		);
 	}
 	;
 
 logical_and_expression
 	: inclusive_or_expression
-    { $$ = new LogicalAndExpr(std::unique_ptr<InclOrExpr>($1)); }
+    { $$ = new LogicalAndExpr(std::unique_ptr<InclOrExpr>(dynamic_cast<InclOrExpr*>($1))); }
 	| logical_and_expression AND_OP inclusive_or_expression
     {
 		$$ = new LogicalAndExpr(
-			std::unique_ptr<LogicalAndExpr>($1),
-			std::unique_ptr<InclOrExpr>($3)
+			std::unique_ptr<LogicalAndExpr>(dynamic_cast<LogicalAndExpr*>($1)),
+			std::unique_ptr<InclOrExpr>(dynamic_cast<InclOrExpr*>($3))
 		);
 	}
 	;
 
 logical_or_expression
 	: logical_and_expression
-    { $$ = new LogicalOrExpr(std::unique_ptr<LogicalAndExpr>($1)); }
+    { $$ = new LogicalOrExpr(std::unique_ptr<LogicalAndExpr>(dynamic_cast<LogicalAndExpr*>($1))); }
 	| logical_or_expression OR_OP logical_and_expression
     {
 		$$ = new LogicalOrExpr(
-			std::unique_ptr<LogicalOrExpr>($1),
-			std::unique_ptr<LogicalAndExpr>($3)
+			std::unique_ptr<LogicalOrExpr>(dynamic_cast<LogicalOrExpr*>($1)),
+			std::unique_ptr<LogicalAndExpr>(dynamic_cast<LogicalAndExpr*>($3))
 		);
 	}
 	;
 
 conditional_expression
 	: logical_or_expression
-    { $$ = new LogicalOrExpr(std::unique_ptr<LogicalAndExpr>($1)); }
+    { $$ = new LogicalOrExpr(std::unique_ptr<LogicalAndExpr>(dynamic_cast<LogicalAndExpr*>($1))); }
 	| logical_or_expression '?' expression ':' conditional_expression
     {
 		$$ = new LogicalOrExpr(
-			std::unique_ptr<LogicalOrExpr>($1),
-			std::unique_ptr<LogicalAndExpr>($3)
+			std::unique_ptr<LogicalOrExpr>(dynamic_cast<LogicalOrExpr*>($1)),
+			std::unique_ptr<LogicalAndExpr>(dynamic_cast<LogicalAndExpr*>($3))
 		);
 	}
 	;
 
 assignment_expression
 	: conditional_expression
-    { $$ = new AssignExpr(std::unique_ptr<CondExpr>($1)); }
+    { $$ = new AssignExpr(std::unique_ptr<CondExpr>(dynamic_cast<CondExpr*>($1))); }
 	| unary_expression assignment_operator assignment_expression
     {
 		$$ = new AssignExpr(
-			std::unique_ptr<UnaryExpr>($1),
+			std::unique_ptr<UnaryExpr>(dynamic_cast<UnaryExpr*>($1)),
 			$2,
-			std::unique_ptr<AssignExpr>($3)
+			std::unique_ptr<AssignExpr>(dynamic_cast<AssignExpr*>($3))
 		);
 	}
 	;
 
 assignment_operator
-	: '=' { $$ = Tag::assign; }
+	: '=' { $$ = Tag::equal; }
 	| MUL_ASSIGN
 	| DIV_ASSIGN
 	| MOD_ASSIGN
@@ -461,14 +484,16 @@ assignment_operator
 
 expression
 	: assignment_expression
-    { 
+    {
         $$ = new Expression();
-        dynamic_cast<Expression*>($$)->exprs.push_back(*$1);
+        (dynamic_cast<Expression*>($$)->exprs).push_back(
+            *dynamic_cast<AssignExpr*>($1));
         delete $1;
     }
 	| expression ',' assignment_expression
     {
-        dynamic_cast<Expression*>($1)->exprs.push_back(*$3);
+        (dynamic_cast<Expression*>($1)->exprs).push_back(
+            *dynamic_cast<AssignExpr*>($3));
         delete $3;
         $$ = $1;
     }
@@ -759,9 +784,10 @@ direct_abstract_declarator
 	;
 
 initializer
-	: '{' initializer_list '}'      { $$ = new Init($2); }
-	| '{' initializer_list ',' '}'  { $$ = new Init($2); }
-	| assignment_expression         { $$ = new Init($1); }
+	: '{' initializer_list '}'      
+	| '{' initializer_list ',' '}'  
+	| assignment_expression         
+    { $$ = new Init(std::unique_ptr<AssignExpr>(dynamic_cast<AssignExpr*>($1))); }
 	;
 
 initializer_list
