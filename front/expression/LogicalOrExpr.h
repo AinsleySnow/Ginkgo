@@ -11,8 +11,8 @@ class LogicalAndExpr;
 class LogicalOrExpr : public Node, public IGenerable
 {
 public:
-    std::unique_ptr<LogicalAndExpr> logicalAndExpr{};
     std::unique_ptr<LogicalOrExpr> logicalOrExpr{};
+    std::unique_ptr<LogicalAndExpr> logicalAndExpr{};
 
     LogicalOrExpr(std::unique_ptr<LogicalAndExpr>&& lae) :
         logicalAndExpr(std::move(lae)) {};
