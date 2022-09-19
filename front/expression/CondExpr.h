@@ -17,9 +17,11 @@ public:
     std::unique_ptr<Expression> expression{};
     std::unique_ptr<CondExpr> condExpr{};
 
-    CondExpr(std::unique_ptr<LogicalOrExpr>&&);
-    CondExpr(std::unique_ptr<LogicalOrExpr>&&, 
-        std::unique_ptr<Expression>&&, std::unique_ptr<CondExpr>&&);
+    CondExpr(std::unique_ptr<LogicalOrExpr>&& loe) :
+        logicalOrExpr(std::move(loe)) {};
+    CondExpr(std::unique_ptr<LogicalOrExpr>&& loe, 
+        std::unique_ptr<Expression>&& e, std::unique_ptr<CondExpr>&& ce) :
+        logicalOrExpr(std::move(loe)), expression(std::move(e)), condExpr(std::move(ce)) {};
 
     IR Generate(SymbolTable&) const override;
 };
