@@ -37,9 +37,12 @@ void SymbolTable::RegisterSymbol(Declaration& decl)
         Entry e { 
             specifier->GetSpec(), 
             specifier->GetQual(),
-            0,
-            std::make_shared<IR>(id.initializer->assignExpr->Generate(*this))
+            0
         };
+        if (id.initializer)
+            e.initial = std::make_shared<IR>(id.initializer->assignExpr->Generate(*this));
+        else
+            e.initial = nullptr;
         content[id.GetName()] = e;
     }
 }
