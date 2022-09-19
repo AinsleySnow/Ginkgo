@@ -11,14 +11,14 @@ class MultiExpr;
 class AddExpr : public Node, public IGenerable
 {
 public:
-    Tag op;
     std::unique_ptr<AddExpr> addExpr{};
+    Tag op;
     std::unique_ptr<MultiExpr> multiExpr{};
 
     AddExpr(std::unique_ptr<MultiExpr>&& me) :
         multiExpr(std::move(me)) {};
-    AddExpr(std::unique_ptr<AddExpr>&& ae, Tag, std::unique_ptr<MultiExpr>&& me) :
-        addExpr(std::move(ae)), multiExpr(std::move(me)) {};
+    AddExpr(std::unique_ptr<AddExpr>&& ae, Tag t, std::unique_ptr<MultiExpr>&& me) :
+        addExpr(std::move(ae)), op(t), multiExpr(std::move(me)) {};
 
     IR Generate(SymbolTable&) const override;
 };
