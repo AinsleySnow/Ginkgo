@@ -44,6 +44,11 @@ std::string IR::GetLastVar() const
     return data.end()->arg3;
 }
 
+Constant IR::GetConstant() const
+{
+    return std::get<0>(Identifier.value());
+}
+
 unsigned long IR::lableIndex;
 std::string IR::GetLable()
 {

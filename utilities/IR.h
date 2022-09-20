@@ -41,6 +41,7 @@ public:
     void AppendLable(const std::string&);
     void Join(IR&);
     std::string GetLastVar() const;
+    Constant GetConstant() const;
 };
 
 #endif // _IR_H_
