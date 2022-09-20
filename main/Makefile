@@ -7,7 +7,7 @@ clean:
 	rm -f *.o
 
 
-test-declaration.o: test-declaration.cc
+test-subfuncs.o: test-subfuncs.cc
 	$(CC) $(CFLAGS) $^ -c -o $@
 
 test-main.o: test-main.cc
