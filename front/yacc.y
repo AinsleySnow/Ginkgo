@@ -101,10 +101,20 @@ primary_expression
 
 constant
 	: I_CONSTANT 
-    { $$ = new Constant; $$->data = static_cast<long unsigned int>(std::stoi(*$1)); }		
+    {
+        $$ = new Constant;
+        $$->data = static_cast<uint64_t>(std::stoll(*$1));
+        $$->type = TypeSpec::int32;
+        delete $1;
+    }
     /* includes character_constant */
 	| F_CONSTANT
-    { $$ = new Constant; $$->data = static_cast<long unsigned int>(std::stoi(*$1)); }
+    {
+        $$ = new Constant;
+        $$->data = std::stod(*$1);
+        $$->type = TypeSpec::float64;
+        delete $1;
+    }
 	| ENUMERATION_CONSTANT	/* after it has been defined as such */
 	;
 
@@ -240,8 +250,8 @@ unary_operator
 	| '*'   { $$ = Tag::star; }
 	| '+'   { $$ = Tag::plus; }
 	| '-'   { $$ = Tag::minus; }
-	| '~'   { $$ = Tag::plus; }
-	| '!'   { $$ = Tag::plus; }
+	| '~'   { $$ = Tag::tilde; }
+	| '!'   { $$ = Tag::exclamation; }
 	;
 
 cast_expression
@@ -285,7 +295,7 @@ multiplicative_expression
 
 additive_expression
 	: multiplicative_expression
-	{ $$ = new MultiExpr(std::unique_ptr<CastExpr>(dynamic_cast<CastExpr*>($1))); }
+	{ $$ = new AddExpr(std::unique_ptr<MultiExpr>(dynamic_cast<MultiExpr*>($1))); }
 	| additive_expression '+' multiplicative_expression
     {
 		$$ = new AddExpr(
@@ -445,12 +455,13 @@ logical_or_expression
 
 conditional_expression
 	: logical_or_expression
-    { $$ = new LogicalOrExpr(std::unique_ptr<LogicalAndExpr>(dynamic_cast<LogicalAndExpr*>($1))); }
+    { $$ = new CondExpr(std::unique_ptr<LogicalOrExpr>(dynamic_cast<LogicalOrExpr*>($1))); }
 	| logical_or_expression '?' expression ':' conditional_expression
     {
-		$$ = new LogicalOrExpr(
+		$$ = new CondExpr(
 			std::unique_ptr<LogicalOrExpr>(dynamic_cast<LogicalOrExpr*>($1)),
-			std::unique_ptr<LogicalAndExpr>(dynamic_cast<LogicalAndExpr*>($3))
+            std::unique_ptr<Expression>(dynamic_cast<Expression*>($3)),
+			std::unique_ptr<CondExpr>(dynamic_cast<CondExpr*>($5))
 		);
 	}
 	;

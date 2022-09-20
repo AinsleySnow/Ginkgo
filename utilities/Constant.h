@@ -138,9 +138,9 @@ struct Constant
         if (type == TypeSpec::int8 || type == TypeSpec::int16 || 
             type == TypeSpec::int32 || type == TypeSpec::int64)
             data = static_cast<uint64_t>(
-                static_cast<int64_t>(std::get<0>(data)) >> std::get<0>(right.data));
+                static_cast<int64_t>(std::get<0>(data)) << std::get<0>(right.data));
         else
-            data = std::get<0>(data) >> std::get<0>(right.data);
+            data = std::get<0>(data) << std::get<0>(right.data);
         return *this;
     }
 

@@ -14,8 +14,8 @@ IR ShiftExpr::Generate(SymbolTable& st) const
         if (op == Tag::lshift) irop = IROper::lshift;
         else irop = IROper::rshift;
         DeclareHelper(shiftExpr, addExpr);
-        OperationHelper(<<, irop, IROper::multiple);
-        OperationHelper(>>, irop, IROper::divide);
+        OperationHelper(<<, irop, IROper::lshift);
+        OperationHelper(>>, irop, IROper::rshift);
         ExprGenerateHelper(irop, st);    
     }
 }
