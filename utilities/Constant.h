@@ -12,7 +12,7 @@ struct Constant
     std::variant<uint64_t, double> data;
     TypeSpec type;
 
-    std::string ToString()
+    std::string ToString() const
     {
         std::string repr;
         if (data.index() == 0)
@@ -21,6 +21,11 @@ struct Constant
             repr = std::to_string(std::get<1>(data));
         repr += " " + static_cast<int>(type);
         return repr;
+    }
+
+    uint64_t GetU64() const
+    {
+        return std::get<0>(data);
     }
 
     Constant& operator++()
