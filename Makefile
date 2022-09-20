@@ -7,7 +7,7 @@ U = utilities
 E = front/expression
 
 
-CHECK = $(MAIN)/test-declaration.o	\
+CHECK = $(MAIN)/test-subfuncs.o	\
 		$(MAIN)/test-main.o
 
 NODES = $D/Declaration.o 	\
@@ -37,7 +37,7 @@ NODES = $D/Declaration.o 	\
 UTILS = $U/SymbolTable.o	\
 		$U/IR.o
 
-$(MAIN)/test: $(UTILS) $(NODES) $(CHECK)
+$(MAIN)/test: $(UTILS) $(NODES) $(CHECK) $F/parser.o $F/lexer.o
 	$(CC) $(UTILS) $(NODES) $F/parser.o $F/lexer.o $(CHECK) -o $@
 
 test: 
