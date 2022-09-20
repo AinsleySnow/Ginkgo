@@ -7,6 +7,36 @@
         return false;}                                      \
 
 
+bool test_evaluate(const SymbolTable& st)
+{
+    check_if(st["a"].initial->GetConstant().GetU64() == 2);
+    check_if(st["b"].initial->GetConstant().GetU64() == 6);
+    check_if(st["c"].initial->GetConstant().GetU64() == 2);
+    check_if(st["d"].initial->GetConstant().GetU64() == -1);
+    check_if(st["e"].initial->GetConstant().GetU64() == 5);
+    check_if(st["f"].initial->GetConstant().GetU64() == 7);
+    check_if(st["g"].initial->GetConstant().GetU64() == 24);
+    check_if(st["h"].initial->GetConstant().GetU64() == 21);
+    check_if(st["i"].initial->GetConstant().GetU64() == 0);
+    check_if(st["j"].initial->GetConstant().GetU64() == 3);
+    check_if(st["l"].initial->GetConstant().GetU64() == 3);
+    // check_if(st["m"].initial->GetConstant().GetU64() == 256);
+    check_if(st["n"].initial->GetConstant().GetU64() == -2);
+    check_if(st["o"].initial->GetConstant().GetU64() == 3);
+    check_if(st["p"].initial->GetConstant().GetU64() == -5);
+    check_if(st["q"].initial->GetConstant().GetU64() == 0);
+    check_if(st["r"].initial->GetConstant().GetU64() == 48);
+    check_if(st["s"].initial->GetConstant().GetU64() == 1);
+    check_if(st["t"].initial->GetConstant().GetU64() == 0);
+    check_if(st["u"].initial->GetConstant().GetU64() == 0);
+    check_if(st["v"].initial->GetConstant().GetU64() == 1);
+    check_if(st["w"].initial->GetConstant().GetU64() == 3);
+    check_if(st["x"].initial->GetConstant().GetU64() == 6);
+    check_if(st["y"].initial->GetConstant().GetU64() == 7);
+
+    return true;
+}
+
 bool test_speccomb(const SymbolTable& st)
 {
     check_if(st.GetSymbol("a").specifier == TypeSpec::int8);
