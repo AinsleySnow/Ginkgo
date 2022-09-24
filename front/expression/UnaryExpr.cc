@@ -31,10 +31,10 @@ inline IR UnaryExpr::Inc_Dec_Sizeof_UnaryExpr(SymbolTable &st) const
     else // unary-expr -> sizeof unary-expr
     {
         IR unaryGen = unaryExpr->Generate(st);
-        std::string assignTo = st.GenerateTempVar(TypeSpec::uint64);
+        std::string assignTo = st.GenerateTempVar(Type::uint64);
         std::string lastVarName = unaryGen.GetLastVar();
 
-        Constant c{st[lastVarName].size, TypeSpec::uint64};
+        Constant c{st[lastVarName].size, Type::uint64};
         Quadruple quad{
             IROper::assign,
             c,
@@ -119,8 +119,8 @@ inline IR UnaryExpr::Sizeof_Alignof_TypeName(SymbolTable &st) const
     // unary-expr -> sizeof ( type-name )
     {
         uint64_t typeSize = typeName->GetSize(st);
-        std::string assignTo = st.GenerateTempVar(TypeSpec::uint64);
-        Constant c{typeSize, TypeSpec::uint64};
+        std::string assignTo = st.GenerateTempVar(Type::uint64);
+        Constant c{typeSize, Type::uint64};
         Quadruple quad{
             IROper::assign,
             c,
@@ -134,8 +134,8 @@ inline IR UnaryExpr::Sizeof_Alignof_TypeName(SymbolTable &st) const
     else // unary-expr -> alignof ( type-name )
     {
         uint64_t align = typeName->GetAlign(st);
-        std::string assignTo = st.GenerateTempVar(TypeSpec::uint64);
-        Constant c{align, TypeSpec::uint64};
+        std::string assignTo = st.GenerateTempVar(Type::uint64);
+        Constant c{align, Type::uint64};
         Quadruple quad{
             IROper::assign,
             c,

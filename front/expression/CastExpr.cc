@@ -8,7 +8,7 @@ IR CastExpr::Generate(SymbolTable& st) const
     else
     // cast-expr -> ( type-name ) cast-expr
     {
-        TypeSpec type = typeName->GetSpec(st);
+        Type type = typeName->GetSpec(st);
         IR castGen = castExpr->Generate(st);
         if (castGen.Identifier.has_value())
         {

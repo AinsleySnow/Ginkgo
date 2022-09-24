@@ -104,7 +104,7 @@ constant
     {
         $$ = new Constant;
         $$->data = static_cast<uint64_t>(std::stoll(*$1));
-        $$->type = TypeSpec::int32;
+        $$->type = Type::int32;
         delete $1;
     }
     /* includes character_constant */
@@ -112,7 +112,7 @@ constant
     {
         $$ = new Constant;
         $$->data = std::stod(*$1);
-        $$->type = TypeSpec::float64;
+        $$->type = Type::float64;
         delete $1;
     }
 	| ENUMERATION_CONSTANT	/* after it has been defined as such */

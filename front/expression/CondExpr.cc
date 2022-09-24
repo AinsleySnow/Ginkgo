@@ -1,7 +1,7 @@
 #include "CondExpr.h"
 #include <string>
 
-const int TypeSpec::undef;
+const int Type::undef;
 IR CondExpr::Generate(SymbolTable &st) const
 {
     if (!condExpr)
@@ -11,7 +11,7 @@ IR CondExpr::Generate(SymbolTable &st) const
     // conditional-expr -> logical-or-expr ? expr : conditional-expr
     IR logicalOrGen = logicalOrExpr->Generate(st);
     std::string lastVar = logicalOrGen.GetLastVar();
-    std::string assignTo = st.GenerateTempVar(TypeSpec::undef);
+    std::string assignTo = st.GenerateTempVar(Type::undef);
     IR exprGen = expression->Generate(st);
     IR condGen = expression->Generate(st);
 

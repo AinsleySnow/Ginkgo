@@ -2,7 +2,7 @@
 #define _DECLSPEC_H_
 
 #include "../Node.h"
-#include "../../utilities/TypeSpec.h"
+#include "../../utilities/Type.h"
 #include "../../utilities/EnumsforEntry.h"
 
 class DeclSpec : public Node
@@ -52,7 +52,7 @@ public:
     void MarkQual(Tag);
     void SetStorage(Tag);
     void Join(const DeclSpec*);
-    TypeSpec GetSpec();
+    Type GetSpec();
     unsigned int GetQual();
     StorageSpec GetStorage();
 };

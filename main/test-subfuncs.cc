@@ -39,75 +39,75 @@ bool test_evaluate(const SymbolTable& st)
 
 bool test_speccomb(const SymbolTable& st)
 {
-    check_if(st.GetSymbol("a").specifier == TypeSpec::int8);
-    check_if(st.GetSymbol("b").specifier == TypeSpec::uint8);
-    check_if(st.GetSymbol("c").specifier == TypeSpec::int8);
+    check_if(st.GetSymbol("a").specifier == Type::int8);
+    check_if(st.GetSymbol("b").specifier == Type::uint8);
+    check_if(st.GetSymbol("c").specifier == Type::int8);
 
-    check_if(st.GetSymbol("d").specifier == TypeSpec::int16);
-    check_if(st.GetSymbol("e").specifier == TypeSpec::int16);
-    check_if(st.GetSymbol("f").specifier == TypeSpec::uint16);
-    check_if(st.GetSymbol("g").specifier == TypeSpec::int16);
-    check_if(st.GetSymbol("h").specifier == TypeSpec::uint16);
-    check_if(st.GetSymbol("i").specifier == TypeSpec::int16);
+    check_if(st.GetSymbol("d").specifier == Type::int16);
+    check_if(st.GetSymbol("e").specifier == Type::int16);
+    check_if(st.GetSymbol("f").specifier == Type::uint16);
+    check_if(st.GetSymbol("g").specifier == Type::int16);
+    check_if(st.GetSymbol("h").specifier == Type::uint16);
+    check_if(st.GetSymbol("i").specifier == Type::int16);
     
-    check_if(st.GetSymbol("j").specifier == TypeSpec::int32);
-    check_if(st.GetSymbol("k").specifier == TypeSpec::int32);
-    check_if(st.GetSymbol("l").specifier == TypeSpec::uint32);
-    check_if(st.GetSymbol("m").specifier == TypeSpec::int32);
-    check_if(st.GetSymbol("n").specifier == TypeSpec::uint32);
+    check_if(st.GetSymbol("j").specifier == Type::int32);
+    check_if(st.GetSymbol("k").specifier == Type::int32);
+    check_if(st.GetSymbol("l").specifier == Type::uint32);
+    check_if(st.GetSymbol("m").specifier == Type::int32);
+    check_if(st.GetSymbol("n").specifier == Type::uint32);
 
-    check_if(st.GetSymbol("o").specifier == TypeSpec::int64);
-    check_if(st.GetSymbol("p").specifier == TypeSpec::uint64);
-    check_if(st.GetSymbol("q").specifier == TypeSpec::int64);
-    check_if(st.GetSymbol("r").specifier == TypeSpec::int64);
-    check_if(st.GetSymbol("s").specifier == TypeSpec::uint64);
-    check_if(st.GetSymbol("t").specifier == TypeSpec::int64);
-    check_if(st.GetSymbol("u").specifier == TypeSpec::int64);
-    check_if(st.GetSymbol("v").specifier == TypeSpec::uint64);
-    check_if(st.GetSymbol("w").specifier == TypeSpec::int64);
-    check_if(st.GetSymbol("x").specifier == TypeSpec::int64);
-    check_if(st.GetSymbol("y").specifier == TypeSpec::uint64);
-    check_if(st.GetSymbol("z").specifier == TypeSpec::int64);
+    check_if(st.GetSymbol("o").specifier == Type::int64);
+    check_if(st.GetSymbol("p").specifier == Type::uint64);
+    check_if(st.GetSymbol("q").specifier == Type::int64);
+    check_if(st.GetSymbol("r").specifier == Type::int64);
+    check_if(st.GetSymbol("s").specifier == Type::uint64);
+    check_if(st.GetSymbol("t").specifier == Type::int64);
+    check_if(st.GetSymbol("u").specifier == Type::int64);
+    check_if(st.GetSymbol("v").specifier == Type::uint64);
+    check_if(st.GetSymbol("w").specifier == Type::int64);
+    check_if(st.GetSymbol("x").specifier == Type::int64);
+    check_if(st.GetSymbol("y").specifier == Type::uint64);
+    check_if(st.GetSymbol("z").specifier == Type::int64);
     
-    check_if(st.GetSymbol("aa").specifier == TypeSpec::float32);
-    check_if(st.GetSymbol("ab").specifier == TypeSpec::float64);
-    check_if(st.GetSymbol("ac").specifier == TypeSpec::float64);
+    check_if(st.GetSymbol("aa").specifier == Type::float32);
+    check_if(st.GetSymbol("ab").specifier == Type::float64);
+    check_if(st.GetSymbol("ac").specifier == Type::float64);
     
     return true;
 }
 
 bool test_speclist(const SymbolTable& st)
 {
-    check_if(st["a"].specifier == TypeSpec::int32);
-    check_if(st["b"].specifier == TypeSpec::int32);
-    check_if(st["c"].specifier == TypeSpec::int32);
+    check_if(st["a"].specifier == Type::int32);
+    check_if(st["b"].specifier == Type::int32);
+    check_if(st["c"].specifier == Type::int32);
 
-    check_if(st["d"].specifier == TypeSpec::int8);
-    check_if(st["e"].specifier == TypeSpec::int8);
-    check_if(st["f"].specifier == TypeSpec::int8);
-    check_if(st["g"].specifier == TypeSpec::int8);
+    check_if(st["d"].specifier == Type::int8);
+    check_if(st["e"].specifier == Type::int8);
+    check_if(st["f"].specifier == Type::int8);
+    check_if(st["g"].specifier == Type::int8);
 
-    check_if(st["m"].specifier == TypeSpec::int64);
-    check_if(st["n"].specifier == TypeSpec::int64);
-    check_if(st["o"].specifier == TypeSpec::int64);
-    check_if(st["p"].specifier == TypeSpec::int64);
-    check_if(st["q"].specifier == TypeSpec::int64);
+    check_if(st["m"].specifier == Type::int64);
+    check_if(st["n"].specifier == Type::int64);
+    check_if(st["o"].specifier == Type::int64);
+    check_if(st["p"].specifier == Type::int64);
+    check_if(st["q"].specifier == Type::int64);
 
-    check_if(st["r"].specifier == TypeSpec::int16);
-    check_if(st["s"].specifier == TypeSpec::int16);
-    check_if(st["t"].specifier == TypeSpec::int16);
-    check_if(st["u"].specifier == TypeSpec::int16); 
-    check_if(st["v"].specifier == TypeSpec::int16);
+    check_if(st["r"].specifier == Type::int16);
+    check_if(st["s"].specifier == Type::int16);
+    check_if(st["t"].specifier == Type::int16);
+    check_if(st["u"].specifier == Type::int16); 
+    check_if(st["v"].specifier == Type::int16);
 
-    check_if(st["w"].specifier == TypeSpec::float64);
-    check_if(st["x"].specifier == TypeSpec::float64);
-    check_if(st["y"].specifier == TypeSpec::float64);
-    check_if(st["z"].specifier == TypeSpec::float64);
+    check_if(st["w"].specifier == Type::float64);
+    check_if(st["x"].specifier == Type::float64);
+    check_if(st["y"].specifier == Type::float64);
+    check_if(st["z"].specifier == Type::float64);
 
-    check_if(st["aa"].specifier == TypeSpec::float32); 
-    check_if(st["ab"].specifier == TypeSpec::float32);
-    check_if(st["ac"].specifier == TypeSpec::float32); 
-    check_if(st["ad"].specifier == TypeSpec::float32);
+    check_if(st["aa"].specifier == Type::float32); 
+    check_if(st["ab"].specifier == Type::float32);
+    check_if(st["ac"].specifier == Type::float32); 
+    check_if(st["ad"].specifier == Type::float32);
     
     return true;
 }
@@ -122,13 +122,13 @@ bool test_qualspec(const SymbolTable& st)
     check_if(st["f"].quailfier == 12);
     check_if(st["g"].quailfier == 9);
 
-    check_if(st["a"].specifier == TypeSpec::int32);
-    check_if(st["b"].specifier == TypeSpec::int32);
-    check_if(st["c"].specifier == TypeSpec::int32);
-    check_if(st["d"].specifier == TypeSpec::int32);
-    check_if(st["e"].specifier == TypeSpec::int32);
-    check_if(st["f"].specifier == TypeSpec::int32);
-    check_if(st["g"].specifier == TypeSpec::int32);
+    check_if(st["a"].specifier == Type::int32);
+    check_if(st["b"].specifier == Type::int32);
+    check_if(st["c"].specifier == Type::int32);
+    check_if(st["d"].specifier == Type::int32);
+    check_if(st["e"].specifier == Type::int32);
+    check_if(st["f"].specifier == Type::int32);
+    check_if(st["g"].specifier == Type::int32);
     
     return true;
 }

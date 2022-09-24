@@ -4,13 +4,13 @@
 #include <cstdint>
 #include <string>
 #include <variant>
-#include "TypeSpec.h"
+#include "Type.h"
 #include "EnumsforEntry.h"
 
 struct Constant
 {
     std::variant<uint64_t, double> data;
-    TypeSpec type;
+    Type type;
 
     std::string ToString() const
     {
@@ -123,8 +123,8 @@ struct Constant
     {
         if (data.index() == 0)
         {
-            if (type == TypeSpec::int8 || type == TypeSpec::int16 || 
-                type == TypeSpec::int32 || type == TypeSpec::int64)
+            if (type == Type::int8 || type == Type::int16 || 
+                type == Type::int32 || type == Type::int64)
                 data = static_cast<uint64_t>(
                     static_cast<int64_t>(std::get<0>(data)) >> std::get<0>(right.data));
             else
@@ -135,8 +135,8 @@ struct Constant
 
     Constant operator<<(Constant& right)
     {
-        if (type == TypeSpec::int8 || type == TypeSpec::int16 || 
-            type == TypeSpec::int32 || type == TypeSpec::int64)
+        if (type == Type::int8 || type == Type::int16 || 
+            type == Type::int32 || type == Type::int64)
             data = static_cast<uint64_t>(
                 static_cast<int64_t>(std::get<0>(data)) << std::get<0>(right.data));
         else
@@ -150,12 +150,12 @@ struct Constant
         if (copy.data.index() == 0)
         {
             copy.data = static_cast<uint64_t>(std::get<0>(copy.data) < std::get<0>(right.data));
-            copy.type = TypeSpec::_bool;
+            copy.type = Type::_bool;
         }
         else
         {
             copy.data = static_cast<uint64_t>(std::get<1>(copy.data) < std::get<1>(right.data));
-            copy.type = TypeSpec::_bool;
+            copy.type = Type::_bool;
         }
         return copy;
     }
@@ -166,12 +166,12 @@ struct Constant
         if (copy.data.index() == 0)
         {
             copy.data = static_cast<uint64_t>(std::get<0>(copy.data) > std::get<0>(right.data));
-            copy.type = TypeSpec::_bool;
+            copy.type = Type::_bool;
         }
         else
         {
             copy.data = static_cast<uint64_t>(std::get<1>(copy.data) > std::get<1>(right.data));
-            copy.type = TypeSpec::_bool;
+            copy.type = Type::_bool;
         }
         return copy;
     }
@@ -182,12 +182,12 @@ struct Constant
         if (copy.data.index() == 0)
         {
             copy.data = static_cast<uint64_t>(std::get<0>(copy.data) <= std::get<0>(right.data));
-            copy.type = TypeSpec::_bool;
+            copy.type = Type::_bool;
         }
         else
         {
             copy.data = static_cast<uint64_t>(std::get<1>(copy.data) <= std::get<1>(right.data));
-            copy.type = TypeSpec::_bool;
+            copy.type = Type::_bool;
         }
         return copy;
     }
@@ -198,12 +198,12 @@ struct Constant
         if (copy.data.index() == 0)
         {
             copy.data = static_cast<uint64_t>(std::get<0>(copy.data) >= std::get<0>(right.data));
-            copy.type = TypeSpec::_bool;
+            copy.type = Type::_bool;
         }
         else
         {
             copy.data = static_cast<uint64_t>(std::get<1>(copy.data) >= std::get<1>(right.data));
-            copy.type = TypeSpec::_bool;
+            copy.type = Type::_bool;
         }
         return copy;
     }
@@ -214,12 +214,12 @@ struct Constant
         if (copy.data.index() == 0)
         {
             copy.data = static_cast<uint64_t>(std::get<0>(copy.data) == std::get<0>(right.data));
-            copy.type = TypeSpec::_bool;
+            copy.type = Type::_bool;
         }
         else
         {
             copy.data = static_cast<uint64_t>(std::get<1>(copy.data) == std::get<1>(right.data));
-            copy.type = TypeSpec::_bool;
+            copy.type = Type::_bool;
         }
         return copy;
     }
@@ -230,12 +230,12 @@ struct Constant
         if (copy.data.index() == 0)
         {
             copy.data = static_cast<uint64_t>(std::get<0>(copy.data) != std::get<0>(right.data));
-            copy.type = TypeSpec::_bool;
+            copy.type = Type::_bool;
         }
         else
         {
             copy.data = static_cast<uint64_t>(std::get<1>(copy.data) != std::get<1>(right.data));
-            copy.type = TypeSpec::_bool;
+            copy.type = Type::_bool;
         }
         return copy;
     }
@@ -246,7 +246,7 @@ struct Constant
         if (copy.data.index() == 0)
         {
             copy.data = std::get<0>(copy.data) & std::get<0>(right.data);
-            copy.type = TypeSpec::_bool;
+            copy.type = Type::_bool;
         }
         return copy;
     }
@@ -257,7 +257,7 @@ struct Constant
         if (copy.data.index() == 0)
         {
             copy.data = std::get<0>(copy.data) ^ std::get<0>(right.data);
-            copy.type = TypeSpec::_bool;
+            copy.type = Type::_bool;
         }
         return copy;
     }
@@ -268,7 +268,7 @@ struct Constant
         if (copy.data.index() == 0)
         {
             copy.data = std::get<0>(copy.data) | std::get<0>(right.data);
-            copy.type = TypeSpec::_bool;
+            copy.type = Type::_bool;
         }
         return copy;
     }
@@ -279,12 +279,12 @@ struct Constant
         if (copy.data.index() == 0)
         {
             copy.data = static_cast<uint64_t>(std::get<0>(copy.data) && std::get<0>(right.data));
-            copy.type = TypeSpec::_bool;
+            copy.type = Type::_bool;
         }
         else
         {
             copy.data = static_cast<uint64_t>(std::get<1>(copy.data) && std::get<1>(right.data));
-            copy.type = TypeSpec::_bool;
+            copy.type = Type::_bool;
         }
         return copy;
     }
@@ -295,12 +295,12 @@ struct Constant
         if (copy.data.index() == 0)
         {
             copy.data = static_cast<uint64_t>(std::get<0>(copy.data) || std::get<0>(right.data));
-            copy.type = TypeSpec::_bool;
+            copy.type = Type::_bool;
         }
         else
         {
             copy.data = static_cast<uint64_t>(std::get<1>(copy.data) || std::get<1>(right.data));
-            copy.type = TypeSpec::_bool;
+            copy.type = Type::_bool;
         }
         return copy;
     }

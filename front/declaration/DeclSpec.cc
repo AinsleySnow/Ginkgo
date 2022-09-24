@@ -96,47 +96,47 @@ void DeclSpec::MarkQual(Tag t)
     }
 }
 
-TypeSpec DeclSpec::GetSpec()
+Type DeclSpec::GetSpec()
 {
     switch (rawSpecifiers)
     {
     // int and its equivalent
     case _int: case _signed: case _int | _signed:
-        return TypeSpec::int32;
+        return Type::int32;
     case _int | _unsigned: case _unsigned:
-        return TypeSpec::uint32;
+        return Type::uint32;
 
     // short and its equivalent
     case _short: case _short | _int:
     case _signed | _short: case _signed | _short | _int:
-        return TypeSpec::int16;
+        return Type::int16;
     case _short | _unsigned: case _short | _unsigned | _int:
-        return TypeSpec::uint16;
+        return Type::uint16;
 
     // long and its equivalent
     case _longlong: case _long: case _long | _signed:
     case _long | _int: case _signed | _long | _int:
     case _longlong | _signed: case _longlong | _int:
     case _signed | _longlong | _int:
-        return TypeSpec::int64;
+        return Type::int64;
     case _unsigned | _longlong: case _unsigned | _long:
     case _long | _int | _unsigned: 
     case _unsigned | _longlong | _int:
-        return TypeSpec::uint64;
+        return Type::uint64;
 
     // char
     case _char: case _char | _signed:
-        return TypeSpec::int8;
+        return Type::int8;
     case _char | _unsigned:
-        return TypeSpec::uint8;
+        return Type::uint8;
 
     // double
     case _double: case _double | _long:
-        return TypeSpec::float64;
+        return Type::float64;
 
     // float
     case _float:
-        return TypeSpec::float32;
+        return Type::float32;
 
     // error
     default:
