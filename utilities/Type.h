@@ -1,19 +1,19 @@
-#ifndef _TYPESPEC_H_
-#define _TYPESPEC_H_
+#ifndef _TYPE_H_
+#define _TYPE_H_
 
 #include <string>
 #include <variant>
 
-class TypeSpec
+class Type
 {
 private:
     std::variant<int, std::string> type;
 
 public:
-    TypeSpec() : type(TypeSpec::undef) {}
-    TypeSpec(const TypeSpec& ts) { type = ts.type; }
-    TypeSpec(int t) : type(t) {}
-    explicit TypeSpec(const std::string& s) : type(s) {}
+    Type() : type(Type::undef) {}
+    Type(const Type& ts) { type = ts.type; }
+    Type(int t) : type(t) {}
+    explicit Type(const std::string& s) : type(s) {}
 
     static const int _bool = -1, 
     int8 = 0, uint8 = 1, int16 = 2,
@@ -21,7 +21,7 @@ public:
     int64 = 6, uint64 = 7, float32 = 8, 
     float64 = 9, _void = -2, undef = -3;
 
-    TypeSpec& operator=(int t)
+    Type& operator=(int t)
     {
         type = t;
         return *this;
@@ -34,7 +34,7 @@ public:
         throw std::bad_variant_access();
     }
 
-    bool operator<(const TypeSpec ts) const
+    bool operator<(const Type ts) const
     {
         if (type.index() == 0 && ts.type.index() == 0)
             return std::get<0>(type) < std::get<0>(ts.type);
@@ -48,7 +48,7 @@ public:
         throw 1002;
     }
 
-    bool operator>(const TypeSpec ts) const
+    bool operator>(const Type ts) const
     {
         if (type.index() == 0 && ts.type.index() == 0)
             return std::get<0>(type) > std::get<0>(ts.type);
@@ -77,4 +77,4 @@ public:
     }
 };
 
-#endif // _TYPESPEC_H_
+#endif // _TYPE_H_
