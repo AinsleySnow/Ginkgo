@@ -1,7 +1,6 @@
 #ifndef _ERROR_H_
 #define _ERROR_H_
 
-void Error(ErrorId id, ...);
 
 enum class ErrorId
 {
@@ -10,7 +9,9 @@ enum class ErrorId
     uncompletetype,
     operatormisuse,
     multistorage,
-    
+    cannotconcatenate
 };
+
+void Error(ErrorId id, ...);
 
 #endif // _ERROR_H_
