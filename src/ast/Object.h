@@ -3,6 +3,7 @@
 
 #include "Expr.h"
 #include "Identifier.h"
+#include "types/ArithmType.h"
 #include "visitors/Visitor.h"
 #include <memory>
 #include <string>
@@ -14,12 +15,14 @@ private:
     std::shared_ptr<Expr> val_{};
 
 public:
-    Object(Identifier* ident) : Identifier(*ident) 
-    { identype_ = IdentType::obj; }
+    Object(const std::string& n) : Identifier(n) {}
+    Object(std::shared_ptr<Identifier> ident) : Identifier(*ident) {}
+
+    bool IsLVal() override { return true; }
 
     void SetValExpr(std::shared_ptr<Expr> expr) { val_ = expr; }
 
-    void Accept(Visitor* v) { v->VisitObject(this); }
+    void Accept(Visitor* v) override { v->VisitObject(this); }
 };
 
 #endif // _OBJECT_H_

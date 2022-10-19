@@ -2,6 +2,7 @@
 #define _STR_H_
 
 #include "Expr.h"
+#include "visitors/Visitor.h"
 #include <string>
 #include <memory>
 
@@ -9,12 +10,12 @@
 class Str : public Expr
 {
 private:
-    std::shared_ptr<std::string> content{};
+    std::string content_{};
 
 public:
-    Str(std::string* s) :
-        content(std::shared_ptr<std::string>(s)),
-        Expr(Which::string) {}
+    Str(std::string s) : content_(s) {}
+
+    void Accept(Visitor* v) override { v->VisitStr(this); }
 };
 
 

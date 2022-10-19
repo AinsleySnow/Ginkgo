@@ -16,25 +16,14 @@ class UnaryExpr;
 
 class Expr
 {
-public:
-    enum class Which
-    {
-        assign,
-        binary,
-        constant,
-        condition,
-        exprlist,
-        identifier,
-        string,
-        unary
-    };
-    
-    Expr(Which w) : which_(w) {}
+public:   
     virtual ~Expr() {}
 
     virtual bool TypeChecking() { return false; }
     virtual bool IsLVal() { return false; }
     
+    virtual void Accept(Visitor*) {}
+
     virtual AssignExpr* ToAssign() { return nullptr; }
     virtual BinaryExpr* ToBinary() { return nullptr; }
     virtual Constant* ToConstant() { return nullptr; }
@@ -46,11 +35,9 @@ public:
 
     void SetType(std::shared_ptr<Type> t) { type_ = t; }
     std::shared_ptr<Type> GetType() const { return type_; }
-    Which WhichNode() const { return which_; }
 
 protected:
     std::shared_ptr<Type> type_;
-    Which which_;
 };
 
 #endif // _EXPR_H_

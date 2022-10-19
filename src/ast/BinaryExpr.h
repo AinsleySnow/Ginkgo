@@ -10,17 +10,18 @@
 class BinaryExpr : public Expr
 {
 private:
-    friend class Evaluator;
-    std::shared_ptr<Expr> left{};
-    Tag op;
-    std::shared_ptr<Expr> right{};
+    friend class IRGen;
+    std::shared_ptr<Expr> left_{};
+    Tag op_;
+    std::shared_ptr<Expr> right_{};
+
 
 public:
     BinaryExpr(std::shared_ptr<Expr>&& l, Tag t, std::shared_ptr<Expr>&& r) :
-        left(l), op(t), right(r), Expr(Which::binary) {}
+        left_(l), op_(t), right_(r) {}
 
-    bool TypeChecking() override;
-    void Accept(Visitor* v) { v->VisitBinaryExpr(this); };
+    void Accept(Visitor* v) override { v->VisitBinaryExpr(this); }
+    BinaryExpr* ToBinary() override { return this; }
 };
 
 #endif // _BINARY_EXPR_H_

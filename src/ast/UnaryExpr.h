@@ -10,16 +10,17 @@
 class UnaryExpr : public Expr
 {
 private:
-    friend class Evaluator;
-    Tag op;
-    std::shared_ptr<Expr> content{};
+    friend class IRGen;
+    Tag op_;
+    std::shared_ptr<Expr> content_{};
+
 
 public:
     UnaryExpr(Tag t, std::shared_ptr<Expr>&& c) :
-        op(t), content(c), Expr(Which::unary) {}
+        op_(t), content_(c) {}
 
-    bool TypeChecking();
-    void Accept(Visitor* v) { v->VisitUnaryExpr(this); }
+    void Accept(Visitor* v) override { v->VisitUnaryExpr(this); }
+    UnaryExpr* ToUnary() override { return this; }
 };
 
 #endif // _UNARY_EXPR_H_

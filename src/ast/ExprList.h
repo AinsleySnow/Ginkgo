@@ -13,9 +13,7 @@ private:
     std::deque<std::shared_ptr<Expr>> exprlist_{};
 
 public:
-    ExprList() : Expr(Which::exprlist) {}
-
-    void Append(Expr* expr) { exprlist_.push_back(std::shared_ptr<Expr>(expr)); }
+    void Append(std::shared_ptr<Expr> expr) { exprlist_.push_back(expr); }
     auto begin() { return exprlist_.begin(); }
     auto end() { return exprlist_.end(); }
 };
