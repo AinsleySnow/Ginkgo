@@ -22,7 +22,7 @@ enum class Tag
     _sizeof, _alignof,
     left, right,
 
-    mul_assign, div_assign, mod_assign, add_assign,
+    assign, mul_assign, div_assign, mod_assign, add_assign,
     sub_assign, left_assign, right_assign, and_assign,
     xor_assign, or_assign
 };
