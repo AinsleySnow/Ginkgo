@@ -5,6 +5,7 @@
 #include "PtrType.h"
 #include <cstdint>
 #include <algorithm>
+#include <memory>
 
 
 enum class Spec
@@ -31,9 +32,11 @@ private:
 
     bool Raw2Spec();
 
+
 public:
     ArithmType() : size_(8), spec_(static_cast<unsigned>(Spec::int64)) {}
-    ArithmType(const Type* t) : Type(*t) {}
+    ArithmType(Spec);
+    ArithmType(const std::shared_ptr<Type> t) : Type(*t) {}
     ArithmType(Tag);
 
     bool Compatible(const Type*) const override;
@@ -47,8 +50,8 @@ public:
     uint64_t GetSize() const;
     bool SetSpec(Tag);
 
-    const ArithmType* ToArithm() const override { return this; }
-    const PtrType* ToPtr() const override { return nullptr; }
+    ArithmType* ToArithm() override { return this; }
+    PtrType* ToPtr() override { return nullptr; }
 
     bool operator>(const ArithmType&) const;
     bool operator<(const ArithmType&) const;

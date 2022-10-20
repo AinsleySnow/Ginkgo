@@ -83,8 +83,8 @@ public:
     bool operator==(const Type&) const = delete;
     bool operator!=(const Type&) const = delete;
 
-    virtual const ArithmType* ToArithm() const { return nullptr; }
-    virtual const PtrType* ToPtr() const { return nullptr; }
+    virtual ArithmType* ToArithm() { return nullptr; }
+    virtual PtrType* ToPtr() { return nullptr; }
 };
 
 #endif // _TYPE_H_
