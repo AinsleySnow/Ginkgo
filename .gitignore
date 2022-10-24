@@ -1,10 +1,7 @@
 *~
 *.o
 *.out
-*.pdf
-*.html
-front/lexer.cc
-front/parser.cc
-front/parser.hh
-main/test
 .vscode
+src/parser/yacc.cc
+src/parser/lexer.cc
+src/parser/yacc.hh
