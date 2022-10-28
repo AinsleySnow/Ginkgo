@@ -1,5 +1,3 @@
-#include "parser/parser.hh"
-#include "utils/Scope.h"
 #include <cassert>
 #include <cstdio>
 #include <cstring>
@@ -7,22 +5,26 @@
 #include <map>
 #include <memory>
 #include <string>
+#include "ast/Expr.h"
+#include "ast/Identifier.h"
+#include "ast/Tag.h"
+#include "types/Type.h"
+#include "utils/Scope.h"
 
+#define YYDEBUG
+#include "parser/yacc.hh"
 
-#ifdef YYDEBUG
-extern int yydebug;
-#endif
-
+bool debug{};
 extern FILE* yyin;
-using map = std::map<std::string, std::function<bool(const SymbolTable&)>>;
-static const std::string path{ "main/test-cases/" };
+using map = std::map<std::string, std::function<bool(const Scope&)>>;
+static const std::string path{ "tests/test-cases/" };
 static const std::string extend{ ".c" };
 
 
-bool test_evaluate(const SymbolTable&);
-bool test_speccomb(const SymbolTable&);
-bool test_speclist(const SymbolTable&);
-bool test_qualspec(const SymbolTable&);
+bool test_evaluate(const Scope&);
+bool test_speccomb(const Scope&);
+bool test_speclist(const Scope&);
+bool test_qualspec(const Scope&);
 
 static const map files{
     {"evaluate", test_evaluate},
@@ -33,17 +35,25 @@ static const map files{
 
 
 bool run(const std::string& name,
-    const std::function<bool(const SymbolTable&)>& func)
+    const std::function<bool(const Scope&)>& func)
 {
     try
     {
         yyin = fopen((path + name + extend).c_str(), "r");
         assert(yyin != nullptr);
-        SymbolTable globalSymbols{};
-        yyparse(globalSymbols);
+
+        Scope scope{ Scope::ScopeType::file };
+        yy::parser p(&scope);
+        
+        #ifdef YYDEBUG
+        if (debug)
+            p.set_debug_level(1);
+        #endif
+        
+        p.parse();
 
         printf("%s: ", name.c_str());
-        if (func(globalSymbols))
+        if (func(scope))
         {
            printf("ok\n");
            return true;
@@ -80,7 +90,7 @@ int main(int argc, char** args)
         if (strcmp("-t", args[i]) == 0)
         {
             #ifdef YYDEBUG
-            yydebug = 1;
+            debug = true;
             #else
             printf("YYDEBUG not defined. Ignoring \"-t\".\n");
             #endif
