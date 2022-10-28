@@ -16,6 +16,7 @@ public:
     Str(std::string s) : content_(s) {}
 
     void Accept(Visitor* v) override { v->VisitStr(this); }
+    Str* ToStr() override { return this; }
 };
 
 

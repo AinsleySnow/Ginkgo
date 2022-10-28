@@ -18,6 +18,10 @@ public:
     Object(const std::string& n) : Identifier(n) {}
     Object(std::shared_ptr<Identifier> ident) : Identifier(*ident) {}
 
+    Object* ToObject() override { return this; }
+    // I don't think implement this method here is a good practice.
+    // But it does simplify many operations.
+    Constant* ToConstant() override { return val_->ToConstant(); }
     bool IsLVal() override { return true; }
 
     void SetValExpr(std::shared_ptr<Expr> expr) { val_ = expr; }

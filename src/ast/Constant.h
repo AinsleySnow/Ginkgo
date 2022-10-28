@@ -2,8 +2,8 @@
 #define _CONSTANT_H_
 
 #include "Expr.h"
-#include "ArithmType.h"
 #include "Tag.h"
+#include "types/ArithmType.h"
 #include "visitors/Visitor.h"
 #include <cstdint>
 #include <memory>

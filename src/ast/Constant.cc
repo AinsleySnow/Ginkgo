@@ -1,5 +1,4 @@
 #include "Constant.h"
-#include "ArithmType.h"
 #include "messages/Error.h"
 
 
@@ -10,22 +9,30 @@ bool Constant::DoCalc(Tag op, const Constant* num, Constant& output)
     case Tag::dec: case Tag::inc: case Tag::arrow:
     case Tag::_and: case Tag::dot:
         Error(ErrorId::needlval); return false;
+    case Tag::plus:
+        output.val_.intgr_ = num->val_.intgr_;
+        return true;
+    case Tag::minus:
+        if (num->GetType()->IsFloat())
+            output.val_.flt_ = -num->val_.flt_;
+        else output.val_.intgr_ = -num->val_.intgr_;
+        return true;
     case Tag::exclamation:
-        if (num->GetInt()) output.val_.intgr_ = 1;
-        else output.val_.intgr_ = 0;
+        if (num->GetInt()) output.val_.intgr_ = 0;
+        else output.val_.intgr_ = 1;
         return true;
     case Tag::tilde:
         if (num->GetType()->IsFloat())
         {
             Error(ErrorId::operatormisuse);
             return false;
-        } 
-        output.val_.intgr_ = ~output.val_.intgr_;
+        }
+        output.val_.intgr_ = ~(num->val_.intgr_);
         return true;
+    default: return false;
     }
-
-    return false;
 }
+
 
 bool Constant::DoCalc(Tag op, const Constant* left, const Constant* right, Constant& output)
 {
@@ -86,6 +93,7 @@ bool Constant::DoCalc(Tag op, const Constant* left, const Constant* right, Const
     case Tag::cap: handle_int(^); break;
     case Tag::equal: handle_calc(==); break;
     case Tag::notequal: handle_calc(!=); break;
+    default: return false;
     }
 
     return false;

@@ -4,6 +4,7 @@
 #include "Expr.h"
 #include "types/Type.h"
 #include <memory>
+#include <string>
 
 class Object;
 class Func;
@@ -19,6 +20,8 @@ public:
     virtual ~Identifier() {};
 
     std::string GetName() const { return name_; }
+
+    Identifier* ToIdentifier() { return this; }
 
     virtual Object* ToObject() { return nullptr; }
     virtual Func* ToFunc() { return nullptr; }

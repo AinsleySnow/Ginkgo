@@ -16,7 +16,7 @@ private:
 
 
 public:
-    UnaryExpr(Tag t, std::shared_ptr<Expr>&& c) :
+    UnaryExpr(Tag t, std::shared_ptr<Expr> c) :
         op_(t), content_(c) {}
 
     void Accept(Visitor* v) override { v->VisitUnaryExpr(this); }

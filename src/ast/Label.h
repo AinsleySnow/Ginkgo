@@ -11,6 +11,7 @@ public:
     Label(const std::string& n) : Identifier(n) {}
 
     void Accept(Visitor* v) override { v->VisitLabel(this); }
+    Label* ToLabel() override { return this; }
 };
 
 #endif // _LABEL_H_

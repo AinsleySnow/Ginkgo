@@ -12,6 +12,7 @@ class ExprList;
 class Identifier;
 class Str;
 class UnaryExpr;
+class Visitor;
 
 
 class Expr
