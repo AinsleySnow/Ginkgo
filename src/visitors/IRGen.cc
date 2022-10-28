@@ -46,9 +46,8 @@ IROper IRGen::Tag2Op(Tag t) const
     case Tag::right_assign: return IROper::rshift;
     case Tag::sub_assign: return IROper::subtract;
     case Tag::xor_assign: return IROper::bitwisexor;
+    default: assert(false);
     }
-
-    assert(false);
 }
 
 

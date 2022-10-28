@@ -21,7 +21,6 @@ public:
     void VisitAssignExpr(AssignExpr*) override;
     void VisitBinaryExpr(BinaryExpr*) override;
     void VisitCondExpr(CondExpr*) override;
-    void VisitConstant(Constant*) override;
     void VisitUnaryExpr(UnaryExpr*) override;
 };
 

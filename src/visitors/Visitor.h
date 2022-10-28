@@ -6,9 +6,10 @@ class BinaryExpr;
 class CondExpr;
 class Constant;
 class ExprList;
-class Identifier;
+class Label;
 class Object;
 class Scope;
+class Str;
 class UnaryExpr;
 
 
@@ -21,9 +22,10 @@ public:
     virtual void VisitCondExpr(CondExpr*) {}
     virtual void VisitConstant(Constant*) {}
     virtual void VisitExprList(ExprList*) {}
-    virtual void VisitIdentifier(Identifier*) {}
+    virtual void VisitLabel(Label*) {}
     virtual void VisitObject(Object*) {}
     virtual void VisitScope(Scope*) {}
+    virtual void VisitStr(Str*) {}
     virtual void VisitUnaryExpr(UnaryExpr*) {}
 };
 

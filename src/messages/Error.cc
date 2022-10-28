@@ -1,10 +1,9 @@
 #include "Error.h"
-#include <string>
 #include <cstdio>
 
-extern std::string errormsg[];
+extern "C" const char* error[];
 
 void Error(ErrorId id, ...)
 {
-    printf("%s\n", errormsg[static_cast<int>(id)].c_str());
+    printf("%s\n", error[static_cast<int>(id)]);
 }
