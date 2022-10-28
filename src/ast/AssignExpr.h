@@ -14,7 +14,7 @@ private:
     std::shared_ptr<Expr> right_{};
 
 public:
-    AssignExpr(std::shared_ptr<Expr>&& l, Tag t, std::shared_ptr<Expr>&& r) :
+    AssignExpr(std::shared_ptr<Expr> l, Tag t, std::shared_ptr<Expr> r) :
         left_(l), op_(t), right_(r) {}
 
     void Accept(Visitor* v) override { v->VisitAssignExpr(this); }

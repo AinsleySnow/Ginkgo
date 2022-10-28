@@ -17,7 +17,7 @@ private:
 
 
 public:
-    BinaryExpr(std::shared_ptr<Expr>&& l, Tag t, std::shared_ptr<Expr>&& r) :
+    BinaryExpr(std::shared_ptr<Expr> l, Tag t, std::shared_ptr<Expr> r) :
         left_(l), op_(t), right_(r) {}
 
     void Accept(Visitor* v) override { v->VisitBinaryExpr(this); }

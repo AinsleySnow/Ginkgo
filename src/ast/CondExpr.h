@@ -14,9 +14,10 @@ private:
     std::shared_ptr<Expr> false_{};
 
 public:
-    CondExpr(std::shared_ptr<Expr>&& c, std::shared_ptr<Expr>&& t,
-        std::shared_ptr<Expr>&& f) : cond_(c), true_(t), false_(f) {}
+    CondExpr(std::shared_ptr<Expr> c, std::shared_ptr<Expr> t,
+        std::shared_ptr<Expr> f) : cond_(c), true_(t), false_(f) {}
     
+    void Accept(Visitor* v) { v->VisitCondExpr(this); }
     CondExpr* ToCondition() { return this; }
 };
 
