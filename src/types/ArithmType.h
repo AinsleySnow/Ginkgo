@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <algorithm>
 #include <memory>
+#include <string>
 
 
 enum class Spec
@@ -55,6 +56,8 @@ public:
 
     bool operator>(const ArithmType&) const;
     bool operator<(const ArithmType&) const;
+
+    std::string ToString() const override;
 };
 
 

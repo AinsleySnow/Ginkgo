@@ -5,24 +5,31 @@ ArithmType::ArithmType(Tag spec)
 {
     switch (spec)
     {
+    case Tag::_bool:
+        spec_ = static_cast<unsigned>(Spec::_bool);
+        raw_ = unsigned(spec); size_ = 4; return;
     case Tag::_char:
         spec_ = static_cast<unsigned>(Spec::int8);
-        raw_ = unsigned(Spec::int8); size_ = 1; return;
+        raw_ = unsigned(spec); size_ = 1; return;
     case Tag::_short:
         spec_ = static_cast<unsigned>(Spec::int16);
-        raw_ = unsigned(Spec::int16); size_ = 2; return;
-    case Tag::_int: case Tag::_bool:
+        raw_ = unsigned(spec); size_ = 2; return;
+    case Tag::_int: case Tag::_signed:
         spec_ = static_cast<unsigned>(Spec::int32);
-        raw_ = unsigned(Spec::int32); size_ = 4; return;
+        raw_ = unsigned(spec); size_ = 4; return;
+    case Tag::_unsigned:
+        spec_ = static_cast<unsigned>(Spec::int32) | 
+                static_cast<unsigned>(Spec::_unsigned);
+        raw_ = unsigned(spec); size_ = 4; return;
     case Tag::_long:
         spec_ = static_cast<unsigned>(Spec::int64);
-        raw_ = unsigned(Spec::int64); size_ = 8; return;
+        raw_ = unsigned(spec); size_ = 8; return;
     case Tag::_float:
         spec_ = static_cast<unsigned>(Spec::float32);
-        raw_ = unsigned(Spec::float32); size_ = 4; return;
+        raw_ = unsigned(spec); size_ = 4; return;
     case Tag::_double:
         spec_ = static_cast<unsigned>(Spec::float64);
-        raw_ = unsigned(Spec::float64); size_ = 8; return;
+        raw_ = unsigned(spec); size_ = 8; return;
     default: return;
     }
 }
@@ -37,6 +44,11 @@ bool ArithmType::Compatible(const Type* other) const
     return false;
 }
 
+
+bool ArithmType::IsComplete() const
+{
+    return true;
+}
 
 bool ArithmType::IsInteger() const
 {
@@ -71,6 +83,8 @@ bool ArithmType::Raw2Spec()
     {      
     // int and its equivalent
     case int(Tag::_bool):
+        size_ = 4; spec_ = int(Spec::_bool); return true;
+
     case int(Tag::_int): case int(Tag::_signed):
     case int(Tag::_int) | int(Tag::_signed):
         size_ = 4; spec_ = int(Spec::int32) | int(Spec::_unsigned);
@@ -143,7 +157,8 @@ bool ArithmType::SetSpec(Tag t)
             if (!(raw_ & (unsigned(Tag::_long) << 1)))
                 raw_ |= unsigned(Tag::_long) << 1;
             else return false;
-        }           
+        }
+        return Raw2Spec();
     }
 
     if (!(raw_ & unsigned(t)))
@@ -163,9 +178,40 @@ bool ArithmType::operator>(const ArithmType& rhs) const
             (rhs.spec_ & ~static_cast<unsigned>(Spec::_unsigned));
     else if (IsFloat() && rhs.IsFloat())
         return spec_ > rhs.spec_;
+    return false;
 }
 
 bool ArithmType::operator<(const ArithmType& rhs) const
 {
     return !(*this > rhs);
+}
+
+
+std::string ArithmType::ToString() const
+{
+    std::string name = IsUnsigned() ? "unsigned " : "";
+    if (raw_ & int(Tag::_bool))
+        return "bool";
+    if (raw_ & int(Tag::_char))
+    {
+        name += "char";
+        return name;
+    }   
+    if (raw_ & int(Tag::_short))
+        name += "short ";
+    if (raw_ & int(Tag::_long))
+        name += "long ";
+    if (raw_ & int(Tag::_longlong))
+        name += "long long ";
+    if (raw_ & int(Tag::_int))
+    {
+        name += "int";
+        return name;
+    }
+    if (raw_ & int(Tag::_double))
+        name += "double ";
+    if (raw_ & int(Tag::_float))
+        name += "float";
+    
+    return name;
 }
