@@ -5,31 +5,30 @@
 
 #include "ast/Expr.h"
 #include "ast/ExprList.h"
+#include "ast/AssignExpr.h"
 #include "ast/BinaryExpr.h"
 #include "ast/CondExpr.h"
 #include "ast/Constant.h"
 #include "ast/Identifier.h"
+#include "ast/Object.h"
 #include "ast/Str.h"
+#include "ast/Tag.h"
 #include "ast/UnaryExpr.h"
 #include "messages/Error.h"
 #include "types/Type.h"
 #include "utils/Scope.h"
 
-
-int yylex(void);
-void yyerror(std::shared_ptr<Scope>, const char*);
+#include "yacc.hh"
+int yylex(yy::parser::value_type* yylval);
 
 
 #define handle_binary_expr(n0, n1, n2, sym, tag)\
-if (n1->WhichNode() == Expr::Which::constant && \
-    n2->WhichNode() == Expr::Which::constant)   \
+if (n1->ToConstant() && n2->ToConstant())       \
 {                                               \
     Constant ans;                               \
     bool correct = Constant::DoCalc(            \
-    std::dynamic_pointer_cast<Constant>(n1),    \
-    tag,                                        \
-    std::dynamic_pointer_cast<Constant>(n2),    \
-    ans                                         \
+        tag, n1->ToConstant(),                  \
+        n2->ToConstant(), ans                   \
     );                                          \
     if (correct)                                \
         n0 = std::make_shared<Constant>(ans);   \
@@ -39,22 +38,23 @@ if (n1->WhichNode() == Expr::Which::constant && \
             n1->GetType()->ToString().c_str(),  \
             n2->GetType()->ToString().c_str()); \
             YYERROR;                            \
-        }                                       \
     }                                           \
-    else                                        \
-    {                                           \
-        n0 = std::make_shared<BinaryExpr>(      \
-		    n1, tag, n2                         \
-		);                                      \
-    }
+}                                               \
+else                                            \
+{                                               \
+    n0 = std::make_shared<BinaryExpr>(          \
+		n1, tag, n2                             \
+	);                                          \
+}
 %}
 
 %require "3.2"
 %language "c++"
 
 %define api.value.type variant
+%define parse.trace
 
-%parse-param { std::shared_ptr<Scope> tree }
+%parse-param { Scope* tree }
 
 %token	<std::string> IDENTIFIER I_CONSTANT F_CONSTANT STRING_LITERAL FUNC_NAME SIZEOF
 %token	<Tag> PTR_OP INC_OP DEC_OP LEFT_OP RIGHT_OP LE_OP GE_OP EQ_OP NE_OP
@@ -64,7 +64,7 @@ if (n1->WhichNode() == Expr::Which::constant && \
 %token	TYPEDEF_NAME ENUMERATION_CONSTANT
 
 %token	TYPEDEF EXTERN STATIC AUTO REGISTER INLINE
-%token	<Tag> CONST RESTRICT VOLATILE
+%token	<Tag> CONST RESTRICT VOLATILE ATOMIC
 %token  <Tag> BOOL CHAR SHORT INT LONG SIGNED UNSIGNED FLOAT DOUBLE VOID
 %token	COMPLEX IMAGINARY 
 %token	STRUCT UNION ENUM ELLIPSIS
@@ -185,12 +185,27 @@ unary_expression
     }
 	| unary_operator cast_expression
     {
-        if (!$2->IsLVal())
+        if ($1 == Tag::_and || $1 == Tag::star)
         {
-            Error(ErrorId::needlval);
-            YYERROR;
+            if (!$2->IsLVal())
+            {
+                Error(ErrorId::needlval);
+                YYERROR;
+            }
+            $$ = std::make_shared<UnaryExpr>($1, $2);
         }
-        $$ = std::make_shared<UnaryExpr>($1, $2);
+        else
+        {
+            if ($2->ToConstant())
+            {
+                Constant ans;
+                bool correct = Constant::DoCalc($1, $2->ToConstant(), ans);
+                if (correct) $$ = std::make_shared<Constant>(ans);
+                else YYERROR;
+            }
+            else
+                $$ = std::make_shared<UnaryExpr>($1, $2);
+        }
     }
 	| SIZEOF unary_expression
     {
@@ -203,7 +218,6 @@ unary_expression
     }
 	| SIZEOF '(' type_name ')' // TODO
 	| ALIGNOF '(' type_name ')' // TODO
-    | error ';'
 	;
 
 unary_operator
@@ -225,10 +239,9 @@ multiplicative_expression
 	| multiplicative_expression '*' cast_expression
 	{ handle_binary_expr($$, $1, $3, *, Tag::star); }
 	| multiplicative_expression '/' cast_expression
-	{ handle_binary_expr($$, $1, $3, /, Tag::divide); }
+	{ handle_binary_expr($$, $1, $3, /, Tag::slash); }
 	| multiplicative_expression '%' cast_expression
 	{ handle_binary_expr($$, $1, $3, %, Tag::percent); }
-    | error ';'
 	;
 
 additive_expression
@@ -245,8 +258,7 @@ shift_expression
 	| shift_expression LEFT_OP additive_expression
 	{ handle_binary_expr($$, $1, $3, <<, $2); }
 	| shift_expression RIGHT_OP additive_expression
-    { handle_binary_expr($$, $1, $3, >>, $3); }
-    | error ';'
+    { handle_binary_expr($$, $1, $3, >>, $2); }
 	;
 
 relational_expression
@@ -259,7 +271,6 @@ relational_expression
     { handle_binary_expr($$, $1, $3, <=, $2); }
 	| relational_expression GE_OP shift_expression
     { handle_binary_expr($$, $1, $3, >=, $2); }
-    | error ';'
 	;
 
 equality_expression
@@ -268,61 +279,61 @@ equality_expression
     { handle_binary_expr($$, $1, $3, ==, $2); }
 	| equality_expression NE_OP relational_expression
     { handle_binary_expr($$, $1, $3, !=, $2); }
-    | error ';'
 	;
 
 and_expression
 	: equality_expression   // fall through
 	| and_expression '&' equality_expression
     { handle_binary_expr($$, $1, $3, &, Tag::_and); }
-    | error ';'
 	;
 
 exclusive_or_expression
 	: and_expression // fall through
 	| exclusive_or_expression '^' and_expression
-    { handle_binary_expr($$, $1, $3, ^, Tag::_xor); }
-    | error ';'
+    { handle_binary_expr($$, $1, $3, ^, Tag::cap); }
 	;
 
 inclusive_or_expression
 	: exclusive_or_expression // fall through
 	| inclusive_or_expression '|' exclusive_or_expression
-    { handle_binary_expr($$, $1, $3, |, Tag::star); }
-    | error ';'
+    { handle_binary_expr($$, $1, $3, |, Tag::incl_or); }
 	;
 
 logical_and_expression
 	: inclusive_or_expression // fall through
 	| logical_and_expression AND_OP inclusive_or_expression
     { handle_binary_expr($$, $1, $3, &&, $2); }
-    | error ';'
 	;
 
 logical_or_expression
 	: logical_and_expression // fall through
 	| logical_or_expression OR_OP logical_and_expression
     { handle_binary_expr($$, $1, $3, ||, $2); }
-    | error ';'
 	;
 
 conditional_expression
 	: logical_or_expression // fall through
 	| logical_or_expression '?' expression ':' conditional_expression
-    | error ';'
+    { 
+        if ($1->ToConstant())
+        {
+            auto temp = $1->ToConstant();
+            if (temp->GetInt()) $$ = $3;
+            else $$ = $5;
+        }
+        else
+            $$ = std::make_shared<CondExpr>($1, $3, $5);
+    }
 	;
 
 assignment_expression
 	: conditional_expression // fall through
 	| unary_expression assignment_operator assignment_expression
     {
-        $$ = new AssignExpr(
-            std::shared_ptr<Expr>($1),
-            $2,
-            std::shared_ptr<Expr>($3)
+        $$ = std::make_shared<AssignExpr>(
+            std::shared_ptr<Expr>($1), $2, std::shared_ptr<Expr>($3)
         );
     }
-    | error ';'
 	;
 
 assignment_operator
@@ -340,18 +351,22 @@ assignment_operator
 	;
 
 expression
-	: assignment_expression
-    {
-        auto exprlist = std::make_shared<ExprList>();
-        exprlist->Append($1);
-        $$ = exprlist;
-    }
+	: assignment_expression // fall through
 	| expression ',' assignment_expression
     {
-        std::dynamic_pointer_cast<ExprList>($1)->Append($3);
-        $$ = $1;
+        if ($1->ToAssign())
+        {
+            auto list = std::make_shared<ExprList>();
+            list->Append($1);
+            list->Append($3);
+            $$ = list;
+        }
+        else
+        {
+            $1->ToExprList()->Append($3);
+            $$ = $1;
+        }
     }
-    | error ';'
 	;
 
 constant_expression
@@ -364,12 +379,11 @@ declaration
 	: declaration_specifiers ';' // fall through
 	| declaration_specifiers init_declarator_list ';'
     {
-        for (auto ident : $2)
-            ident->SetType(std::shared_ptr<Type>($1));
+        for (auto ident : *($2->ToExprList()))
+            ident->ToIdentifier()->SetType(std::shared_ptr<Type>($1));
         $$ = $2;
     }
 	| static_assert_declaration { $$ = nullptr; }
-    | error ';'
 	;
 
 declaration_specifiers
@@ -385,7 +399,7 @@ declaration_specifiers
     }
 	| storage_class_specifier
     {
-        $$ = new Type();
+        $$ = std::make_shared<Type>();
         $$->GetStorage().SetToken($1);
     }
 	| type_specifier declaration_specifiers
@@ -394,12 +408,12 @@ declaration_specifiers
         if (!arithm)
         {
             auto temp = std::make_shared<ArithmType>($2);
-            temp->SetToken($1);
+            temp->SetSpec($1);
             $$ = temp;
         }
         else
         {
-            arithm->SetToken($1);
+            arithm->SetSpec($1);
             $$ = $2;
         }
     }
@@ -419,7 +433,6 @@ declaration_specifiers
 	| function_specifier
 	| alignment_specifier declaration_specifiers
 	| alignment_specifier
-    | error ';'
 	;
 
 init_declarator_list
@@ -431,23 +444,22 @@ init_declarator_list
     }
 	| init_declarator_list ',' init_declarator
     {
-        $1->Append($3);
+        $1->ToExprList()->Append($3);
         $$ = $1;
     }
-    | error ';'
 	;
 
 init_declarator
 	: declarator '=' initializer
     {
-        if ($1->GetIdentType() == Identifier::IdentType::obj)
+        if ($1->ToObject())
         {
-            $1->SetValExpr(std::shared_ptr<Expr>($3));
+            $1->ToObject()->SetValExpr($3);
             $1->SetType($3->GetType());
             $$ = $1;
         }
     }
-	| declarator // fall through
+	| declarator { $$ = $1; }
 	;
 
 storage_class_specifier
@@ -559,18 +571,12 @@ alignment_specifier
 
 declarator
 	: pointer direct_declarator // TODO
-	| direct_declarator
-    {
-        if ($1->GetIdentType() == Identifier::IdentType::undef)
-            $$ = new Object($1);
-        else
-            $$ = $1;
-    }
+	| direct_declarator // fall through
 	;
 
 direct_declarator
 	: IDENTIFIER
-    { $$ = std::make_shared<Identifier>($1); }
+    { $$ = std::make_shared<Object>($1); }
 	| '(' declarator ')'
 	| direct_declarator '[' ']'
 	| direct_declarator '[' '*' ']'
@@ -754,7 +760,7 @@ external_declaration
 	| declaration 
     {
         for (auto ident : *($1->ToExprList()))
-            tree->AddIdentifier(ident);
+            tree->AddIdentifier(std::dynamic_pointer_cast<Identifier>(ident));
     }
 	;
 
@@ -770,8 +776,8 @@ declaration_list
 
 %%
 
-void yyerror(SymbolTable& globalSymbols, const char *s)
+void yy::parser::error(const std::string& msg)
 {
 	fflush(stdout);
-	fprintf(stderr, "*** %s\n", s);
+	fprintf(stderr, "*** %s\n", msg.c_str());
 }
