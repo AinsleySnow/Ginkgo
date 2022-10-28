@@ -16,7 +16,7 @@ enum class IROper
     notequal, equal,
     getsize, getalign,
 
-    lable,
+    label,
     tag, jmp, jmptrue, jmpfalse
 };
 
