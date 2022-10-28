@@ -7,13 +7,14 @@ bool QualType::SetToken(Tag t)
         case Tag::_const:
             token_ |= static_cast<unsigned>(QualTag::_const); return true;
         case Tag::_restrict:
-            token_ |= static_cast<unsigned>(QualTag::_const); return true;
+            token_ |= static_cast<unsigned>(QualTag::_restrict); return true;
         case Tag::_volatile:
-            token_ |= static_cast<unsigned>(QualTag::_const); return true;
+            token_ |= static_cast<unsigned>(QualTag::_volatile); return true;
         case Tag::_atomic:
-            token_ |= static_cast<unsigned>(QualTag::_const); return true;
+            token_ |= static_cast<unsigned>(QualTag::_atomic); return true;
+        default:
+            return false;
     }
-    return false;
 }
 
 
@@ -34,6 +35,7 @@ bool StorageType::SetToken(Tag t)
             token_ |= static_cast<unsigned>(StorageTag::_auto); return true;
         case Tag::_register:
             token_ |= static_cast<unsigned>(StorageTag::_register); return true;
+        default:
+            return false;
     }
-    return false;
 }

@@ -2,6 +2,7 @@
 #define _TYPE_H_
 
 #include "ast/Tag.h"
+#include <string>
 
 class ArithmType;
 class PtrType;
@@ -85,6 +86,8 @@ public:
 
     virtual ArithmType* ToArithm() { return nullptr; }
     virtual PtrType* ToPtr() { return nullptr; }
+
+    virtual std::string ToString() const { return ""; }
 };
 
 #endif // _TYPE_H_
