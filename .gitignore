@@ -5,3 +5,4 @@
 src/parser/yacc.cc
 src/parser/lexer.cc
 src/parser/yacc.hh
+tests/test
