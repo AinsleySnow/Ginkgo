@@ -1,6 +1,4 @@
-#include <string>
-
-const std::string error[]
+const char* error[]
 {
     "类型说明符的组合无效。",
     "需要左值。",

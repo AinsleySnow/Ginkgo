@@ -1,6 +1,4 @@
-#include <string>
-
-const std::string error[]
+const char* error[]
 {
     "Invalid combination of type specifiers.",
     "Left value is needed.",
