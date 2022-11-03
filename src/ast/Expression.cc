@@ -1,5 +1,27 @@
-#include "Constant.h"
+#include "Expression.h"
 #include "messages/Error.h"
+#include "types/ArithmType.h"
+
+
+explicit Constant::Constant(uint64_t u)
+{
+    val_.intgr_ = u;
+    type_ = std::make_shared<ArithmType>();
+}
+
+
+explicit Constant::Constant(double d)
+{
+    val_.flt_ = d;
+    type_ = std::make_shared<ArithmType>();
+}
+
+
+explicit Constant::Constant(bool b)
+{
+    val_.intgr_ = b ? 1 : 0;
+    type_ = std::make_shared<ArithmType>();
+}
 
 
 bool Constant::DoCalc(Tag op, const Constant* num, Constant& output)
