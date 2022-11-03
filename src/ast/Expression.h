@@ -15,7 +15,6 @@ private:
     Tag op_;
     std::shared_ptr<Expr> right_{};
 
-    Object* result_{};
 
 public:
     AssignExpr(std::shared_ptr<Expr> l, Tag t, std::shared_ptr<Expr> r) :
@@ -34,7 +33,6 @@ private:
     Tag op_;
     std::shared_ptr<Expr> right_{};
 
-    Object* result_{};
 
 public:
     BinaryExpr(std::shared_ptr<Expr> l, Tag t, std::shared_ptr<Expr> r) :
@@ -53,7 +51,6 @@ private:
     std::shared_ptr<Expr> true_{};
     std::shared_ptr<Expr> false_{};
 
-    Object* result_{};
 
 public:
     CondExpr(std::shared_ptr<Expr> c, std::shared_ptr<Expr> t,
@@ -115,7 +112,6 @@ private:
     Tag op_;
     std::shared_ptr<Expr> right_{};
 
-    Object* result_{};
 
 public:
     LogicalExpr(std::shared_ptr<Expr> l, Tag t, std::shared_ptr<Expr> r) :
@@ -146,7 +142,6 @@ private:
     Tag op_;
     std::shared_ptr<Expr> content_{};
 
-    Object* result_{};
 
 public:
     UnaryExpr(Tag t, std::shared_ptr<Expr> c) :
