@@ -118,7 +118,7 @@ public:
         left_(l), op_(t), right_(r) {}
 
     void Accept(Visitor* v) { v->VisitLogicalExpr(this); }
-    LogicalExpr* ToLogical() { return this; }
+    LogicalExpr* ToLogical() override { return this; }
 };
 
 
