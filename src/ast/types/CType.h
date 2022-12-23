@@ -4,8 +4,9 @@
 #include "ast/Tag.h"
 #include <string>
 
-class ArithmType;
-class PtrType;
+class CArithmType;
+class CPtrType;
+class CFuncType;
 
 
 enum class QualTag
@@ -59,7 +60,7 @@ public:
 };
 
 
-class Type
+class CType
 {
 private:
     QualType qual_;
@@ -67,7 +68,7 @@ private:
 
 
 public:
-    virtual bool Compatible(const Type* other) const { return false; }
+    virtual bool Compatible(const CType* other) const { return false; }
 
     virtual bool IsScalar() const { return false; }
     virtual bool IsFloat() const { return false; }
@@ -81,11 +82,12 @@ public:
     StorageType GetStorage() const { return storage_; }
     StorageType& GetStorage() { return storage_; }
 
-    bool operator==(const Type&) const = delete;
-    bool operator!=(const Type&) const = delete;
+    bool operator==(const CType&) const = delete;
+    bool operator!=(const CType&) const = delete;
 
-    virtual ArithmType* ToArithm() { return nullptr; }
-    virtual PtrType* ToPtr() { return nullptr; }
+    virtual CArithmType* ToArithm() { return nullptr; }
+    virtual CPtrType* ToPtr() { return nullptr; }
+    virtual CFuncType* ToFunc() { return nullptr; }
 
     virtual std::string ToString() const { return ""; }
 };

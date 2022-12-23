@@ -1,7 +1,7 @@
-#include "ArithmType.h"
+#include "CArithmType.h"
 
 
-ArithmType::ArithmType(Tag spec)
+CArithmType::CArithmType(Tag spec)
 {
     switch (spec)
     {
@@ -35,49 +35,49 @@ ArithmType::ArithmType(Tag spec)
 }
 
 
-bool ArithmType::Compatible(const Type* other) const
+bool CArithmType::Compatible(const CType* other) const
 {
-    auto arithm = dynamic_cast<const ArithmType*>(other);
+    auto arithm = dynamic_cast<const CArithmType*>(other);
     if (arithm) return size_ == arithm->size_;
-    auto ptr = dynamic_cast<const PtrType*>(other);
+    auto ptr = dynamic_cast<const CPtrType*>(other);
     if (ptr) return size_ == 8;
     return false;
 }
 
 
-bool ArithmType::IsComplete() const
+bool CArithmType::IsComplete() const
 {
     return true;
 }
 
-bool ArithmType::IsInteger() const
+bool CArithmType::IsInteger() const
 {
     return spec_ & static_cast<unsigned>(Spec::intmask);
 }
 
-bool ArithmType::IsScalar() const
+bool CArithmType::IsScalar() const
 {
     return spec_ & (static_cast<unsigned>(Spec::intmask) |
                     static_cast<unsigned>(Spec::floatmask));
 }
 
-bool ArithmType::IsFloat() const
+bool CArithmType::IsFloat() const
 {
     return spec_ & static_cast<unsigned>(Spec::floatmask);
 }
 
-bool ArithmType::IsUnsigned() const
+bool CArithmType::IsUnsigned() const
 {
     return spec_ & static_cast<unsigned>(Spec::_unsigned);
 }
 
-uint64_t ArithmType::GetSize() const
+uint64_t CArithmType::GetSize() const
 {
     return size_;
 }
 
 
-bool ArithmType::Raw2Spec()
+bool CArithmType::Raw2Spec()
 {
     switch (raw_)
     {      
@@ -146,7 +146,7 @@ bool ArithmType::Raw2Spec()
     }
 }
 
-bool ArithmType::SetSpec(Tag t)
+bool CArithmType::SetSpec(Tag t)
 {
     if (t == Tag::_long)
     {
@@ -169,7 +169,7 @@ bool ArithmType::SetSpec(Tag t)
 }
 
 
-bool ArithmType::operator>(const ArithmType& rhs) const
+bool CArithmType::operator>(const CArithmType& rhs) const
 {
     if (IsInteger() && rhs.IsFloat()) return false;
     else if (IsFloat() && rhs.IsInteger()) return true;
@@ -181,13 +181,13 @@ bool ArithmType::operator>(const ArithmType& rhs) const
     return false;
 }
 
-bool ArithmType::operator<(const ArithmType& rhs) const
+bool CArithmType::operator<(const CArithmType& rhs) const
 {
     return !(*this > rhs);
 }
 
 
-std::string ArithmType::ToString() const
+std::string CArithmType::ToString() const
 {
     std::string name = IsUnsigned() ? "unsigned " : "";
     if (raw_ & int(Tag::_bool))

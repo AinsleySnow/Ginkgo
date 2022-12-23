@@ -1,4 +1,4 @@
-#include "Type.h"
+#include "CType.h"
 
 bool QualType::SetToken(Tag t)
 {

@@ -1,8 +1,8 @@
 #ifndef _ARITHM_TYPE_H_
 #define _ARITHM_TYPE_H_
 
-#include "Type.h"
-#include "PtrType.h"
+#include "CType.h"
+#include "CPtrType.h"
 #include <cstdint>
 #include <algorithm>
 #include <memory>
@@ -24,7 +24,7 @@ enum class Spec
 };
 
 
-class ArithmType : public Type
+class CArithmType : public CType
 {
 private:
     uint64_t size_{};
@@ -35,12 +35,12 @@ private:
 
 
 public:
-    ArithmType() : size_(8), spec_(static_cast<unsigned>(Spec::int64)) {}
-    ArithmType(Spec);
-    ArithmType(const std::shared_ptr<Type> t) : Type(*t) {}
-    ArithmType(Tag);
+    CArithmType() : size_(8), spec_(static_cast<unsigned>(Spec::int64)) {}
+    CArithmType(Spec);
+    CArithmType(const std::shared_ptr<CType> t) : CType(*t) {}
+    CArithmType(Tag);
 
-    bool Compatible(const Type*) const override;
+    bool Compatible(const CType*) const override;
 
     bool IsComplete() const override;
     bool IsInteger() const override;
@@ -51,11 +51,11 @@ public:
     uint64_t GetSize() const;
     bool SetSpec(Tag);
 
-    ArithmType* ToArithm() override { return this; }
-    PtrType* ToPtr() override { return nullptr; }
+    CArithmType* ToArithm() override { return this; }
+    CPtrType* ToPtr() override { return nullptr; }
 
-    bool operator>(const ArithmType&) const;
-    bool operator<(const ArithmType&) const;
+    bool operator>(const CArithmType&) const;
+    bool operator<(const CArithmType&) const;
 
     std::string ToString() const override;
 };
