@@ -15,13 +15,13 @@ public:
 
     void InsertRetInstr(const IRType* valtype, const std::string& val);
     
-    void InsertBrInstr(const std::string& label);
-    void InsertBrInstr(const std::string& cond, const std::string& tlabel, const std::string& flabel);
+    void InsertBrInstr(const BasicBlock* label);
+    void InsertBrInstr(const std::string& cond, const BasicBlock* tlabel, const BasicBlock* flabel);
     
     void InsertSwitchInstr(const std::string& ident, const IntType* ty,
-        const SwitchInstr::LabelValPair& list);
+        const SwitchInstr::ValueBlkPair& list);
     
-    void InsertCallInstr(const FuncType* proto, const std::string& pfunc,
+    void InsertCallInstr(const FuncType* proto, const Function* pfunc,
         const CallInstr::ArgList& arglist);
 
     void InsertAddInstr(const std::string& result, const IntType* ty,
@@ -86,7 +86,7 @@ public:
     void InsertIcmpInstr(const std::string& result, Condition cond, const IntType* ty, const std::string& lhs, const std::string& rhs);
     void InsertFcmpInstr(const std::string& result, Condition cond, const FloatType* ty, const std::string& lhs, const std::string& rhs);
     void InsertSelectInstr(const std::string& result, const std::string& selty, bool cond, const IRType* ty, const std::string& val1, const std::string& val2);
-    void InsertPhiInstr(const std::string& ident, std::unique_ptr<IRType> ty, const PhiInstr::LabelValPairList& list);
+    void InsertPhiInstr(const std::string& ident, const IRType* ty, const PhiInstr::BlockValPairList& list);
 
 
 private:

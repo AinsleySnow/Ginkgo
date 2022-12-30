@@ -36,40 +36,40 @@ private:
 class BrInstr : public Instr
 {
 public:
-    BrInstr(const std::string& l) : true_(l) {}
-    BrInstr(const std::string& c, const std::string& t, const std::string& f) :
+    BrInstr(const BasicBlock* l) : true_(l) {}
+    BrInstr(const std::string& c, const BasicBlock* t, const BasicBlock* f) :
         cond_(c), true_(t), false_(f) {}
 
     std::string ToString() const override
     {
-        if (false_.empty()) return "br label " + true_;
-        else    return "br " + cond_ + ' ' + true_ + ' ' + false_;
+        if (!false_) return "br label " + true_->GetName();
+        else    return "br " + cond_ + ' ' + true_->GetName() + ' ' + false_->GetName();
     }
 
 
 private:
     std::string cond_{};
-    std::string true_{};
-    std::string false_{};
+    const BasicBlock* true_{};
+    const BasicBlock* false_{};
 };
 
 
 class SwitchInstr : public Instr
 {
 public:
-    using LabelValPair = std::vector<std::pair<std::string, std::string>>;
+    using ValueBlkPair = std::vector<std::pair<std::string, const BasicBlock*>>;
 
     SwitchInstr(
         const std::string& i,
         const IntType* t,
-        const LabelValPair& l
+        const ValueBlkPair& l
     ) : ident_(i), type_(t), cases_(l) {}
 
     std::string ToString() const override
     {
         std::string caselist{ "[\n" };
         for (const auto& pair : cases_)
-            caselist += "    " + pair.first + ": " + pair.second + '\n';
+            caselist += "    " + pair.first + ": " + pair.second->GetName() + '\n';
         caselist += ']';
         return "switch " + type_->ToString() + ident_ + caselist;
     }
@@ -78,7 +78,7 @@ public:
 private:
     std::string ident_{};
     const IntType* type_{};
-    LabelValPair cases_{};
+    ValueBlkPair cases_{};
 };
 
 
@@ -87,12 +87,12 @@ class CallInstr : public Instr
 public:
     using ArgList = std::vector<std::pair<const IRType*, std::string>>;
 
-    CallInstr(const FuncType* proto, const std::string& pfunc, const ArgList& args) :
-        proto_(proto), funcname_(pfunc), arglist_(args) {}
+    CallInstr(const FuncType* proto, const Function* pfunc, const ArgList& args) :
+        proto_(proto), func_(pfunc), arglist_(args) {}
 
     std::string ToString() const override
     {
-        std::string call = "call " + proto_->ToString() + ' ' + funcname_ + '(';
+        std::string call = "call " + proto_->ToString() + ' ' + func_->GetName() + '(';
         for (const auto& pair : arglist_)
             call += pair.first->ToString() + ' ' + pair.second + ", ";
         return call + ')';
@@ -101,7 +101,7 @@ public:
 
 private:
     const FuncType* proto_{};
-    std::string funcname_{};
+    const Function* func_{};
     ArgList arglist_{};
 };
 
@@ -889,16 +889,16 @@ private:
 class PhiInstr : public Instr
 {
 public:
-    using LabelValPairList = std::vector<std::pair<std::string, std::string>>;
+    using BlockValPairList = std::vector<std::pair<const BasicBlock*, std::string>>;
 
-    PhiInstr(const std::string& i, const IRType* t, const LabelValPairList& l) :
+    PhiInstr(const std::string& i, const IRType* t, const BlockValPairList& l) :
         result_(i), type_(t), labels_(l) {}
 
     std::string ToString()
     {
         std::string line = result_ + " = phi " + type_->ToString() + ' ';
         for (const auto& l : labels_)
-            line += '[' + l.first + ", " + l.second + "] ";
+            line += '[' + l.first->GetName() + ", " + l.second + "] ";
         return line;
     }
 
@@ -906,7 +906,7 @@ public:
 private:
     std::string result_{};
     const IRType* type_{};
-    LabelValPairList labels_{};
+    BlockValPairList labels_{};
 };
 
 

@@ -15,27 +15,27 @@ void IRBuilder::InsertRetInstr(const IRType* valtype, const std::string& val)
     insertpoint_->AddInstr(std::move(pret));
 }
 
-void IRBuilder::InsertBrInstr(const std::string& label)
+void IRBuilder::InsertBrInstr(const BasicBlock* label)
 {
     auto pbr = std::make_unique<BrInstr>(label);
     insertpoint_->AddInstr(std::move(pbr));
 }
 
 void IRBuilder::InsertBrInstr(const std::string& cond,
-    const std::string& tlabel, const std::string& flabel)
+    const BasicBlock* tblk, const BasicBlock* fblk)
 {
-    auto pbr = std::make_unique<BrInstr>(cond, tlabel, flabel);
+    auto pbr = std::make_unique<BrInstr>(cond, tblk, fblk);
     insertpoint_->AddInstr(std::move(pbr));
 }
 
 void IRBuilder::InsertSwitchInstr(const std::string& ident, const IntType* ty,
-    const SwitchInstr::LabelValPair& list)
+    const SwitchInstr::ValueBlkPair& list)
 {
     auto pswitch = std::make_unique<SwitchInstr>(ident, ty, list);
     insertpoint_->AddInstr(std::move(pswitch));
 }
 
-void IRBuilder::InsertCallInstr(const FuncType* proto, const std::string& pfunc,
+void IRBuilder::InsertCallInstr(const FuncType* proto, const Function* pfunc,
     const CallInstr::ArgList& arglist)
 {
     auto pcall = std::make_unique<CallInstr>(proto, pfunc, arglist);
@@ -300,7 +300,7 @@ void IRBuilder::InsertSelectInstr(const std::string& result, const std::string& 
     insertpoint_->AddInstr(std::move(pselect));
 }
 
-void IRBuilder::InsertPhiInstr(const std::string& ident, std::unique_ptr<IRType> ty, const PhiInstr::LabelValPairList& list)
+void IRBuilder::InsertPhiInstr(const std::string& ident, const IRType* ty, const PhiInstr::BlockValPairList& list)
 {
     auto pphi = std::make_unique<PhiInstr>(ident, ty, list);
     insertpoint_->AddInstr(std::move(pphi));
