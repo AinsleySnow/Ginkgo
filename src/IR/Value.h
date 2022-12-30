@@ -23,6 +23,7 @@ public:
     virtual GlobalVar* ToGlobalVar() { return nullptr; }
     BasicBlock* ToBasicBlock() { return nullptr; }
 
+    std::string GetName() const { return Value::name_; }
 
 protected:
     std::string name_{};
@@ -90,6 +91,9 @@ public:
 
     void AddInstr(std::unique_ptr<Instr> instr)
     { instrs_.push_back(std::move(instr)); }
+    Instr* GetLastInstr() { return instrs_.back().get(); }
+    const Instr* GetLastInstr() const { return instrs_.back().get(); }
+
     std::string ToString() const override;
 
 private:
