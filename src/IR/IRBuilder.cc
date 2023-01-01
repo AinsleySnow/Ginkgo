@@ -168,42 +168,41 @@ void IRBuilder::InsertAllocaInstr(const std::string& result, const IRType* ty, s
 }
 
 
-void IRBuilder::InsertLoadInstr(const IRType* ty, const std::string& ptr)
+void IRBuilder::InsertLoadInstr(const std::string& r, const PtrType* ty, const std::string& ptr)
 {
-    auto pload = std::make_unique<LoadInstr>(ty, ptr);
+    auto pload = std::make_unique<LoadInstr>(r, ty, ptr);
     insertpoint_->AddInstr(std::move(pload));
 }
 
-void IRBuilder::InsertLoadInstr(const IRType* ty, const std::string& ptr, size_t align)
+void IRBuilder::InsertLoadInstr(const std::string& r, const PtrType* ty, const std::string& ptr, size_t align)
 {
-    auto pload = std::make_unique<LoadInstr>(ty, ptr, align);
+    auto pload = std::make_unique<LoadInstr>(r, ty, ptr, align);
     insertpoint_->AddInstr(std::move(pload));
 }
     
 
-void IRBuilder::InsertStoreInstr(const IRType* valty, const std::string& val,
-    const IRType* ptrty, const std::string& ptr, bool vol)
+void IRBuilder::InsertStoreInstr(const PtrType* ptrty, const std::string& val, const std::string& ptr, bool vol)
 {
-    auto pstore = std::make_unique<StoreInstr>(std::move(valty), val, std::move(ptrty), ptr, vol);
+    auto pstore = std::make_unique<StoreInstr>(ptrty, val, ptr, vol);
     insertpoint_->AddInstr(std::move(pstore));
 }
 
 
-void IRBuilder::InsertExValInstr(const std::string& result, const IRType* ty, const std::string& val, int index)
+void IRBuilder::InsertExValInstr(const std::string& result, const PtrType* ty, const std::string& val, int index)
 {
     auto pexval = std::make_unique<ExtractValInstr>(result, ty, val, index);
     insertpoint_->AddInstr(std::move(pexval));
 }
 
-void IRBuilder::InsertSetValInstr(const std::string& newval, const IRType* ty, const std::string& val, int index)
+void IRBuilder::InsertSetValInstr(const std::string& newval, const PtrType* ty, const std::string& val, int index)
 {
     auto psetval = std::make_unique<SetValInstr>(newval, ty, val, index);
     insertpoint_->AddInstr(std::move(psetval));
 }
 
-void IRBuilder::InsertGetElePtrInstr(const std::string& result, const IRType* ty, const std::string& val, int index)
+void IRBuilder::InsertGetElePtrInstr(const std::string& result, const PtrType* ptrty, const std::string& val, int index)
 {
-    auto pgeteleptr = std::make_unique<LoadInstr>(result, ty, val, index);
+    auto pgeteleptr = std::make_unique<GetElePtrInstr>(result, ptrty, val, index);
     insertpoint_->AddInstr(std::move(pgeteleptr));
 }
 

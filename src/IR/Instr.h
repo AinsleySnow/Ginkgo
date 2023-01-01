@@ -408,15 +408,15 @@ private:
 class LoadInstr : public Instr
 {
 public:
-    LoadInstr(const IRType* t, const std::string& p) :
-        type_(t), ptr_(p) {}
-    LoadInstr(const IRType* t, const std::string& p, size_t a) :
-        type_(t), ptr_(p), align_(a), volatile_(true) {}
+    LoadInstr(const std::string& r, const PtrType* t, const std::string& p) :
+        result_(r), type_(t), ptr_(p) {}
+    LoadInstr(const std::string& r, const PtrType* t, const std::string& p, size_t a) :
+        result_(r), type_(t), ptr_(p), align_(a), volatile_(true) {}
 
     std::string ToString() const override
     {
-        std::string line = volatile_ ? "load " : "volatile load ";
-        line += type_->ToString() + "* " + ptr_;
+        std::string line = result_ + " = " + (volatile_ ? "load " : "volatile load ");
+        line += type_->Dereference()->ToString() + ", " + ptr_;
         if (align_ > 1)
             line += ", align" + std::to_string(align_);
         return line;
@@ -424,7 +424,8 @@ public:
 
 
 private:
-    const IRType* type_{};
+    std::string result_{};
+    const PtrType* type_{};
     std::string ptr_{};
     size_t align_{ 1 };
     bool volatile_{};
@@ -434,22 +435,19 @@ private:
 class StoreInstr : public Instr
 {
 public:
-    StoreInstr(const IRType* vt, const std::string& v,
-        const IRType* pt, const std::string& p, bool vol) :
-        valtype_(vt), value_(v),
-        ptrtype_(pt), ptr_(p), volatile_(vol) {}
+    StoreInstr(const PtrType* pt, const std::string& v, const std::string& p, bool vol) :
+        ptrtype_(pt), value_(v),  ptr_(p), volatile_(vol) {}
 
     std::string ToString() const override
     {
         std::string line = volatile_ ? "volatile stroe " : "store";
-        line += valtype_->ToString() + ' ' + value_ + ", " + ptrtype_->ToString() + "* " + ptr_;
+        line += ptrtype_->Dereference()->ToString() + ' ' + value_ + ", " + ptrtype_->ToString() + ptr_;
         return line;
     }
 
 
 private:
-    const IRType* valtype_{};
-    const IRType* ptrtype_{};
+    const PtrType* ptrtype_{};
     std::string value_{};
     std::string ptr_{};
     bool volatile_{};
@@ -459,7 +457,7 @@ private:
 class ExtractValInstr : public Instr
 {
 public:
-    ExtractValInstr(const std::string& r, const IRType* t, const std::string& v, int i) :
+    ExtractValInstr(const std::string& r, const PtrType* t, const std::string& v, int i) :
         result_(r), ptrtype_(t), value_(v), index_(i) {}
 
     std::string ToString() const override
@@ -471,7 +469,7 @@ public:
 
 private:
     std::string result_{};
-    const IRType* ptrtype_{};
+    const PtrType* ptrtype_{};
     std::string value_{};
     int index_{};
 };
@@ -480,19 +478,19 @@ private:
 class SetValInstr : public Instr
 {
 public:
-    SetValInstr(const std::string& nv, const IRType* t, const std::string& v, int i) :
+    SetValInstr(const std::string& nv, const PtrType* t, const std::string& v, int i) :
         newval_(nv), ptrtype_(t), value_(v), index_(i) {}
 
     std::string ToString() const override
     {
-        return "setval " + newval_ + ", " + ptrtype_->ToString() + "* " +
+        return "setval " + newval_ + ", " + ptrtype_->ToString() +
             value_ + '[' + std::to_string(index_) + ']';
     }
 
 
 private:
     std::string newval_{};
-    const IRType* ptrtype_{};
+    const PtrType* ptrtype_{};
     std::string value_{};
     int index_{};
 };
@@ -501,19 +499,19 @@ private:
 class GetElePtrInstr : public Instr
 {
 public:
-    GetElePtrInstr(const std::string& r, const IRType* t, const std::string& v, int i) :
+    GetElePtrInstr(const std::string& r, const PtrType* t, const std::string& v, int i) :
         result_(r), ptrtype_(t), ptrvalue_(v), index_(i) {}
 
     std::string ToString() const override
     {
         return result_ + " = geteleptr " + ptrtype_->ToString() +
-            "* " + ptrvalue_ + '[' + std::to_string(index_) + ']';
+            ptrvalue_ + '[' + std::to_string(index_) + ']';
     }
 
 
 private:
     std::string result_{};
-    const IRType* ptrtype_{};
+    const PtrType* ptrtype_{};
     std::string ptrvalue_{};
     int index_{};
 };

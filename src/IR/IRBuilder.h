@@ -59,15 +59,14 @@ public:
     void InsertAllocaInstr(const std::string& result, const IRType* ty, size_t num);
     void InsertAllocaInstr(const std::string& result, const IRType* ty, size_t num, size_t align);
     
-    void InsertLoadInstr(const IRType* ty, const std::string& ptr);
-    void InsertLoadInstr(const IRType* ty, const std::string& ptr, size_t align);
+    void InsertLoadInstr(const std::string& r, const PtrType* ty, const std::string& ptr);
+    void InsertLoadInstr(const std::string& r, const PtrType* ty, const std::string& ptr, size_t align);
     
-    void InsertStoreInstr(const IRType* valty, const std::string& val, const IRType* ptrty,
-        const std::string& ptr, bool vol);
+    void InsertStoreInstr(const PtrType* ptrty, const std::string& val, const std::string& ptr, bool vol);
     
-    void InsertExValInstr(const std::string& result, const IRType* ty, const std::string& val, int index);
-    void InsertSetValInstr(const std::string& newval, const IRType* ty, const std::string& val, int index);
-    void InsertGetElePtrInstr(const std::string& result, const IRType* ty, const std::string& val, int index);
+    void InsertExValInstr(const std::string& result, const PtrType* ty, const std::string& val, int index);
+    void InsertSetValInstr(const std::string& newval, const PtrType* ty, const std::string& val, int index);
+    void InsertGetElePtrInstr(const std::string& result, const PtrType* ty, const std::string& val, int index);
 
     void InsertTruncInstr(const std::string& result, const IntType* ty1, const std::string& val, const IntType* ty2);
     void InsertFtruncInstr(const std::string& result, const FloatType* ty1, const std::string& val, const FloatType* ty2);
