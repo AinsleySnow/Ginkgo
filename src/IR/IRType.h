@@ -113,6 +113,8 @@ public:
     PtrType* ToPointer() override { return this; }
     const PtrType* ToPointer() const override { return this; }
 
+    const IRType* Dereference() const { return type_; }
+
 private:
     const IRType* type_{};
 };
