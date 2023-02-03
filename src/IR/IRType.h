@@ -5,6 +5,14 @@
 #include <string>
 #include <vector>
 
+class IntType;
+class FloatType;
+class FuncType;
+class PtrType;
+class ArrayType;
+class StructType;
+class UnionType;
+
 
 class IRType
 {
@@ -33,87 +41,87 @@ public:
     virtual bool IsPtr() const { return false; }
     virtual bool IsAggerate() const { return false; }
 
-    const static IntType* GetInt8(bool);
-    const static IntType* GetInt16(bool);
-    const static IntType* GetInt32(bool);
-    const static IntType* GetInt64(bool);
-    const static FloatType* GetFloat32();
-    const static FloatType* GetFloat64();
+    size_t Size() const { return size_; }
+    size_t Align() const { return align_; }
 
-    const static FuncType* GetFunction(const IRType*, const std::vector<const IRType*>&, bool);
-    const static PtrType* GetPointer(const IRType*);
-    const static ArrayType* GetArray(size_t, const IRType*);
-    const static StructType* GetStruct(const std::vector<const IRType*>&);
-    const static UnionType* GetUnion(const std::vector<const IRType*>&);
+    bool operator<(const IRType& rhs) const;
+    bool operator>(const IRType& rhs) const;
+    virtual bool operator==(const IRType& rhs) const { return false; }
 
-private:
-    static std::vector<std::unique_ptr<IRType>> customedtypes_;
+
+protected:
+    size_t size_{};
+    size_t align_{};
 };
 
 
 class IntType : public IRType
 {
 public:
-    enum class intype { int8 = 8, int16 = 16, int32 = 32, int64 = 64 };
-    IntType(intype t, bool s) : size_(t), signed_(s) {}
+    const static IntType* GetInt8(bool);
+    const static IntType* GetInt16(bool);
+    const static IntType* GetInt32(bool);
+    const static IntType* GetInt64(bool);
+    IntType(size_t s, bool si) : signed_(si) { size_ = s; }
 
-    std::string ToString() const override { return "int" + std::to_string((int)size_); }
+    std::string ToString() const override;
     IntType* ToInteger() override { return this; }
     const IntType* ToInteger() const override { return this; }
 
     bool IsArithm() const override { return true; }
     bool IsInt() const override { return true; }
 
-    intype GetSize() const { return size_; }
     bool IsSigned() const { return signed_; }
 
+
 private:
-    intype size_{};
     bool signed_{};
 };
 
 class FloatType : public IRType
 {
 public:
-    enum class fltype { flt32, flt64 };
-    FloatType(fltype t) : size_(t) {}
+    const static FloatType* GetFloat32();
+    const static FloatType* GetFloat64();
+    FloatType(size_t s) { size_ = s; }
 
-    std::string ToString() const override { return "int" + std::to_string((int)size_); }
+    std::string ToString() const override;
     FloatType* ToFloatPoint() override { return this; }
     const FloatType* ToFloatPoint() const override { return this; }
 
     bool IsArithm() const override { return true; }
     bool IsFloat() const override { return true; }
-
-private:
-    fltype size_{};
 };
 
 
 class ArrayType : public IRType
 {
 public:
-    ArrayType(size_t s, const IRType* t) : size_(s), type_(t) {}
+    const static ArrayType* GetArray(size_t, const IRType*);
+    ArrayType(size_t s, const IRType* t) : type_(t) { size_ = s; }
 
     std::string ToString() const override;
     ArrayType* ToArray() override { return this; }
     const ArrayType* ToArray() const override { return this; }
 
+
 private:
-    size_t size_{};
     const IRType* type_{};
 };
 
 class PtrType : public IntType
 {
 public:
+    const static PtrType* GetPointer(const IRType*);
     PtrType(const IRType* t) :
-        IntType(IntType::intype::int64, false), type_(t) {}
-    std::string ToString() const override { return type_->ToString() + '*'; }
+        IntType(8, false), type_(t) {}
+
+    std::string ToString() const override;
     PtrType* ToPointer() override { return this; }
     const PtrType* ToPointer() const override { return this; }
 
-    const IRType* Dereference() const { return type_; }
+    const IRType* Point2() const { return type_; }
+
 
 private:
     const IRType* type_{};
@@ -123,13 +131,18 @@ private:
 class FuncType : public IRType
 {
 public:
+    const static FuncType* GetFunction(const IRType*, const std::vector<const IRType*>&, bool);
     FuncType(const IRType* ret,
         const std::vector<const IRType*>& p, bool v) : 
-        retype_(std::move(ret)), param_(p), variadic_(v) {}
+        retype_(std::move(ret)), param_(p), variadic_(v) { size_ = -1; }
+
+    auto ReturnType() const { return retype_; }
+    const auto& ParamType() const { return param_; }
 
     std::string ToString() const override;
     FuncType* ToFunction() override { return this; }
     const FuncType* ToFunction() const override { return this; }
+
 
 private:
     const IRType* retype_{};
@@ -141,7 +154,9 @@ private:
 class StructType : public IRType
 {
 public:
+    const static StructType* GetStruct(const std::vector<const IRType*>&);
     StructType(const std::vector<const IRType*>& f) : fields_(f) {}
+
     std::string ToString() const override;
     StructType* ToStruct() override { return this; }
     const StructType* ToStruct() const override { return this; }
@@ -154,7 +169,9 @@ private:
 class UnionType : public IRType
 {
 public:
+    const static UnionType* GetUnion(const std::vector<const IRType*>&);
     UnionType(const std::vector<const IRType*>& f) : fields_(f) {}
+
     std::string ToString() const override;
     UnionType* ToUnion() override { return this; }
     const UnionType* ToUnion() const override { return this; }

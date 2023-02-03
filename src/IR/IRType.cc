@@ -1,95 +1,132 @@
-#include "IRType.h"
+#include "IR/IRType.h"
 #include <memory>
 
 
-std::vector<std::unique_ptr<IRType>> IRType::customedtypes_;
+static std::vector<std::unique_ptr<IRType>> customedtypes;
 
-const static IntType int8 = IntType(IntType::intype::int8, true);
-const static IntType int16 = IntType(IntType::intype::int16, true);
-const static IntType int32 = IntType(IntType::intype::int32, true);
-const static IntType int64 = IntType(IntType::intype::int64, true);
-const static IntType uint8 = IntType(IntType::intype::int8, false);
-const static IntType uint16 = IntType(IntType::intype::int16, false);
-const static IntType uint32 = IntType(IntType::intype::int32, false);
-const static IntType uint64 = IntType(IntType::intype::int64, false);
-const static FloatType float32 = FloatType(FloatType::fltype::flt32);
-const static FloatType float64 = FloatType(FloatType::fltype::flt64);
+const static IntType int8 = IntType(1, true);
+const static IntType int16 = IntType(2, true);
+const static IntType int32 = IntType(4, true);
+const static IntType int64 = IntType(8, true);
+const static IntType uint8 = IntType(1, false);
+const static IntType uint16 = IntType(2, false);
+const static IntType uint32 = IntType(4, false);
+const static IntType uint64 = IntType(8, false);
+const static FloatType float32 = FloatType(4);
+const static FloatType float64 = FloatType(8);
 
 
-const IntType* IRType::GetInt8(bool s)
+const IntType* IntType::GetInt8(bool s)
 {
     if (s) return &int8;
     return &uint8;
 }
 
-const IntType* IRType::GetInt16(bool s)
+const IntType* IntType::GetInt16(bool s)
 {
     if (s) return &int16;
     return &uint16;
 }
 
-const IntType* IRType::GetInt32(bool s)
+const IntType* IntType::GetInt32(bool s)
 {
     if (s) return &int32;
     return &uint32;
 }
 
-const IntType* IRType::GetInt64(bool s)
+const IntType* IntType::GetInt64(bool s)
 {
     if (s) return &int64;
     return &uint64;
 }
 
-const FloatType* IRType::GetFloat32()
+const FloatType* FloatType::GetFloat32()
 {
     return &float32;
 }
 
-const FloatType* IRType::GetFloat64()
+const FloatType* FloatType::GetFloat64()
 {
     return &float64;
 }
 
-const FuncType* IRType::GetFunction(const IRType* retty, const std::vector<const IRType*>& list, bool vol)
+const FuncType* FuncType::GetFunction(const IRType* retty, const std::vector<const IRType*>& list, bool vol)
 {
     auto ty = std::make_unique<FuncType>(std::move(retty), list, vol);
     auto addr = ty.get();
-    customedtypes_.push_back(std::move(ty));
+    customedtypes.push_back(std::move(ty));
     return addr;
 }
 
-const PtrType* IRType::GetPointer(const IRType* point2)
+const PtrType* PtrType::GetPointer(const IRType* point2)
 {
     auto ty = std::make_unique<PtrType>(point2);
     auto addr = ty.get();
-    customedtypes_.push_back(std::move(ty));
+    customedtypes.push_back(std::move(ty));
     return addr;
 }
 
-const ArrayType* IRType::GetArray(size_t size, const IRType* elety)
+const ArrayType* ArrayType::GetArray(size_t size, const IRType* elety)
 {
     auto ty = std::make_unique<ArrayType>(size, elety);
     auto addr = ty.get();
-    customedtypes_.push_back(std::move(ty));
+    customedtypes.push_back(std::move(ty));
     return addr;
 }
 
-const StructType* IRType::GetStruct(const std::vector<const IRType*>& list)
+const StructType* StructType::GetStruct(const std::vector<const IRType*>& list)
 {
     auto ty = std::make_unique<StructType>(list);
     auto addr = ty.get();
-    customedtypes_.push_back(std::move(ty));
+    customedtypes.push_back(std::move(ty));
     return addr;
 }
 
-const UnionType* IRType::GetUnion(const std::vector<const IRType*>& list)
+const UnionType* UnionType::GetUnion(const std::vector<const IRType*>& list)
 {
     auto ty = std::make_unique<UnionType>(list);
     auto addr = ty.get();
-    customedtypes_.push_back(std::move(ty));
+    customedtypes.push_back(std::move(ty));
     return addr;
 }
 
+bool IRType::operator<(const IRType& rhs) const
+{
+    if (!rhs.IsArithm() || !this->IsArithm())
+        return false;
+    if (this->IsFloat() && !rhs.IsFloat())
+        return false;
+    if (!this->IsFloat() && rhs.IsFloat())
+        return true;
+    return this->Size() < rhs.Size();
+}
+
+bool IRType::operator>(const IRType& rhs) const
+{
+    if (!rhs.IsArithm() || !this->IsArithm())
+        return false;
+    if (this->IsFloat() && !rhs.IsFloat())
+        return true;
+    if (!this->IsFloat() && rhs.IsFloat())
+        return false;
+    return this->Size() > rhs.Size();
+}
+
+
+std::string IntType::ToString() const
+{
+    return "int" + std::to_string(size_ * 8);
+}
+
+std::string FloatType::ToString() const
+{
+    return "float" + std::to_string(size_ * 8);
+}
+
+std::string PtrType::ToString() const
+{
+    return type_->ToString() + '*';
+}
 
 std::string ArrayType::ToString() const
 {

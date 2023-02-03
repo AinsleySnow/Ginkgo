@@ -1,9 +1,71 @@
 #ifndef _INSTR_H_
 #define _INSTR_H_
 
-#include "IRType.h"
+#include "IR/IRType.h"
 #include <memory>
 #include <string>
+
+class BasicBlock;
+class Function;
+
+
+class IROperand
+{
+public:
+    IROperand(const IRType* t) : type_(t) {}
+    virtual ~IROperand() {}
+    virtual std::string ToString() const = 0;
+
+    auto Type() const { return type_; }
+    auto& Type() { return type_; }
+
+protected:
+    const IRType* type_{};
+};
+
+class IntConst : public IROperand
+{
+public:
+    static IntConst* CreateIntConst(Function*, unsigned long);
+    static IntConst* CreateIntConst(Function*, unsigned long, const IntType*);
+    IntConst(unsigned long ul, const IntType* t) :
+        num_(ul), IROperand(t) {}
+
+    std::string ToString() const override;
+    unsigned long Val() const { return num_; }
+
+private:
+    unsigned long num_{};
+};
+
+class FloatConst : public IROperand
+{
+public:
+    static FloatConst* CreateFloatConst(Function*, double);
+    static FloatConst* CreateFloatConst(Function*, double, const FloatType*);
+    FloatConst(double d, const FloatType* t) :
+        num_(d), IROperand(t) {}
+
+    std::string ToString() const override;
+    double Val() const { return num_; }
+
+private:
+    double num_{};
+};
+
+class Register : public IROperand
+{
+public:
+    static Register* CreateRegister(Function*, const std::string&, const IRType*);
+    Register(const std::string& n, const IRType* t) :
+        name_(n), IROperand(t) {}
+
+    std::string ToString() const override;
+    std::string Name() const { return name_; }
+
+private:
+    std::string name_{};
+};
 
 
 enum class InstrType
@@ -26,13 +88,13 @@ enum class InstrType
 class Instr
 {
 public:
+    static Instr* CreateInstr(BasicBlock*, std::unique_ptr<Instr>);
     Instr(InstrType instr) : instr_(instr) {}
 
     virtual ~Instr() {}
     virtual std::string ToString() const { return ""; }
 
     InstrType GetInstrType() const { return instr_; }
-
 
 private:
     InstrType instr_{};
@@ -43,18 +105,13 @@ class RetInstr : public Instr
 {
 public:
     RetInstr() : Instr(InstrType::ret) {}
-    RetInstr(const IRType* vt, const std::string& v) :
-        Instr(InstrType::ret), valtype_(vt), value_(v) {}
+    RetInstr(const IROperand* rv) :
+        Instr(InstrType::ret), retval_(rv) {}
 
-    std::string ToString() const override
-    {
-        if (valtype_) return "ret " + valtype_->ToString() + ' ' + value_;
-        else          return "ret void";
-    }
+    std::string ToString() const override;
 
 private:
-    const IRType* valtype_{};
-    std::string value_{};
+    const IROperand* retval_{};
 };
 
 
@@ -62,18 +119,18 @@ class BrInstr : public Instr
 {
 public:
     BrInstr(const BasicBlock* l) : Instr(InstrType::br), true_(l) {}
-    BrInstr(const std::string& c, const BasicBlock* t, const BasicBlock* f) :
+    BrInstr(const IROperand* c, const BasicBlock* t, const BasicBlock* f) :
         Instr(InstrType::br), cond_(c), true_(t), false_(f) {}
 
-    std::string ToString() const override
-    {
-        if (!false_) return "br label " + true_->GetName();
-        else    return "br " + cond_ + ' ' + true_->GetName() + ' ' + false_->GetName();
-    }
+    std::string ToString() const override;
 
+    auto GetTrueBlk() { return true_; }
+    auto GetFalseBlk() { return false_; }
+    void SetTrueBlk(BasicBlock* blk) { true_ = blk; }
+    void SetFalseBlk(BasicBlock* blk) { false_ = blk; }
 
 private:
-    std::string cond_{};
+    const IROperand* cond_{};
     const BasicBlock* true_{};
     const BasicBlock* false_{};
 };
@@ -82,322 +139,270 @@ private:
 class SwitchInstr : public Instr
 {
 public:
-    using ValueBlkPair = std::vector<std::pair<std::string, const BasicBlock*>>;
+    using ValueBlkPair = std::vector<std::pair<const IntConst*, const BasicBlock*>>;
 
-    SwitchInstr(
-        const std::string& i,
-        const IntType* t,
-        const ValueBlkPair& l
-    ) : Instr(InstrType::swtch), ident_(i), type_(t), cases_(l) {}
+    SwitchInstr(const IROperand* i) : Instr(InstrType::swtch), ident_(i) {}
 
-    std::string ToString() const override
-    {
-        std::string caselist{ "[\n" };
-        for (const auto& pair : cases_)
-            caselist += "    " + pair.first + ": " + pair.second->GetName() + '\n';
-        caselist += ']';
-        return "switch " + type_->ToString() + ident_ + caselist;
-    }
+    std::string ToString() const override;
 
+    void AddValueBlkPair(const IntConst* val, const BasicBlock* blk) { cases_.push_back({ val, blk }); }
+    void SetDefault(const BasicBlock* bb) { default_ = bb; }
 
 private:
-    std::string ident_{};
-    const IntType* type_{};
+    const IROperand* ident_{};
     ValueBlkPair cases_{};
+    const BasicBlock* default_{};
 };
 
 
 class CallInstr : public Instr
 {
 public:
-    using ArgList = std::vector<std::pair<const IRType*, std::string>>;
+    CallInstr(const std::string& result, const FuncType* proto, const std::string& name) :
+        Instr(InstrType::call), proto_(proto), func_(name) {}
+    CallInstr(const std::string& result, const Register* addr) :
+        Instr(InstrType::call), proto_(addr->Type()->ToFunction()), funcaddr_(addr) {}
 
-    CallInstr(const FuncType* proto, const Function* pfunc, const ArgList& args) :
-        Instr(InstrType::call), proto_(proto), func_(pfunc), arglist_(args) {}
+    std::string ToString() const override;
 
-    std::string ToString() const override
-    {
-        std::string call = "call " + proto_->ToString() + ' ' + func_->GetName() + '(';
-        for (const auto& pair : arglist_)
-            call += pair.first->ToString() + ' ' + pair.second + ", ";
-        return call + ')';
-    }
-
+    void AddArgv(const IROperand* argv) { arglist_.push_back(argv); }
 
 private:
+    std::string result_{};
     const FuncType* proto_{};
-    const Function* func_{};
-    ArgList arglist_{};
+
+    std::string func_{};
+    const Register* funcaddr_{};
+
+    std::vector<const IROperand*> arglist_{};
 };
 
 
 class AddInstr : public Instr
 {
 public:
-    AddInstr(const std::string& r, const IntType* t,
-        const std::string& o1, const std::string& o2) :
-        Instr(InstrType::add), result_(r), type_(t), lhs_(o1), rhs_(o2) {}
+    AddInstr(const std::string& r,
+        const IROperand* o1, const IROperand* o2) :
+        Instr(InstrType::add), result_(r), lhs_(o1), rhs_(o2) {}
 
-    std::string ToString() const override
-    { return result_ + " = add " + type_->ToString() + ' ' + lhs_ + ' ' + rhs_; }
-
+    std::string ToString() const override;
 
 private:
     std::string result_{};
-    const IntType* type_{};
-    std::string lhs_{}, rhs_{};
+    const IROperand *lhs_{}, *rhs_{};
 };
 
 
 class FaddInstr : public Instr
 {
 public:
-    FaddInstr(const std::string& r, const FloatType* t,
-        const std::string& o1, const std::string& o2) :
-        Instr(InstrType::fadd), result_(r), type_(t), lhs_(o1), rhs_(o2) {}
+    FaddInstr(const std::string& r,
+        const IROperand* o1, const IROperand* o2) :
+        Instr(InstrType::fadd), result_(r), lhs_(o1), rhs_(o2) {}
 
-    std::string ToString() const override
-    { return result_ + " = fadd " + type_->ToString() + ' ' + lhs_ + ' ' + rhs_; }
-
+    std::string ToString() const override;
 
 private:
     std::string result_{};
-    const FloatType* type_{};
-    std::string lhs_{}, rhs_{};
+    const IROperand *lhs_{}, *rhs_{};
 };
 
 
 class SubInstr : public Instr
 {
 public:
-    SubInstr(const std::string& r, const IntType* t,
-        const std::string& o1, const std::string& o2) :
-        Instr(InstrType::sub), result_(r), type_(t), lhs_(o1), rhs_(o2) {}
+    SubInstr(const std::string& r, 
+        const IROperand* o1, const IROperand* o2) :
+        Instr(InstrType::sub), result_(r), lhs_(o1), rhs_(o2) {}
 
-    std::string ToString() const override
-    { return result_ + " = sub " + type_->ToString() + ' ' + lhs_ + ' ' + rhs_; }
-
+    std::string ToString() const override;
 
 private:
     std::string result_{};
-    const IntType* type_{};
-    std::string lhs_{}, rhs_{};
+    const IROperand *lhs_{}, *rhs_{};
 };
 
 
 class FsubInstr : public Instr
 {
 public:
-    FsubInstr(const std::string& r, const FloatType* t,
-        const std::string& o1, const std::string& o2) :
-        Instr(InstrType::fsub), result_(r), type_(t), lhs_(o1), rhs_(o2) {}
+    FsubInstr(const std::string& r,
+        const IROperand* o1, const IROperand* o2) :
+        Instr(InstrType::fsub), result_(r), lhs_(o1), rhs_(o2) {}
 
-    std::string ToString() const override
-    { return result_ + " = fsub " + type_->ToString() + ' ' + lhs_ + ' ' + rhs_; }
-
+    std::string ToString() const override;
 
 private:
     std::string result_{};
-    const FloatType* type_{};
-    std::string lhs_{}, rhs_{};
+    const IROperand *lhs_{}, *rhs_{};
 };
 
 
 class MulInstr : public Instr
 {
 public:
-    MulInstr(const std::string& r, const IntType* t,
-        const std::string& o1, const std::string& o2) :
-        Instr(InstrType::mul), result_(r), type_(t), lhs_(o1), rhs_(o2) {}
+    MulInstr(const std::string& r,
+        const IROperand* o1, const IROperand* o2) :
+        Instr(InstrType::mul), result_(r), lhs_(o1), rhs_(o2) {}
 
-    std::string ToString() const override
-    { return result_ + " = mul " + type_->ToString() + ' ' + lhs_ + ' ' + rhs_; }
-
+    std::string ToString() const override;
 
 private:
     std::string result_{};
-    const IntType* type_{};
-    std::string lhs_{}, rhs_{};
+    const IROperand *lhs_{}, *rhs_{};
 };
 
 
 class FmulInstr : public Instr
 {
 public:
-    FmulInstr(const std::string& r, const FloatType* t,
-        const std::string& o1, const std::string& o2) :
-        Instr(InstrType::fmul), result_(r), type_(t), lhs_(o1), rhs_(o2) {}
+    FmulInstr(const std::string& r,
+        const IROperand* o1, const IROperand* o2) :
+        Instr(InstrType::fmul), result_(r), lhs_(o1), rhs_(o2) {}
 
-    std::string ToString() const override
-    { return result_ + " = fmul " + type_->ToString() + ' ' + lhs_ + ' ' + rhs_; }
-
+    std::string ToString() const override;
 
 private:
     std::string result_{};
-    const FloatType* type_{};
-    std::string lhs_{}, rhs_{};
+    const IROperand *lhs_{}, *rhs_{};
 };
 
 
 class DivInstr : public Instr
 {
 public:
-    DivInstr(const std::string& r, const IntType* t,
-        const std::string& o1, const std::string& o2) :
-        Instr(InstrType::div), result_(r), type_(t), lhs_(o1), rhs_(o2) {}
+    DivInstr(const std::string& r,
+        const IROperand* o1, const IROperand* o2) :
+        Instr(InstrType::div), result_(r), lhs_(o1), rhs_(o2) {}
 
-    std::string ToString() const override
-    { return result_ + " = div " + type_->ToString() + ' ' + lhs_ + ' ' + rhs_; }
-
+    std::string ToString() const override;
 
 private:
     std::string result_{};
-    const IntType* type_{};
-    std::string lhs_{}, rhs_{};
+    const IROperand *lhs_{}, *rhs_{};
 };
 
 
 class FdivInstr : public Instr
 {
 public:
-    FdivInstr(const std::string& r, const FloatType* t,
-        const std::string& o1, const std::string& o2) :
-        Instr(InstrType::fdiv), result_(r), type_(t), lhs_(o1), rhs_(o2) {}
+    FdivInstr(const std::string& r,
+        const IROperand* o1, const IROperand* o2) :
+        Instr(InstrType::fdiv), result_(r), lhs_(o1), rhs_(o2) {}
 
-    std::string ToString() const override
-    { return result_ + " = fdiv " + type_->ToString() + ' ' + lhs_ + ' ' + rhs_; }
-
+    std::string ToString() const override;
 
 private:
     std::string result_{};
-    const FloatType* type_{};
-    std::string lhs_{}, rhs_{};
+    const IROperand *lhs_{}, *rhs_{};
 };
 
 
 class ModInstr : public Instr
 {
 public:
-    ModInstr(const std::string& r, const IntType* t,
-        const std::string& o1, const std::string& o2) :
-        Instr(InstrType::mod), result_(r), type_(t), lhs_(o1), rhs_(o2) {}
+    ModInstr(const std::string& r,
+        const IROperand* o1, const IROperand* o2) :
+        Instr(InstrType::mod), result_(r), lhs_(o1), rhs_(o2) {}
 
-    std::string ToString() const override
-    { return result_ + " = mod " + type_->ToString() + ' ' + lhs_ + ' ' + rhs_; }
-
+    std::string ToString() const override;
 
 private:
     std::string result_{};
-    const IntType* type_{};
-    std::string lhs_{}, rhs_{};
+    const IROperand *lhs_{}, *rhs_{};
 };
 
 
 class ShlInstr : public Instr
 {
 public:
-    ShlInstr(const std::string& r, const IntType* t,
-        const std::string& o1, const std::string& o2) :
-        Instr(InstrType::shl), result_(r), type_(t), lhs_(o1), rhs_(o2) {}
+    ShlInstr(const std::string& r,
+        const IROperand* o1, const IROperand* o2) :
+        Instr(InstrType::shl), result_(r), lhs_(o1), rhs_(o2) {}
 
-    std::string ToString() const override
-    { return result_ + " = shl " + type_->ToString() + ' ' + lhs_ + ' ' + rhs_; }
-
+    std::string ToString() const override;
 
 private:
     std::string result_{};
-    const IntType* type_{};
-    std::string lhs_{}, rhs_{};
+    const IROperand *lhs_{}, *rhs_{};
 };
 
 
 class LshrInstr : public Instr
 {
 public:
-    LshrInstr(const std::string& r, const IntType* t,
-        const std::string& o1, const std::string& o2) :
-        Instr(InstrType::lshr), result_(r), type_(t), lhs_(o1), rhs_(o2) {}
+    LshrInstr(const std::string& r,
+        const IROperand* o1, const IROperand* o2) :
+        Instr(InstrType::lshr), result_(r), lhs_(o1), rhs_(o2) {}
 
-    std::string ToString() const override
-    { return result_ + " = lshr " + type_->ToString() + ' ' + lhs_ + ' ' + rhs_; }
-
+    std::string ToString() const override;
 
 private:
     std::string result_{};
-    const IntType* type_{};
-    std::string lhs_{}, rhs_{};
+    const IROperand *lhs_{}, *rhs_{};
 };
 
 
 class AshrInstr : public Instr
 {
 public:
-    AshrInstr(const std::string& r, const IntType* t,
-        const std::string& o1, const std::string& o2) :
-        Instr(InstrType::ashr), result_(r), type_(t), lhs_(o1), rhs_(o2) {}
+    AshrInstr(const std::string& r,
+        const IROperand* o1, const IROperand* o2) :
+        Instr(InstrType::ashr), result_(r), lhs_(o1), rhs_(o2) {}
 
-    std::string ToString() const override
-    { return result_ + " = ashr " + type_->ToString() + ' ' + lhs_ + ' ' + rhs_; }
-
+    std::string ToString() const override;
 
 private:
     std::string result_{};
-    const IntType* type_{};
-    std::string lhs_{}, rhs_{};
+    const IROperand *lhs_{}, *rhs_{};
 };
 
 
 class AndInstr : public Instr
 {
 public:
-    AndInstr(const std::string& r, const IntType* t,
-        const std::string& o1, const std::string& o2) :
-        Instr(InstrType::btand), result_(r), type_(t), lhs_(o1), rhs_(o2) {}
+    AndInstr(const std::string& r,
+        const IROperand* o1, const IROperand* o2) :
+        Instr(InstrType::btand), result_(r), lhs_(o1), rhs_(o2) {}
 
-    std::string ToString() const override
-    { return result_ + " = and " + type_->ToString() + ' ' + lhs_ + ' ' + rhs_; }
-
+    std::string ToString() const override;
 
 private:
     std::string result_{};
     const IntType* type_{};
-    std::string lhs_{}, rhs_{};
+    const IROperand *lhs_{}, *rhs_{};
 };
 
 
 class OrInstr : public Instr
 {
 public:
-    OrInstr(const std::string& r, const IntType* t,
-        const std::string& o1, const std::string& o2) :
-        Instr(InstrType::btor), result_(r), type_(t), lhs_(o1), rhs_(o2) {}
+    OrInstr(const std::string& r,
+        const IROperand* o1, const IROperand* o2) :
+        Instr(InstrType::btor), result_(r), lhs_(o1), rhs_(o2) {}
 
-    std::string ToString() const override
-    { return result_ + " = or " + type_->ToString() + ' ' + lhs_ + ' ' + rhs_; }
-
+    std::string ToString() const override;
 
 private:
     std::string result_{};
     const IntType* type_{};
-    std::string lhs_{}, rhs_{};
+    const IROperand *lhs_{}, *rhs_{};
 };
 
 
 class XorInstr : public Instr
 {
 public:
-    XorInstr(const std::string& r, const IntType* t,
-        const std::string& o1, const std::string& o2) :
-        Instr(InstrType::btxor), result_(r), type_(t), lhs_(o1), rhs_(o2) {}
+    XorInstr(const std::string& r,
+        const IROperand* o1, const IROperand* o2) :
+        Instr(InstrType::btxor), result_(r), lhs_(o1), rhs_(o2) {}
 
-    std::string ToString() const override
-    { return result_ + " = xor " + type_->ToString() + ' ' + lhs_ + ' ' + rhs_; }
-
+    std::string ToString() const override;
 
 private:
     std::string result_{};
     const IntType* type_{};
-    std::string lhs_{}, rhs_{};
+    const IROperand *lhs_{}, *rhs_{};
 };
 
 
@@ -411,16 +416,7 @@ public:
     AllocaInstr(const std::string& r, const IRType* t, size_t n, size_t a) :
         Instr(InstrType::alloca), result_(r), type_(t), num_(n), align_(a) {}
 
-    std::string ToString() const override
-    {
-        std::string line = result_ + " = alloca " + type_->ToString();
-        if (num_ > 1)
-            line += "i64 " + std::to_string(num_);
-        if (align_ > 1)
-            line += ", align " + std::to_string(align_);
-        return line;
-    }
-
+    std::string ToString() const override;
 
 private:
     std::string result_{};
@@ -433,25 +429,20 @@ private:
 class LoadInstr : public Instr
 {
 public:
-    LoadInstr(const std::string& r, const PtrType* t, const std::string& p) :
-        Instr(InstrType::load), result_(r), type_(t), ptr_(p) {}
-    LoadInstr(const std::string& r, const PtrType* t, const std::string& p, size_t a) :
-        Instr(InstrType::load), result_(r), type_(t), ptr_(p), align_(a), volatile_(true) {}
+    LoadInstr(const std::string& r, const Register* p) :
+        Instr(InstrType::load), result_(r), pointer_(p) {}
+    LoadInstr(const std::string& r, const Register* p, size_t a) :
+        Instr(InstrType::load), result_(r), pointer_(p),
+        align_(a) {}
+    LoadInstr(const std::string& r, const Register* p, size_t a, bool vol) :
+        Instr(InstrType::load), result_(r), pointer_(p),
+        align_(a), volatile_(vol) {}
 
-    std::string ToString() const override
-    {
-        std::string line = result_ + " = " + (volatile_ ? "load " : "volatile load ");
-        line += type_->Dereference()->ToString() + ", " + ptr_;
-        if (align_ > 1)
-            line += ", align" + std::to_string(align_);
-        return line;
-    }
-
+    std::string ToString() const override;
 
 private:
     std::string result_{};
-    const PtrType* type_{};
-    std::string ptr_{};
+    const IROperand* pointer_{};
     size_t align_{ 1 };
     bool volatile_{};
 };
@@ -460,21 +451,14 @@ private:
 class StoreInstr : public Instr
 {
 public:
-    StoreInstr(const PtrType* pt, const std::string& v, const std::string& p, bool vol) :
-        Instr(InstrType::store), ptrtype_(pt), value_(v),  ptr_(p), volatile_(vol) {}
+    StoreInstr(const IROperand* v, const Register* p, bool vol) :
+        Instr(InstrType::store), value_(v), pointer_(p), volatile_(vol) {}
 
-    std::string ToString() const override
-    {
-        std::string line = volatile_ ? "volatile stroe " : "store";
-        line += ptrtype_->Dereference()->ToString() + ' ' + value_ + ", " + ptrtype_->ToString() + ptr_;
-        return line;
-    }
-
+    std::string ToString() const override;
 
 private:
-    const PtrType* ptrtype_{};
-    std::string value_{};
-    std::string ptr_{};
+    const IROperand* value_{};
+    const Register* pointer_{};
     bool volatile_{};
 };
 
@@ -482,20 +466,14 @@ private:
 class ExtractValInstr : public Instr
 {
 public:
-    ExtractValInstr(const std::string& r, const PtrType* t, const std::string& v, int i) :
-        Instr(InstrType::exval), result_(r), ptrtype_(t), value_(v), index_(i) {}
+    ExtractValInstr(const std::string& r, const Register* p, int i) :
+        Instr(InstrType::exval), result_(r), pointer_(p), index_(i) {}
 
-    std::string ToString() const override
-    {
-        return result_ + " = extractval " + ptrtype_->ToString() + "* " +
-            value_ + '[' + std::to_string(index_) + ']';
-    }
-
+    std::string ToString() const override;
 
 private:
     std::string result_{};
-    const PtrType* ptrtype_{};
-    std::string value_{};
+    const Register* pointer_{};
     int index_{};
 };
 
@@ -503,20 +481,14 @@ private:
 class SetValInstr : public Instr
 {
 public:
-    SetValInstr(const std::string& nv, const PtrType* t, const std::string& v, int i) :
-        Instr(InstrType::setval), newval_(nv), ptrtype_(t), value_(v), index_(i) {}
+    SetValInstr(const IROperand* nv, const Register* p, int i) :
+        Instr(InstrType::setval), newval_(nv), pointer_(p), index_(i) {}
 
-    std::string ToString() const override
-    {
-        return "setval " + newval_ + ", " + ptrtype_->ToString() +
-            value_ + '[' + std::to_string(index_) + ']';
-    }
-
+    std::string ToString() const override;
 
 private:
-    std::string newval_{};
-    const PtrType* ptrtype_{};
-    std::string value_{};
+    const IROperand* newval_{};
+    const Register* pointer_{};
     int index_{};
 };
 
@@ -524,20 +496,14 @@ private:
 class GetElePtrInstr : public Instr
 {
 public:
-    GetElePtrInstr(const std::string& r, const PtrType* t, const std::string& v, int i) :
-        Instr(InstrType::geteleptr), result_(r), ptrtype_(t), ptrvalue_(v), index_(i) {}
+    GetElePtrInstr(const std::string& r, const Register* p, int i) :
+        Instr(InstrType::geteleptr), result_(r), pointer_(p), index_(i) {}
 
-    std::string ToString() const override
-    {
-        return result_ + " = geteleptr " + ptrtype_->ToString() +
-            ptrvalue_ + '[' + std::to_string(index_) + ']';
-    }
-
+    std::string ToString() const override;
 
 private:
     std::string result_{};
-    const PtrType* ptrtype_{};
-    std::string ptrvalue_{};
+    const Register* pointer_{};
     int index_{};
 };
 
@@ -545,386 +511,268 @@ private:
 class TruncInstr : public Instr
 {
 public:
-    TruncInstr(const std::string& r, const IntType* t1,
-        const std::string& v, const IntType* t2) :
-        Instr(InstrType::trunc), result_(r), type1_(t1), type2_(t2), value_(v) {}
+    TruncInstr(
+        const std::string& r, const IntType* t, const Register* v
+    ) : Instr(InstrType::trunc), result_(r), type_(t), value_(v) {}
 
-    std::string ToString() const override
-    {
-        return result_ + " = trunc " + type1_->ToString() + ' ' +
-            value_ + " to " + type2_->ToString();
-    }
-
+    std::string ToString() const override;
 
 private:
     std::string result_{};
-    const IntType* type1_{};
-    const IntType* type2_{};
-    std::string value_{};
+    const IntType* type_{};
+    const Register* value_{};
 };
 
 
 class FtruncInstr : public Instr
 {
 public:
-    FtruncInstr(const std::string& r, const FloatType* t1,
-        const std::string& v, const FloatType* t2) :
-        Instr(InstrType::ftrunc), result_(r), type1_(t1), type2_(t2), value_(v) {}
+    FtruncInstr(
+        const std::string& r, const FloatType* t, const Register* v
+    ) : Instr(InstrType::ftrunc), result_(r), type_(t), value_(v) {}
 
-    std::string ToString() const override
-    {
-        return result_ + " = ftrunc " + type1_->ToString() + ' ' +
-            value_ + " to " + type2_->ToString();
-    }
-
+    std::string ToString() const override;
 
 private:
     std::string result_{};
-    const FloatType* type1_{};
-    const FloatType* type2_{};
-    std::string value_{};
+    const FloatType* type_{};
+    const Register* value_{};
 };
 
 
 class ZextInstr : public Instr
 {
 public:
-    ZextInstr(const std::string& r, const IntType* t1,
-        const std::string& v, const IntType* t2) :
-        Instr(InstrType::zext), result_(r), type1_(t1), type2_(t2), value_(v) {}
+    ZextInstr(
+        const std::string& r, const IntType* t, const Register* v
+    ) : Instr(InstrType::zext), result_(r), type_(t), value_(v) {}
 
-    std::string ToString() const override
-    {
-        return result_ + " = zext " + type1_->ToString() + ' ' +
-            value_ + " to " + type2_->ToString();
-    }
-
+    std::string ToString() const override;
 
 private:
     std::string result_{};
-    const IntType* type1_{};
-    const IntType* type2_{};
-    std::string value_{};
+    const IntType* type_{};
+    const Register* value_{};
 };
 
 
 class SextInstr : public Instr
 {
 public:
-    SextInstr(const std::string& r, const IntType* t1,
-        const std::string& v, const IntType* t2) :
-        Instr(InstrType::sext), result_(r), type1_(t1), type2_(t2), value_(v) {}
+    SextInstr(
+        const std::string& r, const IntType* t, const Register* v
+    ) : Instr(InstrType::sext), result_(r), type_(t), value_(v) {}
 
-    std::string ToString() const override
-    {
-        return result_ + " = sext " + type1_->ToString() + ' ' +
-            value_ + " to " + type2_->ToString();
-    }
-
+    std::string ToString() const override;
 
 private:
     std::string result_{};
-    const IntType* type1_{};
-    const IntType* type2_{};
-    std::string value_{};
+    const IntType* type_{};
+    const Register* value_{};
 };
 
 
 class FextInstr : public Instr
 {
 public:
-    FextInstr(const std::string& r, const FloatType* t1,
-        const std::string& v, const FloatType* t2) :
-        Instr(InstrType::fext), result_(r), type1_(t1), type2_(t2), value_(v) {}
+    FextInstr(
+        const std::string& r, const FloatType* t, const Register* v
+    ) : Instr(InstrType::fext), result_(r), type_(t), value_(v) {}
 
-    std::string ToString() const override
-    {
-        return result_ + " = fext " + type1_->ToString() + ' ' +
-            value_ + " to " + type2_->ToString();
-    }
-
+    std::string ToString() const override;
 
 private:
     std::string result_{};
-    const FloatType* type1_{};
-    const FloatType* type2_{};
-    std::string value_{};
+    const FloatType* type_{};
+    const Register* value_{};
 };
 
 
 class FtouInstr : public Instr
 {
 public:
-    FtouInstr(const std::string& r, const FloatType* t1,
-        const std::string& v, const IntType* t2) :
-        Instr(InstrType::ftou), result_(r), type1_(t1), type2_(t2), value_(v) {}
+    FtouInstr(
+        const std::string& r, const IntType* t, const Register* v
+    ) : Instr(InstrType::ftou), result_(r), type_(t), value_(v) {}
 
-    std::string ToString() const override
-    {
-        return result_ + " = ftou " + type1_->ToString() + ' ' +
-            value_ + " to " + type2_->ToString();
-    }
-
+    std::string ToString() const override;
 
 private:
     std::string result_{};
-    const FloatType* type1_{};
-    const IntType* type2_{};
-    std::string value_{};
+    const IntType* type_{};
+    const Register* value_{};
 };
 
 
 class FtosInstr : public Instr
 {
 public:
-    FtosInstr(const std::string& r, const FloatType* t1,
-        const std::string& v, const IntType* t2) :
-        Instr(InstrType::ftos), result_(r), type1_(t1), type2_(t2), value_(v) {}
+    FtosInstr(
+        const std::string& r, const IntType* t, const Register* v
+    ) : Instr(InstrType::ftos), result_(r), type_(t), value_(v) {}
 
-    std::string ToString() const override
-    {
-        return result_ + " = ftos " + type1_->ToString() + ' ' +
-            value_ + " to " + type2_->ToString();
-    }
-
+    std::string ToString() const override;
 
 private:
     std::string result_{};
-    const FloatType* type1_{};
-    const IntType* type2_{};
-    std::string value_{};
+    const IntType* type_{};
+    const Register* value_{};
 };
 
 
 class UtofInstr : public Instr
 {
 public:
-    UtofInstr(const std::string& r, const IntType* t1,
-        const std::string& v, const FloatType* t2) :
-        Instr(InstrType::utof), result_(r), type1_(t1), type2_(t2), value_(v) {}
+    UtofInstr(
+        const std::string& r, const FloatType* t1, const Register* v
+    ) : Instr(InstrType::utof), result_(r), type_(t1), value_(v) {}
 
-    std::string ToString() const override
-    {
-        return result_ + " = utof " + type1_->ToString() + ' ' +
-            value_ + " to " + type2_->ToString();
-    }
-
+    std::string ToString() const override;
 
 private:
     std::string result_{};
-    const IntType* type1_{};
-    const FloatType* type2_{};
-    std::string value_{};
+    const FloatType* type_{};
+    const Register* value_{};
 };
 
 
 class StofInstr : public Instr
 {
 public:
-    StofInstr(const std::string& r, const IntType* t1,
-        const std::string& v, const FloatType* t2) :
-        Instr(InstrType::stof), result_(r), type1_(t1), type2_(t2), value_(v) {}
+    StofInstr(
+        const std::string& r, const FloatType* t, const Register* v
+    ) : Instr(InstrType::stof), result_(r), type_(t), value_(v) {}
 
-    std::string ToString() const override
-    {
-        return result_ + " = stof " + type1_->ToString() + ' ' +
-            value_ + " to " + type2_->ToString();
-    }
-
+    std::string ToString() const override;
 
 private:
     std::string result_{};
-    const IntType* type1_{};
-    const FloatType* type2_{};
-    std::string value_{};
+    const FloatType* type_{};
+    const Register* value_{};
 };
 
 
 class PtrtoiInstr : public Instr
 {
 public:
-    PtrtoiInstr(const std::string& r, const PtrType* t1,
-        const std::string& v, const IntType* t2) :
-        Instr(InstrType::ptrtoi), result_(r), type1_(t1), type2_(t2), value_(v) {}
+    PtrtoiInstr(
+        const std::string& r, const IntType* t, const Register* v
+    ) : Instr(InstrType::ptrtoi), result_(r), type_(t), value_(v) {}
 
-    std::string ToString() const override
-    {
-        return result_ + " = ptrtoi " + type1_->ToString() + ' ' +
-            value_ + " to " + type2_->ToString();
-    }
-
+    std::string ToString() const override;
 
 private:
     std::string result_{};
-    const PtrType* type1_{};
-    const IntType* type2_{};
-    std::string value_{};
+    const IntType* type_{};
+    const Register* value_{};
 };
 
 
 class ItoptrInstr : public Instr
 {
 public:
-    ItoptrInstr(const std::string& r, const IntType* t1,
-        const std::string& v, const PtrType* t2) :
-        Instr(InstrType::itoptr), result_(r), type1_(t1), type2_(t2), value_(v) {}
+    ItoptrInstr(
+        const std::string& r, const PtrType* t, const Register* v
+    ) : Instr(InstrType::itoptr), result_(r), type_(t), value_(v) {}
 
-    std::string ToString() const override
-    {
-        return result_ + " = itoptr " + type1_->ToString() + ' ' +
-            value_ + " to " + type2_->ToString();
-    }
-
+    std::string ToString() const override;
 
 private:
     std::string result_{};
-    const IntType* type1_{};
-    const PtrType* type2_{};
-    std::string value_{};
+    const PtrType* type_{};
+    const Register* value_{};
 };
 
 
 class BitcastInstr : public Instr
 {
 public:
-    BitcastInstr(const std::string& r, const IRType* t1,
-        const std::string& v, const IRType* t2) :
-        Instr(InstrType::bitcast), result_(r), type1_(t1), type2_(t2), value_(v) {}
+    BitcastInstr(
+        const std::string& r, const IRType* t, const Register* v
+    ) : Instr(InstrType::bitcast), result_(r), type_(t), value_(v) {}
 
-    std::string ToString() const override
-    {
-        return result_ + " = bitcast " + type1_->ToString() + ' ' +
-            value_ + " to " + type2_->ToString();
-    }
-
+    std::string ToString() const override;
 
 private:
     std::string result_{};
-    const IRType* type1_{};
-    const IRType* type2_{};
-    std::string value_{};
+    const IRType* type_{};
+    const Register* value_{};
 };
 
 
 enum class Condition
 {
-    eq, ne, ugt, uge, ult, 
-    ule, sgt, sge, slt, sle
+    eq, ne,
+    ge, gt, ugt, uge, sgt, sge,
+    le, lt, ult, ule, slt, sle
 };
-
-namespace std
-{
-string to_string(Condition c)
-{
-    switch (c)
-    {
-    case Condition::eq: return "eq";
-    case Condition::ne: return "ne";
-    case Condition::ugt: return "ugt";
-    case Condition::uge: return "uge";
-    case Condition::ult: return "ult";
-    case Condition::ule: return "ule";
-    case Condition::sgt: return "sgt";
-    case Condition::sge: return "sge";
-    case Condition::slt: return "slt";
-    case Condition::sle: return "sle";
-    default: return "";
-    }
-}
-}
 
 
 class IcmpInstr : public Instr
 {
 public:
-    IcmpInstr(const std::string& r, Condition c, const IntType* t,
-        const std::string& o1, const std::string& o2) :
+    IcmpInstr(const std::string& r, Condition c,
+        const IROperand* o1, const IROperand* o2) :
             Instr(InstrType::icmp), result_(r), cond_(c),
-            type_(t), op1_(o1), op2_(o2) {}
+            op1_(o1), op2_(o2) {}
 
-    std::string ToString()
-    {
-        return result_ + " = icmp " + std::to_string(cond_) +
-            ' ' + type_->ToString() + ' ' + op1_ + ' ' + op2_;
-    }
-
+    std::string ToString() const override;
 
 private:
     std::string result_{};
     Condition cond_;
-    const IntType* type_{};
-    std::string op1_{};
-    std::string op2_{};
+    const IROperand* op1_{};
+    const IROperand* op2_{};
 };
 
 
 class FcmpInstr : public Instr
 {
 public:
-    FcmpInstr(const std::string& r, Condition c, const FloatType* t,
-        const std::string& o1, const std::string& o2) :
+    FcmpInstr(const std::string& r, Condition c,
+        const IROperand* o1, const IROperand* o2) :
             Instr(InstrType::fcmp), result_(r), cond_(c),
-            type_(t), op1_(o1), op2_(o2) {}
+            op1_(o1), op2_(o2) {}
 
-    std::string ToString()
-    {
-        return result_ + " = fcmp " + std::to_string(cond_) +
-            ' ' + type_->ToString() + ' ' + op1_ + ' ' + op2_;
-    }
-
+    std::string ToString() const override;
 
 private:
     std::string result_{};
     Condition cond_;
-    const FloatType* type_{};
-    std::string op1_{};
-    std::string op2_{};
+    const IROperand* op1_{};
+    const IROperand* op2_{};
 };
 
 
 class SelectInstr : public Instr
 {
 public:
-    SelectInstr(const std::string& r, const std::string& s,
-        bool c, const IRType* t,
-        const std::string& v1, const std::string& v2) :
-            Instr(InstrType::select), result_(r), selty_(s), cond_(c),
-            type_(t), value1_(v1), value2_(v2) {}
+    SelectInstr(const std::string& r, const IROperand* s,
+        bool c, const IROperand* v1, const IROperand* v2) :
+            Instr(InstrType::select), result_(r), selty_(s),
+            cond_(c), value1_(v1), value2_(v2) {}
 
-    std::string ToString()
-    {
-        return result_ + " = select " + selty_ + ", " +
-            (cond_ ? "true: " : "false: ") + type_->ToString() + 
-            ' ' + value1_ + ' ' + value2_;
-    }
-
+    std::string ToString() const override;
 
 private:
     std::string result_{};
-    std::string selty_{};
+    const IROperand* selty_{};
     bool cond_{};
-    const IRType* type_{};
-    std::string value1_{};
-    std::string value2_{};
+    const IROperand* value1_{};
+    const IROperand* value2_{};
 };
 
 
 class PhiInstr : public Instr
 {
 public:
-    using BlockValPairList = std::vector<std::pair<const BasicBlock*, std::string>>;
+    using BlockValPairList = std::vector<std::pair<const BasicBlock*, const IROperand*>>;
 
-    PhiInstr(const std::string& i, const IRType* t, const BlockValPairList& l) :
-        Instr(InstrType::phi), result_(i), type_(t), labels_(l) {}
+    PhiInstr(const std::string& r, const IRType* t) :
+        Instr(InstrType::phi), result_(r), type_(t) {}
 
-    std::string ToString()
-    {
-        std::string line = result_ + " = phi " + type_->ToString() + ' ';
-        for (const auto& l : labels_)
-            line += '[' + l.first->GetName() + ", " + l.second + "] ";
-        return line;
-    }
-
+    std::string ToString() const override;
+    void AddBlockValPair(const BasicBlock*, const IROperand*);
 
 private:
     std::string result_{};

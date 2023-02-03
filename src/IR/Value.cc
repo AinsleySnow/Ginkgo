@@ -1,20 +1,19 @@
-#include "Value.h"
+#include "IR/Value.h"
 
 
 std::string Module::ToString() const
 {
     std::string mod{};
     for (const auto& psym : globalsym_)
-        mod += psym->ToString() + '\n';
+        mod += psym.second->ToString() + '\n';
     return mod;
 }
 
-Function* Module::AddFunc(const std::string& name,
-    const std::vector<const IRType*>& param)
+Function* Module::AddFunc(const std::string& name, const FuncType* functy)
 {
-    auto func = std::make_unique<Function>(name, param);
+    auto func = std::make_unique<Function>(name, functy);
     auto pfunc = func.get();
-    globalsym_.push_back(std::move(func));
+    globalsym_.emplace(name, std::move(func));
     return pfunc;
 }
 
@@ -22,7 +21,7 @@ GlobalVar* Module::AddGlobalVar(const std::string& name, const IRType* ptype)
 {
     auto var = std::make_unique<GlobalVar>(name, std::move(ptype));
     auto pvar = var.get();
-    globalsym_.push_back(std::move(var));
+    globalsym_.emplace(name, std::move(var));
     return pvar;
 }
 
@@ -43,16 +42,25 @@ BasicBlock* Function::AddBasicBlock(const std::string& name)
     return pbb; 
 }
 
-void Function::AddSymbol(const std::string& name, const IRType* ty)
+BasicBlock* Function::GetBasicBlock(const std::string& name)
 {
-    if (table_.count(name)) return;
-    table_[name] = ty;
+    for (auto& pbb : blk_)
+        if (name == pbb->Name())
+            return pbb.get();
+    return nullptr;
 }
 
-const IRType* Function::GetSymbolType(const std::string& name) const
+BasicBlock* Function::GetBasicBlock(int index)
 {
-    if (!table_.count(name)) return nullptr;
-    return table_.at(name);
+    if (index < 0)
+        return (blk_.end() + index)->get();
+    else
+        return blk_[index].get();
+}
+
+void Function::AddIROperand(std::unique_ptr<IROperand> op)
+{
+    operands_.push_back(std::move(op));
 }
 
 
@@ -63,4 +71,3 @@ std::string BasicBlock::ToString() const
         blk += instr->ToString() + ";\n";
     return blk;
 }
-

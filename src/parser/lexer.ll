@@ -28,7 +28,6 @@ WS  [ \t\v\n\f]
 #include <cstdlib>
 #include <string>
 #include <memory>
-#include "utils/Scope.h"
 #include "ast/Tag.h"
 #include "yacc.hh"
 
@@ -55,17 +54,17 @@ static int check_type(void);
 "case"					{ return YYTOKEN::CASE; }
 "char"					{ yylval->emplace<Tag>() = Tag::_char; return YYTOKEN::CHAR; }
 "const"					{ yylval->emplace<Tag>() = Tag::_const; return YYTOKEN::CONST; }
-"continue"				{ return YYTOKEN::CONTINUE; }
+"continue"				{ yylval->emplace<Tag>() = Tag::_continue; return YYTOKEN::CONTINUE; }
 "default"				{ return YYTOKEN::DEFAULT; }
-"do"					{ return YYTOKEN::DO; }
+"do"					{ yylval->emplace<Tag>() = Tag::_do; return YYTOKEN::DO; }
 "double"				{ yylval->emplace<Tag>() = Tag::_double; return YYTOKEN::DOUBLE; }
-"else"					{ return YYTOKEN::ELSE; }
+"else"					{ yylval->emplace<Tag>() = Tag::_else; return YYTOKEN::ELSE; }
 "enum"					{ return YYTOKEN::ENUM; }
 "extern"				{ return YYTOKEN::EXTERN; }
 "float"					{ yylval->emplace<Tag>() = Tag::_float; return YYTOKEN::FLOAT; }
-"for"					{ return YYTOKEN::FOR; }
+"for"					{ yylval->emplace<Tag>() = Tag::_for; return YYTOKEN::FOR; }
 "goto"					{ return YYTOKEN::GOTO; }
-"if"					{ return YYTOKEN::IF; }
+"if"					{ yylval->emplace<Tag>() = Tag::_if; return YYTOKEN::IF; }
 "inline"				{ return YYTOKEN::INLINE; }
 "int"					{ yylval->emplace<Tag>() = Tag::_int; return YYTOKEN::INT; }
 "long"					{ yylval->emplace<Tag>() = Tag::_long; return YYTOKEN::LONG; }
@@ -83,7 +82,7 @@ static int check_type(void);
 "unsigned"				{ yylval->emplace<Tag>() = Tag::_unsigned; return YYTOKEN::UNSIGNED; }
 "void"					{ return YYTOKEN::VOID; }
 "volatile"				{ yylval->emplace<Tag>() = Tag::_volatile; return YYTOKEN::VOLATILE; }
-"while"					{ return YYTOKEN::WHILE; }
+"while"					{ yylval->emplace<Tag>() = Tag::_while; return YYTOKEN::WHILE; }
 "_Alignas"              { return YYTOKEN::ALIGNAS; }
 "_Alignof"              { return YYTOKEN::ALIGNOF; }
 "_Atomic"               { yylval->emplace<Tag>() = Tag::_atomic; return YYTOKEN::ATOMIC; }

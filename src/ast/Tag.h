@@ -7,6 +7,8 @@ enum class Tag
     _float = 32, _double = 64, _unsigned = 128, _signed = 256,
     _bool = 512, _void = 1024,
 
+    customedtype, typedefedtype, enumtype, atomictype,
+
     _typedef, _extern, _static, _thread_local,
     
     _auto, _register, _complex, _imaginary,
@@ -14,7 +16,7 @@ enum class Tag
     _const, _restrict, _volatile, _atomic,
 
     arrow, inc, dec, dot,
-    _and, _or, star, plus, minus, tilde, exclamation, 
+    _and, _or, asterisk, plus, minus, tilde, exclamation, 
     slash, percent, lshift, rshift, greathan,
     lessthan, greatequal, lessequal, equal,
     notequal, cap,
@@ -24,7 +26,9 @@ enum class Tag
 
     assign, mul_assign, div_assign, mod_assign, add_assign,
     sub_assign, left_assign, right_assign, and_assign,
-    xor_assign, or_assign
+    xor_assign, or_assign,
+
+    _continue, _do, _else, _for, _if, _while
 };
 
 #endif // _TAG_H_
