@@ -187,17 +187,7 @@ unary_expression
             $$ = std::make_unique<UnaryExpr>($1, std::move($2));
         }
         else
-        {
-            /*if ($2->ToConstant())
-            {
-                ConstExpr ans;
-                bool correct = ConstExpr::DoCalc($1, $2->ToConstant(), ans);
-                if (correct) $$ = std::make_unique<ConstExpr>(ans);
-                else YYERROR;
-            }
-            else*/
-                $$ = std::make_unique<UnaryExpr>($1, std::move($2));
-        }
+            $$ = std::make_unique<UnaryExpr>($1, std::move($2));
     }
 	| SIZEOF unary_expression
     {
