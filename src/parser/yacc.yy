@@ -1,12 +1,6 @@
 %{
 #include "yacc.hh"
 int yylex(yy::parser::value_type* yylval);
-
-#define handle_binary_expr(n0, n1, n2, sym, tag)\
-    n0 = std::make_unique<BinaryExpr>(          \
-		n1, tag, n2                             \
-	);
-
 %}
 
 
