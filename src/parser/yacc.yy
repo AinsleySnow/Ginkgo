@@ -236,89 +236,83 @@ cast_expression
 multiplicative_expression
 	: cast_expression{ $$ = std::move($1); }
 	| multiplicative_expression '*' cast_expression
-	{ handle_binary_expr($$, std::move($1), std::move($3), *, Tag::asterisk); }
+	{ $$ = std::make_unique<BinaryExpr>(std::move($1), Tag::asterisk, std::move($3)); }
 	| multiplicative_expression '/' cast_expression
-	{ handle_binary_expr($$, std::move($1), std::move($3), /, Tag::slash); }
+	{ $$ = std::make_unique<BinaryExpr>(std::move($1), Tag::slash, std::move($3)); }
 	| multiplicative_expression '%' cast_expression
-	{ handle_binary_expr($$, std::move($1), std::move($3), %, Tag::percent); }
+	{ $$ = std::make_unique<BinaryExpr>(std::move($1), Tag::percent, std::move($3)); }
 	;
 
 additive_expression
 	: multiplicative_expression{ $$ = std::move($1); }
 	| additive_expression '+' multiplicative_expression
-    { handle_binary_expr($$, std::move($1), std::move($3), +, Tag::plus); }
+    { $$ = std::make_unique<BinaryExpr>(std::move($1), Tag::plus, std::move($3)); }
 	| additive_expression '-' multiplicative_expression
-	{ handle_binary_expr($$, std::move($1), std::move($3), -, Tag::minus); }
+	{ $$ = std::make_unique<BinaryExpr>(std::move($1), Tag::minus, std::move($3)); }
     ;
 
 shift_expression
 	: additive_expression{ $$ = std::move($1); }
 	| shift_expression LEFT_OP additive_expression
-	{ handle_binary_expr($$, std::move($1), std::move($3), <<, $2); }
+	{ $$ = std::make_unique<BinaryExpr>(std::move($1), Tag::lshift, std::move($3)); }
 	| shift_expression RIGHT_OP additive_expression
-    { handle_binary_expr($$, std::move($1), std::move($3), >>, $2); }
+    { $$ = std::make_unique<BinaryExpr>(std::move($1), Tag::rshift, std::move($3)); }
 	;
 
 relational_expression
 	: shift_expression { $$ = std::move($1); }
 	| relational_expression '<' shift_expression
-    { handle_binary_expr($$, std::move($1), std::move($3), <, Tag::lessthan); }
+    { $$ = std::make_unique<BinaryExpr>(std::move($1), Tag::lessthan, std::move($3)); }
 	| relational_expression '>' shift_expression
-    { handle_binary_expr($$, std::move($1), std::move($3), >, Tag::greathan); }
+    { $$ = std::make_unique<BinaryExpr>(std::move($1), Tag::greathan, std::move($3)); }
 	| relational_expression LE_OP shift_expression
-    { handle_binary_expr($$, std::move($1), std::move($3), <=, $2); }
+    { $$ = std::make_unique<BinaryExpr>(std::move($1), Tag::lessequal, std::move($3)); }
 	| relational_expression GE_OP shift_expression
-    { handle_binary_expr($$, std::move($1), std::move($3), >=, $2); }
+    { $$ = std::make_unique<BinaryExpr>(std::move($1), Tag::greatequal, std::move($3)); }
 	;
 
 equality_expression
 	: relational_expression   { $$ = std::move($1); }
 	| equality_expression EQ_OP relational_expression
-    { handle_binary_expr($$, std::move($1), std::move($3), ==, $2); }
+    { $$ = std::make_unique<BinaryExpr>(std::move($1), Tag::equal, std::move($3)); }
 	| equality_expression NE_OP relational_expression
-    { handle_binary_expr($$, std::move($1), std::move($3), !=, $2); }
+    { $$ = std::make_unique<BinaryExpr>(std::move($1), Tag::notequal, std::move($3)); }
 	;
 
 and_expression
 	: equality_expression  { $$ = std::move($1); }
 	| and_expression '&' equality_expression
-    { handle_binary_expr($$, std::move($1), std::move($3), &, Tag::_and); }
+    { $$ = std::make_unique<BinaryExpr>(std::move($1), Tag::_and, std::move($3)); }
 	;
 
 exclusive_or_expression
 	: and_expression{ $$ = std::move($1); }
 	| exclusive_or_expression '^' and_expression
-    { handle_binary_expr($$, std::move($1), std::move($3), ^, Tag::cap); }
+    { $$ = std::make_unique<BinaryExpr>(std::move($1), Tag::cap, std::move($3)); }
 	;
 
 inclusive_or_expression
 	: exclusive_or_expression{ $$ = std::move($1); }
 	| inclusive_or_expression '|' exclusive_or_expression
-    { handle_binary_expr($$, std::move($1), std::move($3), |, Tag::incl_or); }
+    { $$ = std::make_unique<BinaryExpr>(std::move($1), Tag::incl_or, std::move($3)); }
 	;
 
 logical_and_expression
 	: inclusive_or_expression{ $$ = std::move($1); }
 	| logical_and_expression AND_OP inclusive_or_expression
-    {
-        $$ = std::make_unique<LogicalExpr>(std::move($1), $2, std::move($3));
-    }
+    { $$ = std::make_unique<BinaryExpr>(std::move($1), Tag::and_assign, std::move($3)); }
 	;
 
 logical_or_expression
 	: logical_and_expression{ $$ = std::move($1); }
 	| logical_or_expression OR_OP logical_and_expression
-    {
-        $$ = std::make_unique<LogicalExpr>(std::move($1), $2, std::move($3));
-    }
+    { $$ = std::make_unique<LogicalExpr>(std::move($1), Tag::or_assign, std::move($3)); }
 	;
 
 conditional_expression
 	: logical_or_expression{ $$ = std::move($1); }
 	| logical_or_expression '?' expression ':' conditional_expression
-    { 
-        $$ = std::make_unique<CondExpr>(std::move($1), std::move($3), std::move($5));
-    }
+    { $$ = std::make_unique<CondExpr>(std::move($1), std::move($3), std::move($5)); }
 	;
 
 assignment_expression

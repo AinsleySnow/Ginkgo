@@ -7,6 +7,113 @@
 #include <algorithm>
 #include <utility>
 
+#define to_int(op) static_cast<const IntConst*>(op)
+#define to_float(op) static_cast<const FloatConst*>(op)
+
+const IROperand* IRGen::EvalBinary(
+    Tag op, const IROperand* lhs, const IROperand* rhs)
+{
+#define both_float lhs->IsFloatConst() && rhs->IsFloatConst()
+#define both_int lhs->IsIntConst() && rhs->IsIntConst()
+#define int_float lhs->IsIntConst() && rhs->IsFloatConst()
+#define float_int lhs->IsFloatConst() && rhs->IsIntConst()
+
+#define do_int_calc(sym)                                    \
+    if (both_int)                                           \
+    {                                                       \
+        auto lval = to_int(lhs)->Val();                     \
+        auto rval = to_int(rhs)->Val();                     \
+        auto ans = lval sym rval;                           \
+        return IntConst::CreateIntConst(curfunc_, ans);     \
+    }
+
+
+#define do_calc(sym)                                            \
+    if (both_float)                                             \
+    {                                                           \
+        auto lval = to_float(lhs)->Val();                       \
+        auto rval = to_float(rhs)->Val();                       \
+        auto ans = lval sym rval;                               \
+        return FloatConst::CreateFloatConst(curfunc_, ans);     \
+    }                                                           \
+    else if (both_int)                                          \
+    {                                                           \
+        auto lval = to_int(lhs)->Val();                         \
+        auto rval = to_int(rhs)->Val();                         \
+        auto ans = lval sym rval;                               \
+        return IntConst::CreateIntConst(curfunc_, ans);                                          \
+    }                                                           \
+    else if (int_float)                                         \
+    {                                                           \
+        auto lval = to_int(lhs)->Val();                         \
+        auto rval = to_float(rhs)->Val();                       \
+        auto ans = lval sym rval;                               \
+        return FloatConst::CreateFloatConst(curfunc_, ans);     \
+    }                                                           \
+    else if (float_int)                                         \
+    {                                                           \
+        auto lval = to_float(lhs)->Val();                       \
+        auto rval = to_int(rhs)->Val();                         \
+        auto ans = lval sym rval;                               \
+        return FloatConst::CreateFloatConst(curfunc_, ans);     \
+    }
+
+    switch (op)
+    {
+    case Tag::plus: do_calc(+); break;
+    case Tag::minus: do_calc(-); break;
+    case Tag::asterisk: do_calc(*); break;
+    case Tag::slash: do_calc(/); break;
+    case Tag::_and: do_int_calc(&); break;
+    case Tag::incl_or: do_int_calc(|); break;
+    case Tag::logical_and: do_calc(&&); break;
+    case Tag::logical_or: do_calc(||); break;
+    case Tag::lshift: do_int_calc(<<); break;
+    case Tag::rshift: do_int_calc(>>); break;
+    case Tag::lessthan: do_calc(<); break;
+    case Tag::greathan: do_calc(>); break;
+    case Tag::lessequal: do_calc(<=); break;
+    case Tag::greatequal: do_calc(>=); break;
+    case Tag::cap: do_int_calc(^); break;
+    case Tag::equal: do_calc(==); break;
+    case Tag::notequal: do_calc(!=); break;
+    default: return nullptr;
+    }
+
+    return nullptr;
+
+#undef both_int
+#undef both_float
+#undef int_float
+#undef float_int
+#undef do_int_calc
+#undef do_calc
+}
+
+
+const IROperand* IRGen::EvalUnary(Tag op, const IROperand* num)
+{
+    switch (op)
+    {
+    case Tag::plus: return num;
+    case Tag::minus:
+        if (num->IsIntConst())
+            return IntConst::CreateIntConst(curfunc_, to_int(num)->Val());
+        else return FloatConst::CreateFloatConst(curfunc_, to_float(num)->Val());
+    case Tag::exclamation:
+        if (num->IsIntConst())
+            return IntConst::CreateIntConst(curfunc_, !(to_int(num)->Val()));
+        else return IntConst::CreateIntConst(curfunc_, !(to_float(num)->Val()));
+    case Tag::tilde:
+        return IntConst::CreateIntConst(curfunc_, ~(to_int(num)->Val()));
+    default: return nullptr;
+    }
+
+    return nullptr;
+}
+#undef to_int
+#undef to_float
+
 
 BasicBlock* IRGen::GetBasicBlock()
 {
@@ -250,6 +357,13 @@ void IRGen::VisitBinaryExpr(BinaryExpr* bin)
     bin->left_->Accept(this);
     bin->right_->Accept(this);
 
+    if (bin->left_->IsConstant() && bin->right_->IsConstant())
+    {
+        bin->Val() = EvalBinary(
+            bin->op_, bin->left_->Val(), bin->right_->Val());
+        return;
+    }
+
     auto lhs = bin->left_->Val(), rhs = bin->right_->Val();
     auto lhsty = lhs->Type(), rhsty = rhs->Type();
     bool hasfloat = lhsty->IsFloat() || rhsty->IsFloat();
@@ -362,16 +476,47 @@ void IRGen::VisitCastExpr(CastExpr* cast)
 
 void IRGen::VisitCondExpr(CondExpr* cond)
 {
+    if (cond->IsConstant())
+    {
+        cond->cond_->Accept(this);
+        auto sel = static_cast<const Constant*>(cond->cond_->Val());
+        if (sel->IsZero())
+        {
+            cond->false_->Accept(this);
+            cond->Val() = cond->false_->Val();
+        }
+        else
+        {
+            cond->true_->Accept(this);
+            cond->Val() = cond->true_->Val();
+        }
+        return;
+    }
+
     cond->cond_->Accept(this);
+    auto trueblk = GetBasicBlock(),
+        falseblk = GetBasicBlock(),
+        endblk = GetBasicBlock();
+    builder_.InsertBrInstr(cond->cond_->Val(), trueblk, falseblk);
+
+    builder_.InsertPoint() = trueblk;
     cond->true_->Accept(this);
+    builder_.InsertBrInstr(endblk);
+
+    builder_.InsertPoint() = falseblk;
     cond->false_->Accept(this);
+    builder_.InsertBrInstr(endblk);
+
+    builder_.InsertPoint() = endblk;
     auto sel = cond->cond_->Val();
     auto tval = cond->true_->Val();
     auto fval = cond->false_->Val();
 
-    auto regname = GetRegName();
     cond->Val() =
-        builder_.InsertSelectInstr(regname, sel, true, tval, fval);
+        builder_.InsertPhiInstr(GetRegName(), tval->Type());
+    auto phi = static_cast<PhiInstr*>(GetLastInstr());
+    phi->AddBlockValPair(trueblk, tval);
+    phi->AddBlockValPair(falseblk, fval);
 }
 
 
@@ -379,9 +524,11 @@ void IRGen::VisitConstant(ConstExpr* constant)
 {
     auto ctype = constant->RawType();
     if (ctype->IsInteger())
-        constant->Val() = IntConst::CreateIntConst(curfunc_, constant->GetInt());
+        constant->Val() = IntConst::CreateIntConst(
+            curfunc_, constant->GetInt(), ctype->ToIRType()->ToInteger());
     else
-        constant->Val() = FloatConst::CreateFloatConst(curfunc_, constant->GetFloat());
+        constant->Val() = FloatConst::CreateFloatConst(
+            curfunc_, constant->GetFloat(), ctype->ToIRType()->ToFloatPoint());
 }
 
 
@@ -395,12 +542,40 @@ void IRGen::VisitExprList(ExprList* list)
 void IRGen::VisitIdentExpr(IdentExpr* ident)
 {
     auto object = scopestack_.SearchObject(ident->name_);
-    ident->Val() = object->GetAddr();
+    ident->Val() = builder_.InsertLoadInstr(
+        GetRegName(), object->GetAddr());
 }
 
 
 void IRGen::VisitLogicalExpr(LogicalExpr* logical)
 {
+    if (logical->left_->IsConstant() && logical->right_->IsConstant())
+    {
+        logical->left_->Accept(this);
+        logical->right_->Accept(this);
+        auto lhs = static_cast<const Constant*>(logical->left_->Val());
+        auto rhs = static_cast<const Constant*>(logical->right_->Val());
+        logical->Val() = EvalBinary(logical->op_, lhs, rhs);
+        return;
+    }
+    else if (logical->left_->IsConstant())
+    {
+        logical->left_->Accept(this);
+        auto lhs = static_cast<const Constant*>(logical->left_->Val());
+        if ((lhs->IsZero() && logical->op_ == Tag::logical_and) ||
+            (!lhs->IsZero() && logical->op_ == Tag::logical_or))
+            logical->Val() = IntConst::CreateIntConst(curfunc_, !lhs->IsZero());
+        else
+        {
+            logical->right_->Accept(this);
+            auto zero = IntConst::CreateIntConst(curfunc_, 0);
+            auto one = IntConst::CreateIntConst(curfunc_, 1);
+            logical->Val() = builder_.InsertSelectInstr(
+                GetRegName(), logical->right_->Val(), true, one, zero);
+        }
+        return;
+    }
+
     auto firstblk = GetBasicBlock(),
         midblk = GetBasicBlock(),
         finalblk = GetBasicBlock();
@@ -456,6 +631,12 @@ void IRGen::VisitLogicalExpr(LogicalExpr* logical)
 void IRGen::VisitUnaryExpr(UnaryExpr* unary)
 {
     unary->content_->Accept(this);
+
+    if (unary->content_->IsConstant())
+    {
+        unary->Val() = EvalUnary(unary->op_, unary->content_->Val());
+        return;
+    }
 
     if (unary->op_ == Tag::inc || unary->op_ == Tag::dec)
     {

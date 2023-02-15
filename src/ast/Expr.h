@@ -18,6 +18,7 @@ public:
 
     virtual void Accept(Visitor*) {}
     virtual bool IsLVal() const { return false; }
+    virtual bool IsConstant() const { return false; }
 
     const auto& Type() const { return type_; }
     auto& Type() { return type_; }

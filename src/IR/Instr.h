@@ -16,6 +16,11 @@ public:
     virtual ~IROperand() {}
     virtual std::string ToString() const = 0;
 
+    virtual bool IsIntConst() const { return false; }
+    virtual bool IsFloatConst() const { return false; }
+    virtual bool IsConstant() const { return false; }
+    virtual bool IsRegister() const { return false; }
+
     auto Type() const { return type_; }
     auto& Type() { return type_; }
 
@@ -23,31 +28,46 @@ protected:
     const IRType* type_{};
 };
 
-class IntConst : public IROperand
+class Constant : public IROperand
+{
+public:
+    Constant(const IRType* t) : IROperand(t) {}
+    virtual bool IsZero() const = 0;
+};
+
+class IntConst : public Constant
 {
 public:
     static IntConst* CreateIntConst(Function*, unsigned long);
     static IntConst* CreateIntConst(Function*, unsigned long, const IntType*);
     IntConst(unsigned long ul, const IntType* t) :
-        num_(ul), IROperand(t) {}
+        num_(ul), Constant(t) {}
 
     std::string ToString() const override;
     unsigned long Val() const { return num_; }
+
+    bool IsZero() const override { return num_ == 0; }
+    bool IsConstant() const override { return true; }
+    bool IsIntConst() const override { return true; }
 
 private:
     unsigned long num_{};
 };
 
-class FloatConst : public IROperand
+class FloatConst : public Constant
 {
 public:
     static FloatConst* CreateFloatConst(Function*, double);
     static FloatConst* CreateFloatConst(Function*, double, const FloatType*);
     FloatConst(double d, const FloatType* t) :
-        num_(d), IROperand(t) {}
+        num_(d), Constant(t) {}
 
     std::string ToString() const override;
     double Val() const { return num_; }
+
+    bool IsZero() const override { return num_ == 0; }
+    bool IsConstant() const override { return true; }
+    bool IsFloatConst() const override { return true; }
 
 private:
     double num_{};

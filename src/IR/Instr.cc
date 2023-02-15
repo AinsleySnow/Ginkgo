@@ -1,10 +1,20 @@
 #include "IR/Instr.h"
 #include "IR/Value.h"
+#include <climits>
+#include <cfloat>
 
 
 IntConst* IntConst::CreateIntConst(Function* func, unsigned long ul)
 {
-    return CreateIntConst(func, ul, IntType::GetInt8(false));
+    if (ul < UINT8_MAX)
+        return CreateIntConst(func, ul, IntType::GetInt8(false));
+    else if (ul < UINT16_MAX)
+        return CreateIntConst(func, ul, IntType::GetInt16(false));
+    else if (ul < UINT32_MAX)
+        return CreateIntConst(func, ul, IntType::GetInt32(false));
+    else if (ul < UINT64_MAX)
+        return CreateIntConst(func, ul, IntType::GetInt64(false));
+    return nullptr;
 }
 
 IntConst* IntConst::CreateIntConst(Function* func, unsigned long ul, const IntType* t)
@@ -36,7 +46,11 @@ std::string IntConst::ToString() const
 
 FloatConst* FloatConst::CreateFloatConst(Function* func, double d)
 {
-    return CreateFloatConst(func, d, FloatType::GetFloat32());
+    if (d < FLT_MAX)
+        return CreateFloatConst(func, d, FloatType::GetFloat32());
+    else if (d < DBL_MAX)
+        return CreateFloatConst(func, d, FloatType::GetFloat64());
+    return nullptr;
 }
 
 FloatConst* FloatConst::CreateFloatConst(Function* func, double d, const FloatType* t)

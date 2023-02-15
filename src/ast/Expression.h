@@ -107,6 +107,7 @@ public:
     uint64_t GetInt() const { return val_.intgr_; }
     double GetFloat() const { return val_.flt_; }
     bool IsZero() const { return val_.intgr_ == 0; }
+    bool IsConstant() const override { return true; }
 
     void Accept(Visitor* v) override;
 
