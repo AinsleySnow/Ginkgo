@@ -43,8 +43,12 @@ public:
     Function* GetFunction(const std::string&);
     GlobalVar* GetGlobalVar(const std::string&);
 
+    auto& TypePool() { return pool_; }
+
+
 private:
     std::unordered_map<std::string, std::unique_ptr<Value>> globalsym_{};
+    IRTypePool pool_{};
 };
 
 
@@ -58,7 +62,7 @@ public:
     std::string ToString() const override;
     Module* Parent() const override { return static_cast<Module*>(parent_); }
 
-    BasicBlock* AddBasicBlock(const std::string&);
+    void AddBasicBlock(std::unique_ptr<BasicBlock>);
     BasicBlock* GetBasicBlock(const std::string&);
     BasicBlock* GetBasicBlock(int);
     void AddIROperand(std::unique_ptr<IROperand>);
@@ -70,6 +74,8 @@ public:
     auto ReturnValue() const { return returnvalue_; }
     auto& ReturnValue() { return returnvalue_; }
 
+    auto& TypePool() { return pool_; }
+
 
 private:
     std::vector<std::unique_ptr<BasicBlock>> blk_{};
@@ -77,6 +83,7 @@ private:
 
     const Register* returnvalue_{};
     const FuncType* functype_{};
+    IRTypePool pool_{};
 };
 
 

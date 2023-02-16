@@ -296,7 +296,8 @@ const Register* IRBuilder::InsertAllocaInstr(const std::string& result, const IR
 {
     auto palloca = std::make_unique<AllocaInstr>(result, ty);
     insertpoint_->AddInstr(std::move(palloca));
-    return Register::CreateRegister(insertpoint_->Parent(), result, ty);
+    auto ptrty = PtrType::GetPtrType(insertpoint_->Parent()->TypePool(), ty);
+    return Register::CreateRegister(insertpoint_->Parent(), result, ptrty);
 }
 
 const Register* IRBuilder::InsertAllocaInstr(
@@ -304,7 +305,8 @@ const Register* IRBuilder::InsertAllocaInstr(
 {
     auto palloca = std::make_unique<AllocaInstr>(result, ty, num);
     insertpoint_->AddInstr(std::move(palloca));
-    return Register::CreateRegister(insertpoint_->Parent(), result, ty);
+    auto ptrty = PtrType::GetPtrType(insertpoint_->Parent()->TypePool(), ty);
+    return Register::CreateRegister(insertpoint_->Parent(), result, ptrty);
 }
 
 const Register* IRBuilder::InsertAllocaInstr(
@@ -312,7 +314,8 @@ const Register* IRBuilder::InsertAllocaInstr(
 {
     auto palloca = std::make_unique<AllocaInstr>(result, ty, num, align);
     insertpoint_->AddInstr(std::move(palloca));
-    return Register::CreateRegister(insertpoint_->Parent(), result, ty);
+    auto ptrty = PtrType::GetPtrType(insertpoint_->Parent()->TypePool(), ty);
+    return Register::CreateRegister(insertpoint_->Parent(), result, ptrty);
 }
 
 

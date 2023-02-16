@@ -82,7 +82,7 @@ std::unique_ptr<CPtrType> CArithmType::AttachPtr(const Ptr* ptr) const
     return ptrtype;
 }
 
-const IRType* CArithmType::ToIRType() const
+const IRType* CArithmType::ToIRType(IRTypePool&) const
 {
     switch (type_)
     {
@@ -162,4 +162,13 @@ std::string CArithmType::ToString() const
 void CFuncType::AddParam(std::unique_ptr<CType> t)
 {
     paramlist_.push_back(std::move(t));
+}
+
+const FuncType* CFuncType::ToIRType(IRTypePool& pool) const
+{
+    auto functy = FuncType::GetFuncType(
+        pool, ReturnType()->ToIRType(pool), Variadic());
+    for (auto& param : paramlist_)
+        functy->AddParam(param->ToIRType(pool));
+    return functy;
 }

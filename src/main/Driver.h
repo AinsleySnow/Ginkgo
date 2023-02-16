@@ -1,7 +1,6 @@
 #ifndef _DRIVER_H_
 #define _DRIVER_H_
 
-#include <cstdio>
 #include <fstream>
 #include <memory>
 #include <string>
@@ -13,23 +12,28 @@
 class Driver
 {
 public:
-    Driver(const std::string&);
-    Driver(const std::string&, const std::string&);
-    ~Driver();
+    Driver() {}
+    Driver(const std::string& in) : inputname_(in) {}
+    Driver(const std::string& in, const std::string& out) :
+        inputname_(in), outputname_(out) {}
+    ~Driver() {}
 
     void Parse();
     const auto& GetAST();
-    void CheckAST();
+    bool CheckAST();
     void GenerateIR();
+    void PrintIR();
 
+    void SetInputFile(const std::string& in) { inputname_ = in; }
+    auto GetInputFile() { return inputname_; }
+    void SetOutputFile(const std::string& out) { outputname_ = out; }
+    auto GetOutputFile() { return outputname_; }
 
 private:
     std::string inputname_{};
     std::string outputname_{};
-    std::ifstream input_{};
-    std::ofstream output_{};
 
-    std::vector<std::unique_ptr<DeclStmt>> transunits_{};
+    TransUnit transunit_{};
     std::unique_ptr<Module> module_{};
 };
 

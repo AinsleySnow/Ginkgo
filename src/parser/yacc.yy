@@ -26,7 +26,7 @@ int yylex(yy::parser::value_type* yylval);
 // %define parser.error custom
 %define parse.trace
 
-%parse-param { std::vector<std::unique_ptr<DeclStmt>>& transunits }
+%parse-param { TransUnit& transunit }
 
 %token	<std::string> IDENTIFIER I_CONSTANT F_CONSTANT STRING_LITERAL
 FUNC_NAME SIZEOF TYPEDEF_NAME
@@ -66,12 +66,11 @@ constant initializer initializer_list
 %type <std::unique_ptr<DeclSpec>> declaration_specifiers
 %type <std::unique_ptr<Ptr>> pointer
 %type <std::unique_ptr<Declaration>> declarator direct_declarator
-function_definition
-parameter_declaration translation_unit type_name
-
+function_definition parameter_declaration type_name
+%type <std::unique_ptr<TransUnit>> translation_unit
 %type <std::unique_ptr<DeclStmt>> declaration external_declaration
 %type <std::unique_ptr<ExprStmt>> expression_statement
-%type <std::unique_ptr<CompoundStmt>> compound_statement
+%type <std::unique_ptr<CompoundStmt>> compound_statement block_item_list
 %type <std::unique_ptr<Statement>> block_item statement
 selection_statement iteration_statement jump_statement labeled_statement
 %type <QualType> type_qualifier_list
@@ -701,12 +700,22 @@ labeled_statement
 
 compound_statement
 	: '{' '}'
+    { $$ = std::make_unique<CompoundStmt>(); }
 	| '{'  block_item_list '}'
+    { $$ = std::move($2); }
 	;
 
 block_item_list
 	: block_item
+    {
+        $$ = std::make_unique<CompoundStmt>();
+        $$->Append(std::move($1));
+    }
 	| block_item_list block_item
+    {
+        $1->Append(std::move($2));
+        $$ = std::move($1);
+    }
 	;
 
 block_item
@@ -758,9 +767,9 @@ jump_statement
 
 translation_unit
 	: external_declaration
-    { transunits.push_back(std::move($1)); }
+    { transunit.AddDecl(std::move($1)); }
 	| translation_unit external_declaration
-    { transunits.push_back(std::move($2)); }
+    { transunit.AddDecl(std::move($2)); }
 	;
 
 external_declaration 

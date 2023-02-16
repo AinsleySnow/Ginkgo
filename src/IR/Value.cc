@@ -3,7 +3,7 @@
 
 std::string Module::ToString() const
 {
-    std::string mod{};
+    std::string mod = "module " + Name() + ":\n";
     for (const auto& psym : globalsym_)
         mod += psym.second->ToString() + '\n';
     return mod;
@@ -28,18 +28,21 @@ GlobalVar* Module::AddGlobalVar(const std::string& name, const IRType* ptype)
 
 std::string Function::ToString() const
 {
-    std::string func{};
-    for (const auto& pb : blk_)
-        func += pb->ToString() + '\n';
+    std::string func = "def " +
+        ReturnType()->ToString() + ' ' + Name() + '(';
+    for (auto param : ParamType())
+        func += param->ToString();
+    func += ") {\n";
+    for (auto i = blk_.begin(); i < blk_.end() - 1; ++i)
+        func += (*i)->ToString() + '\n';
+    func += (*(blk_.end() - 1))->ToString() + '}';
     return func;
 }
 
-BasicBlock* Function::AddBasicBlock(const std::string& name)
+void Function::AddBasicBlock(std::unique_ptr<BasicBlock> bb)
 {
-    auto bb = std::make_unique<BasicBlock>(name);
-    auto pbb = bb.get();
     blk_.push_back(std::move(bb));
-    return pbb; 
+
 }
 
 BasicBlock* Function::GetBasicBlock(const std::string& name)
@@ -64,10 +67,19 @@ void Function::AddIROperand(std::unique_ptr<IROperand> op)
 }
 
 
+BasicBlock* BasicBlock::CreateBasicBlock(Function* func, const std::string& name)
+{
+    std::unique_ptr<BasicBlock> bb = std::make_unique<BasicBlock>(name);
+    bb->parent_ = func;
+    auto raw = bb.get();
+    func->AddBasicBlock(std::move(bb));
+    return raw;
+}
+
 std::string BasicBlock::ToString() const
 { 
-    std::string blk{};
+    std::string blk = Name() + ":\n";
     for (const auto& instr : instrs_)
-        blk += instr->ToString() + ";\n";
+        blk += "  " + instr->ToString() + ";\n";
     return blk;
 }

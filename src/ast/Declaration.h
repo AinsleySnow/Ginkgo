@@ -174,7 +174,8 @@ public:
 class FuncDef : public Declaration
 {
 public:
-    FuncDef(const std::string& n) : Declaration(n) {}
+    FuncDef(const std::string& n) :
+        Declaration(n), paramlist_(std::make_unique<ParamList>()) {}
     FuncDef(const std::string& n, std::unique_ptr<ParamList> p) :
         Declaration(n), paramlist_(std::move(p)) {}
 

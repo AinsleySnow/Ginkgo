@@ -2,11 +2,11 @@
 #define _TYPE_H_
 
 #include "ast/Tag.h"
+#include "IR/IRType.h"
 #include <memory>
 #include <string>
 #include <vector>
 
-class IRType;
 class Ptr;
 
 
@@ -73,7 +73,7 @@ class CType
 {
 public:
     virtual std::unique_ptr<CPtrType> AttachPtr(const Ptr*) const = 0;
-    virtual const IRType* ToIRType() const = 0;
+    virtual const IRType* ToIRType(IRTypePool&) const = 0;
     virtual std::string ToString() const = 0;
 
     virtual bool Compatible(const CType* other) const = 0;
@@ -105,7 +105,7 @@ public:
     CArithmType(TypeTag);
 
     std::unique_ptr<CPtrType> AttachPtr(const Ptr*) const override;
-    const IRType* ToIRType() const override;
+    const IRType* ToIRType(IRTypePool&) const override;
 
     bool Compatible(const CType*) const override;
 
@@ -138,7 +138,7 @@ public:
 
     std::unique_ptr<CPtrType> AttachPtr(const Ptr*) const override { return nullptr; }
     std::string ToString() const override { return ""; }
-    const IRType* ToIRType() const override { return nullptr; }
+    const FuncType* ToIRType(IRTypePool&) const override;
     bool Compatible(const CType*) const override { return false; }
 
     const CType* ReturnType() const { return return_.get(); }
@@ -168,7 +168,7 @@ public:
 
     std::string ToString() const override { return ""; }
     std::unique_ptr<CPtrType> AttachPtr(const Ptr*) const override { return nullptr; } 
-    const IRType* ToIRType() const { return nullptr; }
+    const IRType* ToIRType(IRTypePool&) const { return nullptr; }
     bool Compatible(const CType*) const { return false; }
 
     size_t Size() { return 8; }

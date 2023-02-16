@@ -87,6 +87,7 @@ public:
     void Accept(Visitor* v) override;
 
 private:
+    friend class IRGen;
     std::unique_ptr<Declaration> decl_{};
 };
 
@@ -209,6 +210,18 @@ private:
     friend class IRGen;
     std::unique_ptr<Expr> expr_{};
     std::unique_ptr<Statement> stmt_{};
+};
+
+
+class TransUnit : public Statement
+{
+public:
+    void AddDecl(std::unique_ptr<DeclStmt>);
+    void Accept(Visitor*);
+
+private:
+    friend class IRGen;
+    std::vector<std::unique_ptr<DeclStmt>> declist_{};
 };
 
 

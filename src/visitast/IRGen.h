@@ -27,7 +27,6 @@ public:
     void VisitFuncDef(FuncDef*) override;
     void VisitObjDef(ObjDef*) override;
     void VisitParamList(ParamList*) override;
-    void VisitTransUnit(DeclStmt*) override;
 
     void VisitAssignExpr(AssignExpr*) override;
     void VisitBinaryExpr(BinaryExpr*) override;
@@ -44,6 +43,7 @@ public:
     void VisitCaseStmt(CaseStmt*) override;
     void VisitCompoundStmt(CompoundStmt*) override;
     void VisitContinueStmt(ContinueStmt*) override;
+    void VisitDeclStmt(DeclStmt*) override;
     void VisitDoWhileStmt(DoWhileStmt*) override;
     void VisitExprStmt(ExprStmt*) override;
     void VisitForStmt(ForStmt*) override;
@@ -52,6 +52,7 @@ public:
     void VisitLabelStmt(LabelStmt*) override;
     void VisitRetStmt(RetStmt*) override;
     void VisitSwitchStmt(SwitchStmt*) override;
+    void VisitTransUnit(TransUnit*) override;
     void VisitWhileStmt(WhileStmt*) override;
 
     auto GetModule() { return std::move(transunit_); }

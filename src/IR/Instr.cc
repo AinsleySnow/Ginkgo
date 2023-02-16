@@ -80,7 +80,7 @@ Register* Register::CreateRegister(
 
 std::string Register::ToString() const
 {
-    return type_->ToString() + ", " + name_;
+    return type_->ToString() + ' ' + name_;
 }
 
 
@@ -93,7 +93,7 @@ std::string RetInstr::ToString() const
 
 std::string BrInstr::ToString() const
 {
-    if (!false_) return "br label " + true_->Name();
+    if (!cond_) return "br label " + true_->Name();
     else    return "br " + cond_->ToString() + ' ' + true_->Name() + ' ' + false_->Name();
 }
 
@@ -163,7 +163,7 @@ std::string AllocaInstr::ToString() const
 
 std::string LoadInstr::ToString() const
 {
-    std::string line = result_ + " = " + (volatile_ ? "load " : "volatile load ");
+    std::string line = result_ + " = " + (volatile_ ? "volatile load " : "load ");
     line += pointer_->ToString();
     if (align_ > 1)
         line += ", align" + std::to_string(align_);
@@ -172,8 +172,8 @@ std::string LoadInstr::ToString() const
 
 std::string StoreInstr::ToString() const
 {
-    std::string line = volatile_ ? "volatile stroe " : "store";
-    line += pointer_->ToString() + ", " + value_->ToString();
+    std::string line = volatile_ ? "volatile store " : "store ";
+    line += value_->ToString() + ", " + pointer_->ToString();
     return line;
 }
 

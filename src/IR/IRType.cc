@@ -2,8 +2,6 @@
 #include <memory>
 
 
-static std::vector<std::unique_ptr<IRType>> customedtypes;
-
 const static IntType int8 = IntType(1, true);
 const static IntType int16 = IntType(2, true);
 const static IntType int32 = IntType(4, true);
@@ -50,43 +48,59 @@ const FloatType* FloatType::GetFloat64()
     return &float64;
 }
 
-const FuncType* FuncType::GetFunction(const IRType* retty, const std::vector<const IRType*>& list, bool vol)
+
+void IRTypePool::AddIRType(std::unique_ptr<IRType> ty)
 {
-    auto ty = std::make_unique<FuncType>(std::move(retty), list, vol);
+    typelist_.push_back(std::move(ty));
+}
+
+
+FuncType* FuncType::GetFuncType(
+    IRTypePool& pool, const IRType* retty, bool vol)
+{
+    auto ty = std::make_unique<FuncType>(retty, vol);
     auto addr = ty.get();
-    customedtypes.push_back(std::move(ty));
+    pool.AddIRType(std::move(ty));
     return addr;
 }
 
-const PtrType* PtrType::GetPointer(const IRType* point2)
+void FuncType::AddParam(const IRType* ty)
+{
+    param_.push_back(ty);
+}
+
+PtrType* PtrType::GetPtrType(IRTypePool& pool, const IRType* point2)
 {
     auto ty = std::make_unique<PtrType>(point2);
     auto addr = ty.get();
-    customedtypes.push_back(std::move(ty));
+    pool.AddIRType(std::move(ty));
     return addr;
 }
 
-const ArrayType* ArrayType::GetArray(size_t size, const IRType* elety)
+ArrayType* ArrayType::GetArrayType(
+    IRTypePool& pool, size_t size, const IRType* elety)
 {
     auto ty = std::make_unique<ArrayType>(size, elety);
     auto addr = ty.get();
-    customedtypes.push_back(std::move(ty));
+    pool.AddIRType(std::move(ty));
     return addr;
 }
 
-const StructType* StructType::GetStruct(const std::vector<const IRType*>& list)
+StructType* StructType::GetStructType(
+    IRTypePool& pool, const std::vector<const IRType*>& list)
 {
     auto ty = std::make_unique<StructType>(list);
     auto addr = ty.get();
-    customedtypes.push_back(std::move(ty));
+    pool.AddIRType(std::move(ty));
     return addr;
 }
 
-const UnionType* UnionType::GetUnion(const std::vector<const IRType*>& list)
+UnionType* UnionType::GetUnionType(
+    IRTypePool& pool, const std::vector<const IRType*>& list)
 {
     auto ty = std::make_unique<UnionType>(list);
     auto addr = ty.get();
-    customedtypes.push_back(std::move(ty));
+    pool.AddIRType(std::move(ty));
     return addr;
 }
 

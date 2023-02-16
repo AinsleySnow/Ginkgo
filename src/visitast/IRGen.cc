@@ -117,8 +117,8 @@ const IROperand* IRGen::EvalUnary(Tag op, const IROperand* num)
 
 BasicBlock* IRGen::GetBasicBlock()
 {
-    std::string name = '%' + std::to_string(index_);
-    return curfunc_->AddBasicBlock(name);
+    std::string name = '%' + std::to_string(index_++);
+    return BasicBlock::CreateBasicBlock(curfunc_, name);
 }
 
 Instr* IRGen::GetLastInstr()
@@ -129,8 +129,8 @@ Instr* IRGen::GetLastInstr()
 
 const Register* IRGen::AllocaObject(const CType* raw, const std::string& name)
 {
-    auto ptrty = PtrType::GetPointer(raw->ToIRType());
-    auto reg = builder_.InsertAllocaInstr(GetRegName(), ptrty);
+    auto reg = builder_.InsertAllocaInstr(
+        GetRegName(), raw->ToIRType(curfunc_->TypePool()));
     scopestack_.Top().AddObject(name, raw, reg);
     return reg;
 }
@@ -192,7 +192,9 @@ void IRGen::VisitDeclList(DeclList* list)
 void IRGen::VisitFuncDef(FuncDef* def)
 {
     def->declspec_->Accept(this);
-    def->paramlist_->Accept(this);
+    if (def->paramlist_)
+        def->paramlist_->Accept(this);
+
     auto spec = def->GetDeclSpec();
     const Ptr* ptr = def->GetRawPtr();
 
@@ -201,7 +203,7 @@ void IRGen::VisitFuncDef(FuncDef* def)
     def->return_ = std::move(retcty);
 
     auto funccty = std::make_unique<CFuncType>(
-        std::move(retcty), def->GetParamList().size());
+        std::move(def->return_), def->GetParamList().size());
     for (auto param : def->GetParamType())
     {
         auto arthmic = static_cast<const CArithmType*>(param);
@@ -210,7 +212,7 @@ void IRGen::VisitFuncDef(FuncDef* def)
     scopestack_.Top().AddFunc(def->Name(), funccty.get());
 
     auto pfunc = transunit_->AddFunc(
-        def->Name(), funccty->ToIRType()->ToFunction());
+        def->Name(), funccty->ToIRType(transunit_->TypePool()));
 
     if (!def->compound_)
         return;
@@ -279,12 +281,6 @@ void IRGen::VisitParamList(ParamList* list)
         param->Accept(this);
         list->AppendType(param->RawType());
     }
-}
-
-
-void IRGen::VisitTransUnit(DeclStmt* decl)
-{
-    decl->Accept(this);
 }
 
 
@@ -525,10 +521,12 @@ void IRGen::VisitConstant(ConstExpr* constant)
     auto ctype = constant->RawType();
     if (ctype->IsInteger())
         constant->Val() = IntConst::CreateIntConst(
-            curfunc_, constant->GetInt(), ctype->ToIRType()->ToInteger());
+            curfunc_, constant->GetInt(),
+            ctype->ToIRType(transunit_->TypePool())->ToInteger());
     else
         constant->Val() = FloatConst::CreateFloatConst(
-            curfunc_, constant->GetFloat(), ctype->ToIRType()->ToFloatPoint());
+            curfunc_, constant->GetFloat(),
+            ctype->ToIRType(transunit_->TypePool())->ToFloatPoint());
 }
 
 
@@ -719,6 +717,12 @@ void IRGen::VisitContinueStmt(ContinueStmt* stmt)
 }
 
 
+void IRGen::VisitDeclStmt(DeclStmt* stmt)
+{
+    stmt->decl_->Accept(this);
+}
+
+
 void IRGen::VisitDoWhileStmt(DoWhileStmt* stmt)
 {
     brkcntn_.push(stmt);
@@ -895,6 +899,15 @@ void IRGen::VisitSwitchStmt(SwitchStmt* stmt)
         brkcntn_.pop();
         stmt->nextlist_ = Merge(stmt->nextlist_, line->NextList());
     }
+}
+
+
+void IRGen::VisitTransUnit(TransUnit* tu)
+{
+    scopestack_.PushNewScope(Scope::ScopeType::file);
+    for (auto& decl : tu->declist_)
+        decl->Accept(this);
+    scopestack_.PopScope();
 }
 
 

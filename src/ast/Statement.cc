@@ -72,6 +72,16 @@ void SwitchStmt::Accept(Visitor* v)
     v->VisitSwitchStmt(this);
 }
 
+void TransUnit::Accept(Visitor* v)
+{
+    v->VisitTransUnit(this);
+}
+
+void TransUnit::AddDecl(std::unique_ptr<DeclStmt> decl)
+{
+    declist_.push_back(std::move(decl));
+}
+
 void WhileStmt::Accept(Visitor* v)
 {
     v->VisitWhileStmt(this);

@@ -55,6 +55,16 @@ protected:
 };
 
 
+class IRTypePool
+{
+public:
+    void AddIRType(std::unique_ptr<IRType>);
+
+private:
+    std::vector<std::unique_ptr<IRType>> typelist_{};
+};
+
+
 class IntType : public IRType
 {
 public:
@@ -97,7 +107,7 @@ public:
 class ArrayType : public IRType
 {
 public:
-    const static ArrayType* GetArray(size_t, const IRType*);
+    static ArrayType* GetArrayType(IRTypePool&, size_t, const IRType*);
     ArrayType(size_t s, const IRType* t) : type_(t) { size_ = s; }
 
     std::string ToString() const override;
@@ -112,7 +122,7 @@ private:
 class PtrType : public IntType
 {
 public:
-    const static PtrType* GetPointer(const IRType*);
+    static PtrType* GetPtrType(IRTypePool&, const IRType*);
     PtrType(const IRType* t) :
         IntType(8, false), type_(t) {}
 
@@ -131,13 +141,13 @@ private:
 class FuncType : public IRType
 {
 public:
-    const static FuncType* GetFunction(const IRType*, const std::vector<const IRType*>&, bool);
-    FuncType(const IRType* ret,
-        const std::vector<const IRType*>& p, bool v) : 
-        retype_(std::move(ret)), param_(p), variadic_(v) { size_ = -1; }
+    static FuncType* GetFuncType(IRTypePool&, const IRType*, bool);
+    FuncType(const IRType* ret, bool v) : 
+        retype_(std::move(ret)), variadic_(v) { size_ = -1; }
 
     auto ReturnType() const { return retype_; }
     const auto& ParamType() const { return param_; }
+    void AddParam(const IRType*);
 
     std::string ToString() const override;
     FuncType* ToFunction() override { return this; }
@@ -154,7 +164,7 @@ private:
 class StructType : public IRType
 {
 public:
-    const static StructType* GetStruct(const std::vector<const IRType*>&);
+    static StructType* GetStructType(IRTypePool&, const std::vector<const IRType*>&);
     StructType(const std::vector<const IRType*>& f) : fields_(f) {}
 
     std::string ToString() const override;
@@ -169,7 +179,7 @@ private:
 class UnionType : public IRType
 {
 public:
-    const static UnionType* GetUnion(const std::vector<const IRType*>&);
+    static UnionType* GetUnionType(IRTypePool&, const std::vector<const IRType*>&);
     UnionType(const std::vector<const IRType*>& f) : fields_(f) {}
 
     std::string ToString() const override;

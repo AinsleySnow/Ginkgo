@@ -33,6 +33,7 @@ class IfStmt;
 class LabelStmt;
 class RetStmt;
 class SwitchStmt;
+class TransUnit;
 class WhileStmt;
 
 
@@ -46,7 +47,6 @@ public:
     virtual void VisitFuncDef(FuncDef*) {}
     virtual void VisitObjDef(ObjDef*) {}
     virtual void VisitParamList(ParamList*) {}
-    virtual void VisitTransUnit(DeclStmt*) {}
 
     virtual void VisitAssignExpr(AssignExpr*) {}
     virtual void VisitBinaryExpr(BinaryExpr*) {}
@@ -73,6 +73,7 @@ public:
     virtual void VisitLabelStmt(LabelStmt*) {}
     virtual void VisitRetStmt(RetStmt*) {}
     virtual void VisitSwitchStmt(SwitchStmt*) {}
+    virtual void VisitTransUnit(TransUnit*) {}
     virtual void VisitWhileStmt(WhileStmt*) {}
 };
 
