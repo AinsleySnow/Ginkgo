@@ -3,6 +3,7 @@ add_library(
     OBJECT
     Instr.cc
     IRBuilder.cc
+    IROperand.cc
     IRType.cc
     Value.cc
 )
@@ -11,6 +12,7 @@ target_precompile_headers(
     ginkgo_IR
     PRIVATE Instr.h
     PRIVATE IRBuilder.h
+    PRIVATE IROperand.h
     PRIVATE IRType.h
     PRIVATE Value.h
 )
