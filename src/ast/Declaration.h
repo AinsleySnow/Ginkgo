@@ -103,11 +103,11 @@ public:
     auto& GetPtr() { return ptr_; }
 
     DeclSpec* GetDeclSpec() const { return declspec_.get(); }
-    virtual void SetDeclSpec(std::unique_ptr<::DeclSpec> ds)
+    virtual void SetDeclSpec(std::shared_ptr<::DeclSpec> ds)
     { declspec_ = std::move(ds); }
 
 protected:
-    std::unique_ptr<DeclSpec> declspec_{};
+    std::shared_ptr<DeclSpec> declspec_{};
     std::unique_ptr<Ptr> ptr_{};
     std::unique_ptr<CType> type_{};
     std::string name_{};
@@ -152,7 +152,7 @@ public:
     auto begin() { return decllist_.begin(); }
     auto end() { return decllist_.end(); }
 
-    void SetDeclSpec(std::unique_ptr<::DeclSpec>) override;
+    void SetDeclSpec(std::shared_ptr<::DeclSpec>) override;
 
 private:
     std::vector<std::unique_ptr<InitDecl>> decllist_{};

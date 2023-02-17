@@ -197,6 +197,10 @@ void IRGen::VisitDeclList(DeclList* list)
         initdecl->base_ = AllocaObject(
             initdecl->declarator_->RawType(),
             initdecl->declarator_->Name());
+        if (initdecl->initalizer_)
+            builder_.InsertStoreInstr(
+                initdecl->initalizer_->Val(),
+                initdecl->base_, false);
     }
 }
 

@@ -112,10 +112,10 @@ bool DeclSpec::SetRawSpec(Tag t)
     return true;
 }
 
-void DeclList::SetDeclSpec(std::unique_ptr<::DeclSpec> ds)
+void DeclList::SetDeclSpec(std::shared_ptr<::DeclSpec> ds)
 {
     for (auto& initdecl : decllist_)
-        initdecl->declarator_->SetDeclSpec(std::move(ds));
+        initdecl->declarator_->SetDeclSpec(ds);
 }
 
 
