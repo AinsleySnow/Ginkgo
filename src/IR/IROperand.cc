@@ -29,15 +29,27 @@ std::string IntConst::ToString() const
     auto byte = reinterpret_cast<const char*>(&num_);
 
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-    for (int i = 0; i < type_->Size(); ++i)
-        reinterpret_cast<char*>(&numcopy)[i] = *(byte + i);
+    int i = 0;
+    for (; i < type_->Size(); ++i)
 #else
-    for (int i = 7; i >= 8 - type_->Size(); --i)
-        reinterpret_cast<char*>(&numcopy)[i] = *(byte + i);
+    int i = 7;
+    for (; i >= 8 - type_->Size(); --i)
 #endif
+        reinterpret_cast<char*>(&numcopy)[i] = *(byte + i);
 
     if (type_->ToInteger()->IsSigned())
+    {
+        if (reinterpret_cast<char*>(&numcopy)[i - 1] & 0x80)
+        {
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+        for (; i < 8; ++i)
+#else
+        for (; i >= 0; --i)
+#endif
+            reinterpret_cast<char*>(&numcopy)[i] = 0xFF;
+        }
         return std::to_string((long)numcopy);
+    }
     else
         return std::to_string(numcopy);
 }

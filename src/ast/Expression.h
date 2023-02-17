@@ -34,6 +34,7 @@ public:
         left_(std::move(l)), op_(t), right_(std::move(r)) {}
 
     void Accept(Visitor* v) override;
+    bool IsConstant() const override;
 
 private:
     friend class IRGen;
@@ -100,9 +101,9 @@ public:
     explicit ConstExpr(uint64_t u);
     explicit ConstExpr(double d);
     explicit ConstExpr(bool b);
+    explicit ConstExpr(uint64_t u, int base, std::string);
+    explicit ConstExpr(double d, char);
 
-    ConstExpr(ConstExpr&&) = default;
-    ConstExpr& operator=(ConstExpr&&) = default;
 
     uint64_t GetInt() const { return val_.intgr_; }
     double GetFloat() const { return val_.flt_; }
@@ -110,9 +111,6 @@ public:
     bool IsConstant() const override { return true; }
 
     void Accept(Visitor* v) override;
-
-    static bool DoCalc(Tag, const ConstExpr*, ConstExpr&);
-    static bool DoCalc(Tag, const ConstExpr*, const ConstExpr*, ConstExpr&);
 
 private:
     union

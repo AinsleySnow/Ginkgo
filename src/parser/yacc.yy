@@ -7,6 +7,7 @@ int yylex(yy::parser::value_type* yylval);
 %code requires
 {
     #include <cstdio>
+    #include <cctype>
     #include <memory>
     #include <string>
     #include <vector>
@@ -91,13 +92,29 @@ primary_expression
 constant
 	: I_CONSTANT 
     {
+        auto index = $1.find_first_of("ulUL");
+        std::string suffix = "";
+        if (index != std::string::npos)
+            suffix = $1.substr(index, $1.length() - index);
+        
+        int base = 10;
+        if ($1.length() > 1 && $1[0] == '0' && 
+            ($1[1] == 'x' || $1[1] == 'X')) base = 16;
+        else if ($1.length() > 1 && $1[0] == '0') base = 8;
+ 
         $$ = std::make_unique<ConstExpr>(
-            static_cast<uint64_t>(std::stoll($1.c_str()))
-        );
+            std::stoull($1.substr(0, $1.length() - suffix.length())),
+            base,
+            suffix);
     }
     /* includes character_constant */
 	| F_CONSTANT
-    { $$ = std::make_unique<ConstExpr>(std::stod($1)); }
+    {
+        if (std::isalpha($1.back()))
+            $$ = std::make_unique<ConstExpr>(std::stod($1), $1.back());
+        else
+            $$ = std::make_unique<ConstExpr>(std::stod($1));
+    }
 	| ENUMERATION_CONSTANT	/* after it has been defined as such */
 	;
 
@@ -271,25 +288,25 @@ and_expression
 exclusive_or_expression
 	: and_expression{ $$ = std::move($1); }
 	| exclusive_or_expression '^' and_expression
-    { $$ = std::make_unique<BinaryExpr>(std::move($1), Tag::cap, std::move($3)); }
+    { $$ = std::make_unique<BinaryExpr>(std::move($1), Tag::_xor, std::move($3)); }
 	;
 
 inclusive_or_expression
 	: exclusive_or_expression{ $$ = std::move($1); }
 	| inclusive_or_expression '|' exclusive_or_expression
-    { $$ = std::make_unique<BinaryExpr>(std::move($1), Tag::incl_or, std::move($3)); }
+    { $$ = std::make_unique<BinaryExpr>(std::move($1), Tag::_or, std::move($3)); }
 	;
 
 logical_and_expression
 	: inclusive_or_expression{ $$ = std::move($1); }
 	| logical_and_expression AND_OP inclusive_or_expression
-    { $$ = std::make_unique<BinaryExpr>(std::move($1), Tag::and_assign, std::move($3)); }
+    { $$ = std::make_unique<BinaryExpr>(std::move($1), Tag::logical_and, std::move($3)); }
 	;
 
 logical_or_expression
 	: logical_and_expression{ $$ = std::move($1); }
 	| logical_or_expression OR_OP logical_and_expression
-    { $$ = std::make_unique<LogicalExpr>(std::move($1), Tag::or_assign, std::move($3)); }
+    { $$ = std::make_unique<LogicalExpr>(std::move($1), Tag::logical_or, std::move($3)); }
 	;
 
 conditional_expression

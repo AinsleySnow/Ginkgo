@@ -3,6 +3,7 @@
 #include "ast/Declaration.h"
 #include "ast/Expression.h"
 #include "ast/Statement.h"
+#include "IR/IROperand.h"
 #include "messages/Error.h"
 #include <algorithm>
 #include <utility>
@@ -24,7 +25,10 @@ const IROperand* IRGen::EvalBinary(
         auto lval = to_int(lhs)->Val();                     \
         auto rval = to_int(rhs)->Val();                     \
         auto ans = lval sym rval;                           \
-        return IntConst::CreateIntConst(curfunc_, ans);     \
+        auto ty = lhs->Type()->operator>(*(rhs->Type())) ?  \
+            lhs->Type() : rhs->Type();                      \
+        return IntConst::CreateIntConst(                    \
+            curfunc_, ans, ty->ToInteger());                \
     }
 
 
@@ -41,7 +45,10 @@ const IROperand* IRGen::EvalBinary(
         auto lval = to_int(lhs)->Val();                         \
         auto rval = to_int(rhs)->Val();                         \
         auto ans = lval sym rval;                               \
-        return IntConst::CreateIntConst(curfunc_, ans);                                          \
+        auto ty = lhs->Type()->operator>(*(rhs->Type())) ?      \
+            lhs->Type() : rhs->Type();                          \
+        return IntConst::CreateIntConst(                        \
+            curfunc_, ans, ty->ToInteger());                    \
     }                                                           \
     else if (int_float)                                         \
     {                                                           \
@@ -65,7 +72,7 @@ const IROperand* IRGen::EvalBinary(
     case Tag::asterisk: do_calc(*); break;
     case Tag::slash: do_calc(/); break;
     case Tag::_and: do_int_calc(&); break;
-    case Tag::incl_or: do_int_calc(|); break;
+    case Tag::_or: do_int_calc(|); break;
     case Tag::logical_and: do_calc(&&); break;
     case Tag::logical_or: do_calc(||); break;
     case Tag::lshift: do_int_calc(<<); break;
@@ -74,7 +81,7 @@ const IROperand* IRGen::EvalBinary(
     case Tag::greathan: do_calc(>); break;
     case Tag::lessequal: do_calc(<=); break;
     case Tag::greatequal: do_calc(>=); break;
-    case Tag::cap: do_int_calc(^); break;
+    case Tag::_xor: do_int_calc(^); break;
     case Tag::equal: do_calc(==); break;
     case Tag::notequal: do_calc(!=); break;
     default: return nullptr;
@@ -98,14 +105,19 @@ const IROperand* IRGen::EvalUnary(Tag op, const IROperand* num)
     case Tag::plus: return num;
     case Tag::minus:
         if (num->IsIntConst())
-            return IntConst::CreateIntConst(curfunc_, to_int(num)->Val());
-        else return FloatConst::CreateFloatConst(curfunc_, to_float(num)->Val());
+            return IntConst::CreateIntConst(
+                curfunc_, -to_int(num)->Val(), num->Type()->ToInteger());
+        else return FloatConst::CreateFloatConst(
+            curfunc_, -to_float(num)->Val(), num->Type()->ToFloatPoint());
     case Tag::exclamation:
         if (num->IsIntConst())
-            return IntConst::CreateIntConst(curfunc_, !(to_int(num)->Val()));
-        else return IntConst::CreateIntConst(curfunc_, !(to_float(num)->Val()));
+            return IntConst::CreateIntConst(
+                curfunc_, !(to_int(num)->Val()), num->Type()->ToInteger());
+        else return IntConst::CreateIntConst(
+            curfunc_, !(to_float(num)->Val()), num->Type()->ToInteger());
     case Tag::tilde:
-        return IntConst::CreateIntConst(curfunc_, ~(to_int(num)->Val()));
+        return IntConst::CreateIntConst(
+            curfunc_, ~(to_int(num)->Val()), num->Type()->ToInteger());
     default: return nullptr;
     }
 
@@ -412,7 +424,7 @@ void IRGen::VisitBinaryExpr(BinaryExpr* bin)
 
     else if (bin->op_ == Tag::_and)
         result = builder_.InsertAndInstr(regname, lhs, rhs);
-    else if (bin->op_ == Tag::incl_or)
+    else if (bin->op_ == Tag::_xor)
         result = builder_.InsertXorInstr(regname, lhs, rhs);
     else if (bin->op_ == Tag::_or)
         result = builder_.InsertOrInstr(regname, lhs, rhs);

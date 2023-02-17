@@ -11,9 +11,6 @@ class Visitor;
 class Expr
 {
 public:
-    Expr() {}
-    Expr(Expr&&) = default;
-    Expr& operator=(Expr&&) = default;
     virtual ~Expr() {}
 
     virtual void Accept(Visitor*) {}

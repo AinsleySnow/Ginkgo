@@ -16,11 +16,10 @@ enum class Tag
     _const, _restrict, _volatile, _atomic,
 
     arrow, inc, dec, dot,
-    _and, _or, asterisk, plus, minus, tilde, exclamation, 
+    _and, _or, _xor, asterisk, plus, minus, tilde, exclamation, 
     slash, percent, lshift, rshift, greathan,
-    lessthan, greatequal, lessequal, equal,
-    notequal, cap,
-    incl_or, logical_and, logical_or,
+    lessthan, greatequal, lessequal, equal, notequal,
+    logical_and, logical_or,
     _sizeof, _alignof,
     left, right,
 
