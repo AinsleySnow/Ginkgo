@@ -99,6 +99,17 @@ private:
 };
 
 
+class ErrorType : public CType
+{
+public:
+    std::unique_ptr<CPtrType> AttachPtr(const Ptr*) { return nullptr; };
+    const IRType* ToIRType(IRTypePool&) { return nullptr; };
+    std::string ToString() const { return "<error-type>"; }
+
+    bool Compatible(const CType* other) { return false; };
+};
+
+
 class CArithmType : public CType
 {
 public:
@@ -184,6 +195,17 @@ public:
 
 private:
     std::unique_ptr<CType> point2_{};
+};
+
+
+class CVoidType : public CType
+{
+public:
+    virtual std::unique_ptr<CPtrType> AttachPtr(const Ptr*) { return nullptr; }
+    const VoidType* ToIRType(IRTypePool&) const override;
+    virtual std::string ToString() { return "void"; }
+
+    virtual bool Compatible(const CType* other) { return false; }
 };
 
 #endif // _TYPE_H_

@@ -182,3 +182,11 @@ std::string UnionType::ToString() const
     *(fields.end() - 1) = ' ';
     return fields;
 }
+
+
+const static VoidType _void = VoidType();
+
+const VoidType* VoidType::GetVoidType()
+{
+    return &_void;
+}

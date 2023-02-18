@@ -12,6 +12,7 @@ class PtrType;
 class ArrayType;
 class StructType;
 class UnionType;
+class VoidType;
 
 
 class IRType
@@ -27,6 +28,7 @@ public:
     virtual ArrayType* ToArray() { return nullptr; }
     virtual StructType* ToStruct() { return nullptr; }
     virtual UnionType* ToUnion() { return nullptr; }
+    virtual VoidType* ToVoid() { return nullptr; }
     virtual const IntType* ToInteger() const { return nullptr; }
     virtual const FloatType* ToFloatPoint() const { return nullptr; }
     virtual const FuncType* ToFunction() const { return nullptr; }
@@ -34,11 +36,13 @@ public:
     virtual const ArrayType* ToArray() const { return nullptr; }
     virtual const StructType* ToStruct() const { return nullptr; }
     virtual const UnionType* ToUnion() const { return nullptr; }
+    virtual const VoidType* ToVoid() const { return nullptr; }
 
     virtual bool IsArithm() const { return false; }
     virtual bool IsInt() const { return false; }
     virtual bool IsFloat() const { return false; }
     virtual bool IsPtr() const { return false; }
+    virtual bool IsVoid() const { return false; }
     virtual bool IsAggerate() const { return false; }
 
     size_t Size() const { return size_; }
@@ -188,6 +192,17 @@ public:
 
 private:
     std::vector<const IRType*> fields_{};
+};
+
+
+class VoidType : public IRType
+{
+public:
+    static const VoidType* GetVoidType();
+
+    std::string ToString() const override { return "void"; }
+    VoidType* ToVoid() override { return this; }
+    const VoidType* ToVoid() const override { return this; }
 };
 
 

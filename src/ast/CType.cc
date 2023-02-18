@@ -172,3 +172,9 @@ const FuncType* CFuncType::ToIRType(IRTypePool& pool) const
         functy->AddParam(param->ToIRType(pool));
     return functy;
 }
+
+
+const VoidType* CVoidType::ToIRType(IRTypePool&) const
+{
+    return VoidType::GetVoidType();
+}
