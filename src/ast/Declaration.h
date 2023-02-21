@@ -64,6 +64,7 @@ public:
 
     void SetStorage(Tag t) { storagelist_.push_back(t); }
     void SetQual(Tag t) { quallist_.push_back(t); }
+    void SetFuncSpec(Tag t) {  }
     void AddTypeSpec(std::unique_ptr<::TypeSpec> ts);
 
     auto& Type() { return type_; }
@@ -72,6 +73,7 @@ public:
     TypeTag TypeSpec();
     QualType Qual();
     StorageType Storage();
+    FuncSpec Func();
 
 private:
     friend class IRGen;
@@ -83,6 +85,7 @@ private:
     std::list<std::unique_ptr<::TypeSpec>> speclist_{};
     std::list<Tag> storagelist_{};
     std::list<Tag> quallist_{};
+    std::list<Tag> funcspeclist_{};
 };
 
 

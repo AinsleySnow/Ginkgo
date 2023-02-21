@@ -60,11 +60,30 @@ public:
 };
 
 
+enum class FuncTag
+{
+    _inline = 1,
+    _noreturn = 2
+};
+
+class FuncSpec
+{
+private:
+    unsigned token_{};
+
+public:
+    bool IsInline() const { return token_ & static_cast<unsigned>(FuncTag::_inline); }
+    bool IsNoreturn() const { return token_ & static_cast<unsigned>(FuncTag::_noreturn); }
+
+    bool SetSpec(Tag);
+};
+
+
 enum class TypeTag
 {
     int8, int16, int32, int64,
     uint8, uint16, uint32, uint64,
-    flt32, flt64, customed
+    flt32, flt64, _void, customed
 };
 
 class CPtrType;
@@ -102,9 +121,9 @@ private:
 class ErrorType : public CType
 {
 public:
-    std::unique_ptr<CPtrType> AttachPtr(const Ptr*) { return nullptr; };
-    const IRType* ToIRType(IRTypePool&) { return nullptr; };
-    std::string ToString() const { return "<error-type>"; }
+    std::unique_ptr<CPtrType> AttachPtr(const Ptr*) const override { return nullptr; };
+    const IRType* ToIRType(IRTypePool&) const override { return nullptr; };
+    std::string ToString() const override { return "<error-type>"; }
 
     bool Compatible(const CType* other) { return false; };
 };
@@ -161,12 +180,12 @@ public:
     bool IsDerived() const override { return true; }
     bool IsComplete() const override { return true; }
 
-    void AddParam(std::unique_ptr<CType> t);
+    void AddParam(const CType* t);
 
 
 private:
     bool variadic_{};
-    std::vector<std::unique_ptr<CType>> paramlist_{};
+    std::vector<const CType*> paramlist_{};
     std::unique_ptr<CType> return_{};
 };
 
@@ -201,11 +220,11 @@ private:
 class CVoidType : public CType
 {
 public:
-    virtual std::unique_ptr<CPtrType> AttachPtr(const Ptr*) { return nullptr; }
+    std::unique_ptr<CPtrType> AttachPtr(const Ptr*) const override { return nullptr; }
     const VoidType* ToIRType(IRTypePool&) const override;
-    virtual std::string ToString() { return "void"; }
+    std::string ToString() const override { return "void"; }
 
-    virtual bool Compatible(const CType* other) { return false; }
+    bool Compatible(const CType* other) const override { return false; }
 };
 
 #endif // _TYPE_H_

@@ -33,8 +33,12 @@ std::string SwitchInstr::ToString() const
 std::string CallInstr::ToString() const
 {
     std::string call = "call " + proto_->ToString() + ' ' + func_ + '(';
-    for (const auto& arg : arglist_)
-        call += arg->ToString() + ", ";
+    if (!arglist_.empty())
+    {
+        for (auto arg = arglist_.begin(); arg < arglist_.end() - 1; arg++)
+            call += (*arg)->ToString() + ", ";
+        call += arglist_.back()->ToString();
+    }
     return call + ')';
 }
 

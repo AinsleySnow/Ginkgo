@@ -15,6 +15,8 @@ enum class Tag
     
     _const, _restrict, _volatile, _atomic,
 
+    _inline, _noreturn,
+
     arrow, inc, dec, dot,
     _and, _or, _xor, asterisk, plus, minus, tilde, exclamation, 
     slash, percent, lshift, rshift, greathan,

@@ -105,10 +105,18 @@ const Func* ScopeStack::SearchFunc(const std::string& name)
 void ScopeStack::PushNewScope(Scope::ScopeType scpty)
 {
     stack_.push_back(std::make_unique<Scope>(scpty));
+    if (scpty == Scope::ScopeType::file)
+        filescope_ = stack_.back().get();
+    else if (scpty == Scope::ScopeType::block)
+        blockscope_ = stack_.back().get();
 }
 
 void ScopeStack::PopScope()
 {
+    if (stack_.back()->GetScopeType() == Scope::ScopeType::file)
+        filescope_ = nullptr;
+    else if (stack_.back()->GetScopeType() == Scope::ScopeType::block)
+        blockscope_ = nullptr;
     stack_.pop_back();
 }
 
@@ -116,4 +124,9 @@ void ScopeStack::PopScope()
 Scope& ScopeStack::Top()
 {
     return *(stack_.back());
+}
+
+Scope& ScopeStack::File()
+{
+    return *(stack_.front());
 }

@@ -129,12 +129,12 @@ bool IRType::operator>(const IRType& rhs) const
 
 std::string IntType::ToString() const
 {
-    return "int" + std::to_string(size_ * 8);
+    return 'i' + std::to_string(size_ * 8);
 }
 
 std::string FloatType::ToString() const
 {
-    return "float" + std::to_string(size_ * 8);
+    return 'f' + std::to_string(size_ * 8);
 }
 
 std::string PtrType::ToString() const

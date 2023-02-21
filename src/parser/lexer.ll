@@ -65,7 +65,7 @@ static int check_type(void);
 "for"					{ yylval->emplace<Tag>() = Tag::_for; return YYTOKEN::FOR; }
 "goto"					{ return YYTOKEN::GOTO; }
 "if"					{ yylval->emplace<Tag>() = Tag::_if; return YYTOKEN::IF; }
-"inline"				{ return YYTOKEN::INLINE; }
+"inline"				{ yylval->emplace<Tag>() = Tag::_inline; return YYTOKEN::INLINE; }
 "int"					{ yylval->emplace<Tag>() = Tag::_int; return YYTOKEN::INT; }
 "long"					{ yylval->emplace<Tag>() = Tag::_long; return YYTOKEN::LONG; }
 "register"				{ return YYTOKEN::REGISTER; }
@@ -80,7 +80,7 @@ static int check_type(void);
 "typedef"				{ return YYTOKEN::TYPEDEF; }
 "union"					{ return YYTOKEN::UNION; }
 "unsigned"				{ yylval->emplace<Tag>() = Tag::_unsigned; return YYTOKEN::UNSIGNED; }
-"void"					{ return YYTOKEN::VOID; }
+"void"					{ yylval->emplace<Tag>() = Tag::_void; return YYTOKEN::VOID; }
 "volatile"				{ yylval->emplace<Tag>() = Tag::_volatile; return YYTOKEN::VOLATILE; }
 "while"					{ yylval->emplace<Tag>() = Tag::_while; return YYTOKEN::WHILE; }
 "_Alignas"              { return YYTOKEN::ALIGNAS; }
@@ -90,7 +90,7 @@ static int check_type(void);
 "_Complex"              { return YYTOKEN::COMPLEX; }
 "_Generic"              { return YYTOKEN::GENERIC; }
 "_Imaginary"            { return YYTOKEN::IMAGINARY; }
-"_Noreturn"             { return YYTOKEN::NORETURN; }
+"_Noreturn"             { yylval->emplace<Tag>() = Tag::_noreturn; return YYTOKEN::NORETURN; }
 "_Static_assert"        { return YYTOKEN::STATIC_ASSERT; }
 "_Thread_local"         { return YYTOKEN::THREAD_LOCAL; }
 "__func__"              { return YYTOKEN::FUNC_NAME; }

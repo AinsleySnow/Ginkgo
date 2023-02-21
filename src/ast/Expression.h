@@ -186,6 +186,7 @@ public:
         op_(t), content_(std::move(c)) {}
 
     void Accept(Visitor* v) override;
+    bool IsConstant() const override;
 
 private:
     friend class IRGen;

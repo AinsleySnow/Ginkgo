@@ -54,6 +54,7 @@ public:
     void PopScope();
 
     Scope& Top();
+    Scope& File();
 
 private:
     Scope* filescope_{};

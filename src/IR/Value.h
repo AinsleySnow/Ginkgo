@@ -47,7 +47,8 @@ public:
 
 
 private:
-    std::unordered_map<std::string, std::unique_ptr<Value>> globalsym_{};
+    std::vector<std::unique_ptr<Value>> globalsym_{};
+    std::unordered_map<std::string, int> symindex_{};
     IRTypePool pool_{};
 };
 
@@ -66,10 +67,17 @@ public:
     BasicBlock* GetBasicBlock(const std::string&);
     BasicBlock* GetBasicBlock(int);
     void AddIROperand(std::unique_ptr<IROperand>);
+    void AddParam(const Register*);
 
     auto Type() const { return functype_; }
+    const auto& Params() const { return params_; }
     const auto& ParamType() const { return functype_->ParamType(); }
     const IRType* ReturnType() const { return functype_->ReturnType(); }
+
+    bool Inline() const { return inline_; }
+    bool& Inline() { return inline_; }
+    bool Noreturn() const { return noreturn_; }
+    bool& Noreturn() { return noreturn_; }
 
     auto ReturnValue() const { return returnvalue_; }
     auto& ReturnValue() { return returnvalue_; }
@@ -81,8 +89,12 @@ private:
     std::vector<std::unique_ptr<BasicBlock>> blk_{};
     std::vector<std::unique_ptr<IROperand>> operands_{};
 
+    bool inline_{}, noreturn_{};
+
     const Register* returnvalue_{};
     const FuncType* functype_{};
+    std::vector<const Register*> params_{};
+
     IRTypePool pool_{};
 };
 

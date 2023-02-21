@@ -63,7 +63,7 @@ constant initializer initializer_list
 %type <std::string> enumerator_list string
 %type <Tag> unary_operator assignment_operator
 %type <std::unique_ptr<TypeSpec>> type_specifier
-%type <Tag> type_qualifier storage_class_specifier
+%type <Tag> type_qualifier storage_class_specifier function_specifier
 %type <std::unique_ptr<DeclSpec>> declaration_specifiers
 %type <std::unique_ptr<Ptr>> pointer
 %type <std::unique_ptr<Declaration>> declarator direct_declarator
@@ -408,7 +408,15 @@ declaration_specifiers
         $$->SetQual($1);
     }
 	| function_specifier declaration_specifiers
+    {
+        $2->SetFuncSpec($1);
+        $$ = std::move($2);
+    }
 	| function_specifier
+    {
+        $$ = std::make_unique<DeclSpec>();
+        $$->SetFuncSpec($1);
+    }
 	| alignment_specifier declaration_specifiers
 	| alignment_specifier
 	;
@@ -741,7 +749,7 @@ block_item
 	;
 
 expression_statement
-	: ';' { $$ = nullptr; }
+	: ';' { $$ = std::make_unique<ExprStmt>(nullptr); }
 	| expression ';' { $$ = std::make_unique<ExprStmt>(std::move($1)); }
 	;
 

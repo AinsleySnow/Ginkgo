@@ -45,6 +45,19 @@ bool StorageType::SetToken(Tag t)
 }
 
 
+bool FuncSpec::SetSpec(Tag t)
+{
+    switch (t)
+    {
+    case Tag::_inline:
+        token_ |= (unsigned)FuncTag::_inline; return true;
+    case Tag::_noreturn:
+        token_ |= (unsigned)FuncTag::_noreturn; return true;
+    default: return false;
+    }
+}
+
+
 CArithmType::CArithmType(TypeTag tt) : type_(tt)
 {
     switch (tt)
@@ -159,7 +172,7 @@ std::string CArithmType::ToString() const
 }
 
 
-void CFuncType::AddParam(std::unique_ptr<CType> t)
+void CFuncType::AddParam(const CType* t)
 {
     paramlist_.push_back(std::move(t));
 }

@@ -6,7 +6,6 @@
 #include "IR/IROperand.h"
 #include "messages/Error.h"
 #include <algorithm>
-#include <utility>
 
 #define to_int(op) static_cast<const IntConst*>(op)
 #define to_float(op) static_cast<const FloatConst*>(op)
@@ -20,7 +19,6 @@ const IROperand* IRGen::EvalBinary(
 #define float_int lhs->IsFloatConst() && rhs->IsIntConst()
 
 #define do_int_calc(sym)                                    \
-    if (both_int)                                           \
     {                                                       \
         auto lval = to_int(lhs)->Val();                     \
         auto rval = to_int(rhs)->Val();                     \
@@ -29,6 +27,27 @@ const IROperand* IRGen::EvalBinary(
             lhs->Type() : rhs->Type();                      \
         return IntConst::CreateIntConst(                    \
             curfunc_, ans, ty->ToInteger());                \
+    }
+
+
+#define do_shift(sym)                                       \
+    {                                                       \
+        auto lval = to_int(lhs), rval = to_int(rhs);        \
+        auto ty = lval->Type();                             \
+        if (ty->ToInteger()->IsSigned())                    \
+        {                                                   \
+            long left = lval->Val();                        \
+            auto ans = left sym rval->Val();                \
+            return IntConst::CreateIntConst(                \
+                curfunc_, ans, lval->Type()->ToInteger());  \
+        }                                                   \
+        else                                                \
+        {                                                   \
+            unsigned long left = lval->Val();               \
+            auto ans = left sym rval->Val();                \
+            return IntConst::CreateIntConst(                \
+                curfunc_, ans, lval->Type()->ToInteger());  \
+        }                                                   \
     }
 
 
@@ -65,6 +84,38 @@ const IROperand* IRGen::EvalBinary(
         return FloatConst::CreateFloatConst(curfunc_, ans);     \
     }
 
+
+#define do_compare(sym)                                         \
+    if (both_float)                                             \
+    {                                                           \
+        auto lval = to_float(lhs)->Val();                       \
+        auto rval = to_float(rhs)->Val();                       \
+        int ans = lval sym rval;                                \
+        return IntConst::CreateIntConst(curfunc_, ans);         \
+    }                                                           \
+    else if (both_int)                                          \
+    {                                                           \
+        auto lval = to_int(lhs)->Val();                         \
+        auto rval = to_int(rhs)->Val();                         \
+        int ans = lval sym rval;                                \
+        return IntConst::CreateIntConst(curfunc_, ans);         \
+    }                                                           \
+    else if (int_float)                                         \
+    {                                                           \
+        auto lval = to_int(lhs)->Val();                         \
+        auto rval = to_float(rhs)->Val();                       \
+        int ans = lval sym rval;                                \
+        return IntConst::CreateIntConst(curfunc_, ans);         \
+    }                                                           \
+    else if (float_int)                                         \
+    {                                                           \
+        auto lval = to_float(lhs)->Val();                       \
+        auto rval = to_int(rhs)->Val();                         \
+        int ans = lval sym rval;                                \
+        return IntConst::CreateIntConst(curfunc_, ans);         \
+    }
+
+
     switch (op)
     {
     case Tag::plus: do_calc(+); break;
@@ -75,15 +126,15 @@ const IROperand* IRGen::EvalBinary(
     case Tag::_or: do_int_calc(|); break;
     case Tag::logical_and: do_calc(&&); break;
     case Tag::logical_or: do_calc(||); break;
-    case Tag::lshift: do_int_calc(<<); break;
-    case Tag::rshift: do_int_calc(>>); break;
-    case Tag::lessthan: do_calc(<); break;
-    case Tag::greathan: do_calc(>); break;
-    case Tag::lessequal: do_calc(<=); break;
-    case Tag::greatequal: do_calc(>=); break;
+    case Tag::lshift: do_shift(<<); break;
+    case Tag::rshift: do_shift(>>); break;
+    case Tag::lessthan: do_compare(<); break;
+    case Tag::greathan: do_compare(>); break;
+    case Tag::lessequal: do_compare(<=); break;
+    case Tag::greatequal: do_compare(>=); break;
     case Tag::_xor: do_int_calc(^); break;
-    case Tag::equal: do_calc(==); break;
-    case Tag::notequal: do_calc(!=); break;
+    case Tag::equal: do_compare(==); break;
+    case Tag::notequal: do_compare(!=); break;
     default: return nullptr;
     }
 
@@ -112,9 +163,9 @@ const IROperand* IRGen::EvalUnary(Tag op, const IROperand* num)
     case Tag::exclamation:
         if (num->IsIntConst())
             return IntConst::CreateIntConst(
-                curfunc_, !(to_int(num)->Val()), num->Type()->ToInteger());
+                curfunc_, !(to_int(num)->Val()));
         else return IntConst::CreateIntConst(
-            curfunc_, !(to_float(num)->Val()), num->Type()->ToInteger());
+            curfunc_, !(to_float(num)->Val()));
     case Tag::tilde:
         return IntConst::CreateIntConst(
             curfunc_, ~(to_int(num)->Val()), num->Type()->ToInteger());
@@ -174,7 +225,9 @@ std::list<BrInstr*> IRGen::Merge(
 void IRGen::VisitDeclSpec(DeclSpec* spec)
 {
     auto tag = spec->TypeSpec();
-    if (tag != TypeTag::customed)
+    if (tag == TypeTag::_void)
+        spec->type_ = std::make_unique<CVoidType>();
+    else if (tag != TypeTag::customed)
     {
         spec->type_ = std::make_unique<CArithmType>(tag);
         spec->type_->Qual() = spec->Qual();
@@ -194,13 +247,16 @@ void IRGen::VisitDeclList(DeclList* list)
         initdecl->declarator_->Accept(this);
         if (initdecl->initalizer_)
             initdecl->initalizer_->Accept(this);
-        initdecl->base_ = AllocaObject(
+        if (!dynamic_cast<FuncDef*>(initdecl->declarator_.get()))
+        {
+            initdecl->base_ = AllocaObject(
             initdecl->declarator_->RawType(),
             initdecl->declarator_->Name());
-        if (initdecl->initalizer_)
-            builder_.InsertStoreInstr(
-                initdecl->initalizer_->Val(),
-                initdecl->base_, false);
+            if (initdecl->initalizer_)
+                builder_.InsertStoreInstr(
+                    initdecl->initalizer_->Val(),
+                    initdecl->base_, false);
+        }
     }
 }
 
@@ -221,14 +277,19 @@ void IRGen::VisitFuncDef(FuncDef* def)
     auto funccty = std::make_unique<CFuncType>(
         std::move(def->return_), def->GetParamList().size());
     for (auto param : def->GetParamType())
-    {
-        auto arthmic = static_cast<const CArithmType*>(param);
-        funccty->AddParam(std::make_unique<CArithmType>(*arthmic));
-    }
-    scopestack_.Top().AddFunc(def->Name(), funccty.get());
+        funccty->AddParam(std::move(param));
 
-    auto pfunc = transunit_->AddFunc(
-        def->Name(), funccty->ToIRType(transunit_->TypePool()));
+    Function* pfunc = nullptr;
+    if (scopestack_.SearchFunc(def->Name()))
+        pfunc = transunit_->GetFunction(def->Name());
+    else
+    {
+        scopestack_.File().AddFunc(def->Name(), funccty.get());
+        pfunc = transunit_->AddFunc(
+            def->Name(), funccty->ToIRType(transunit_->TypePool()));
+        pfunc->Inline() = spec->Func().IsInline();
+        pfunc->Noreturn() = spec->Func().IsNoreturn();
+    }
 
     if (!def->compound_)
         return;
@@ -240,23 +301,33 @@ void IRGen::VisitFuncDef(FuncDef* def)
     scopestack_.PushNewScope(Scope::ScopeType::block);
 
     auto rety = curfunc_->ReturnType();
-    std::string retreg = "";
-    if (rety)
+    if (!rety->ToVoid())
     {
-        retreg = GetRegName();
         curfunc_->ReturnValue() =
-            builder_.InsertAllocaInstr(retreg, rety);
+            builder_.InsertAllocaInstr(GetRegName(), rety);
     }
 
     for (auto& param : def->GetParamList())
+    {
+        if (dynamic_cast<const CVoidType*>(param->RawType()))
+            continue;
+        auto ctype = param->RawType();
+        auto paramreg = Register::CreateRegister(
+            curfunc_, GetRegName(),
+            ctype->ToIRType(curfunc_->TypePool()));
+        curfunc_->AddParam(paramreg);
         if (!param->Name().empty())
-            AllocaObject(param->RawType(), param->Name());
+        {
+            auto addr = AllocaObject(ctype, param->Name());
+            builder_.InsertStoreInstr(paramreg, addr, false);
+        }
+    }
 
     def->compound_->Accept(this);
     if (!builder_.InsertPoint()->Empty())
         builder_.InsertPoint() = GetBasicBlock();
 
-    if (rety)
+    if (!rety->ToVoid())
     {
         auto retvalue = builder_.InsertLoadInstr(
             GetRegName(), curfunc_->ReturnValue());
@@ -439,27 +510,30 @@ void IRGen::VisitBinaryExpr(BinaryExpr* bin)
 
 void IRGen::VisitCallExpr(CallExpr* call)
 {
-    call->postfix_->Accept(this);
-    call->argvlist_->Accept(this);
-
-    auto pfunc = static_cast<const Register*>(call->postfix_->Val());
+    if (call->argvlist_)
+        call->argvlist_->Accept(this);
 
     IdentExpr* ident = dynamic_cast<IdentExpr*>(call->postfix_.get());
     if (ident)
     {
-        const FuncType* functy =
-            pfunc->Type()->ToPointer()->Point2()->ToFunction();        
+        auto pfunc = transunit_->GetFunction(ident->name_);
+        const FuncType* functy = pfunc->Type();
         call->Val() = builder_.InsertCallInstr(GetRegName(), functy, ident->name_);
     }
     else // if a function is called through a pointer
     {
+        call->postfix_->Accept(this);
+        auto pfunc = static_cast<const Register*>(call->postfix_->Val());
         auto func = builder_.InsertLoadInstr(GetRegName(), pfunc);
         call->Val() = builder_.InsertCallInstr(GetRegName(), func);
     }
 
-    auto callinstr = static_cast<CallInstr*>(GetLastInstr());
-    for (auto& argv : *call->argvlist_)
-        callinstr->AddArgv(argv->Val());
+    if (call->argvlist_)
+    {
+        auto callinstr = static_cast<CallInstr*>(GetLastInstr());
+        for (auto& argv : *call->argvlist_)
+            callinstr->AddArgv(argv->Val());
+    }
 }
 
 
@@ -768,7 +842,8 @@ void IRGen::VisitDoWhileStmt(DoWhileStmt* stmt)
 
 void IRGen::VisitExprStmt(ExprStmt* stmt)
 {
-    stmt->expr_->Accept(this);
+    if (stmt->expr_)
+        stmt->expr_->Accept(this);
 }
 
 

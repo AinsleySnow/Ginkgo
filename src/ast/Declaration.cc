@@ -69,6 +69,10 @@ TypeTag DeclSpec::TypeSpec()
     case int(Tag::_float):
         return TypeTag::flt32;
 
+    // void
+    case int(Tag::_void):
+        return TypeTag::_void;
+
     // others
     default: return TypeTag::customed;
     }
@@ -88,6 +92,14 @@ StorageType DeclSpec::Storage()
     for (auto tag : storagelist_)
         storage.SetToken(tag);
     return storage;
+}
+
+FuncSpec DeclSpec::Func()
+{
+    FuncSpec func{};
+    for (auto tag : funcspeclist_)
+        func.SetSpec(tag);
+    return func;
 }
 
 bool DeclSpec::SetRawSpec(Tag t)

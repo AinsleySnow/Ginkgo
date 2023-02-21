@@ -19,9 +19,9 @@ class Identifier
 public:
     enum class IdentType { obj, func, label, tydef, member };
 
-    Identifier(IdentType it, const std::string& n) : name_(n) {}
+    Identifier(IdentType it, const std::string& n) : identype_(it), name_(n) {}
     Identifier(IdentType it, const std::string& n, const CType* t) :
-        name_(n), type_(t) {}
+        identype_(it), name_(n), type_(t) {}
     virtual ~Identifier() {}
 
     std::string GetName() const { return name_; }

@@ -158,3 +158,8 @@ void UnaryExpr::Accept(Visitor* v)
 {
     v->VisitUnaryExpr(this);
 }
+
+bool UnaryExpr::IsConstant() const
+{
+    return Val()->IsConstant();
+}
