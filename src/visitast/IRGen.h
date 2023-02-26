@@ -59,8 +59,6 @@ public:
 
 
 private:
-    const IROperand* EvalBinary(Tag t, const IROperand*, const IROperand*);
-    const IROperand* EvalUnary(Tag op, const IROperand*);
     BasicBlock* GetBasicBlock();
     Instr* GetLastInstr();
     std::string GetRegName() { return '%' + std::to_string(index_++); }

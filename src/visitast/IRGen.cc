@@ -1,4 +1,5 @@
 #include "visitast/IRGen.h"
+#include "visitast/Evaluator.h"
 #include "ast/CType.h"
 #include "ast/Declaration.h"
 #include "ast/Expression.h"
@@ -6,176 +7,6 @@
 #include "IR/IROperand.h"
 #include "messages/Error.h"
 #include <algorithm>
-
-#define to_int(op) static_cast<const IntConst*>(op)
-#define to_float(op) static_cast<const FloatConst*>(op)
-
-const IROperand* IRGen::EvalBinary(
-    Tag op, const IROperand* lhs, const IROperand* rhs)
-{
-#define both_float lhs->IsFloatConst() && rhs->IsFloatConst()
-#define both_int lhs->IsIntConst() && rhs->IsIntConst()
-#define int_float lhs->IsIntConst() && rhs->IsFloatConst()
-#define float_int lhs->IsFloatConst() && rhs->IsIntConst()
-
-#define do_int_calc(sym)                                    \
-    {                                                       \
-        auto lval = to_int(lhs)->Val();                     \
-        auto rval = to_int(rhs)->Val();                     \
-        auto ans = lval sym rval;                           \
-        auto ty = lhs->Type()->operator>(*(rhs->Type())) ?  \
-            lhs->Type() : rhs->Type();                      \
-        return IntConst::CreateIntConst(                    \
-            curfunc_, ans, ty->ToInteger());                \
-    }
-
-
-#define do_shift(sym)                                       \
-    {                                                       \
-        auto lval = to_int(lhs), rval = to_int(rhs);        \
-        auto ty = lval->Type();                             \
-        if (ty->ToInteger()->IsSigned())                    \
-        {                                                   \
-            long left = lval->Val();                        \
-            auto ans = left sym rval->Val();                \
-            return IntConst::CreateIntConst(                \
-                curfunc_, ans, lval->Type()->ToInteger());  \
-        }                                                   \
-        else                                                \
-        {                                                   \
-            unsigned long left = lval->Val();               \
-            auto ans = left sym rval->Val();                \
-            return IntConst::CreateIntConst(                \
-                curfunc_, ans, lval->Type()->ToInteger());  \
-        }                                                   \
-    }
-
-
-#define do_calc(sym)                                            \
-    if (both_float)                                             \
-    {                                                           \
-        auto lval = to_float(lhs)->Val();                       \
-        auto rval = to_float(rhs)->Val();                       \
-        auto ans = lval sym rval;                               \
-        return FloatConst::CreateFloatConst(curfunc_, ans);     \
-    }                                                           \
-    else if (both_int)                                          \
-    {                                                           \
-        auto lval = to_int(lhs)->Val();                         \
-        auto rval = to_int(rhs)->Val();                         \
-        auto ans = lval sym rval;                               \
-        auto ty = lhs->Type()->operator>(*(rhs->Type())) ?      \
-            lhs->Type() : rhs->Type();                          \
-        return IntConst::CreateIntConst(                        \
-            curfunc_, ans, ty->ToInteger());                    \
-    }                                                           \
-    else if (int_float)                                         \
-    {                                                           \
-        auto lval = to_int(lhs)->Val();                         \
-        auto rval = to_float(rhs)->Val();                       \
-        auto ans = lval sym rval;                               \
-        return FloatConst::CreateFloatConst(curfunc_, ans);     \
-    }                                                           \
-    else if (float_int)                                         \
-    {                                                           \
-        auto lval = to_float(lhs)->Val();                       \
-        auto rval = to_int(rhs)->Val();                         \
-        auto ans = lval sym rval;                               \
-        return FloatConst::CreateFloatConst(curfunc_, ans);     \
-    }
-
-
-#define do_compare(sym)                                         \
-    if (both_float)                                             \
-    {                                                           \
-        auto lval = to_float(lhs)->Val();                       \
-        auto rval = to_float(rhs)->Val();                       \
-        int ans = lval sym rval;                                \
-        return IntConst::CreateIntConst(curfunc_, ans);         \
-    }                                                           \
-    else if (both_int)                                          \
-    {                                                           \
-        auto lval = to_int(lhs)->Val();                         \
-        auto rval = to_int(rhs)->Val();                         \
-        int ans = lval sym rval;                                \
-        return IntConst::CreateIntConst(curfunc_, ans);         \
-    }                                                           \
-    else if (int_float)                                         \
-    {                                                           \
-        auto lval = to_int(lhs)->Val();                         \
-        auto rval = to_float(rhs)->Val();                       \
-        int ans = lval sym rval;                                \
-        return IntConst::CreateIntConst(curfunc_, ans);         \
-    }                                                           \
-    else if (float_int)                                         \
-    {                                                           \
-        auto lval = to_float(lhs)->Val();                       \
-        auto rval = to_int(rhs)->Val();                         \
-        int ans = lval sym rval;                                \
-        return IntConst::CreateIntConst(curfunc_, ans);         \
-    }
-
-
-    switch (op)
-    {
-    case Tag::plus: do_calc(+); break;
-    case Tag::minus: do_calc(-); break;
-    case Tag::asterisk: do_calc(*); break;
-    case Tag::slash: do_calc(/); break;
-    case Tag::_and: do_int_calc(&); break;
-    case Tag::_or: do_int_calc(|); break;
-    case Tag::logical_and: do_calc(&&); break;
-    case Tag::logical_or: do_calc(||); break;
-    case Tag::lshift: do_shift(<<); break;
-    case Tag::rshift: do_shift(>>); break;
-    case Tag::lessthan: do_compare(<); break;
-    case Tag::greathan: do_compare(>); break;
-    case Tag::lessequal: do_compare(<=); break;
-    case Tag::greatequal: do_compare(>=); break;
-    case Tag::_xor: do_int_calc(^); break;
-    case Tag::equal: do_compare(==); break;
-    case Tag::notequal: do_compare(!=); break;
-    default: return nullptr;
-    }
-
-    return nullptr;
-
-#undef both_int
-#undef both_float
-#undef int_float
-#undef float_int
-#undef do_int_calc
-#undef do_calc
-}
-
-
-const IROperand* IRGen::EvalUnary(Tag op, const IROperand* num)
-{
-    switch (op)
-    {
-    case Tag::plus: return num;
-    case Tag::minus:
-        if (num->IsIntConst())
-            return IntConst::CreateIntConst(
-                curfunc_, -to_int(num)->Val(), num->Type()->ToInteger());
-        else return FloatConst::CreateFloatConst(
-            curfunc_, -to_float(num)->Val(), num->Type()->ToFloatPoint());
-    case Tag::exclamation:
-        if (num->IsIntConst())
-            return IntConst::CreateIntConst(
-                curfunc_, !(to_int(num)->Val()));
-        else return IntConst::CreateIntConst(
-            curfunc_, !(to_float(num)->Val()));
-    case Tag::tilde:
-        return IntConst::CreateIntConst(
-            curfunc_, ~(to_int(num)->Val()), num->Type()->ToInteger());
-    default: return nullptr;
-    }
-
-    return nullptr;
-}
-#undef to_int
-#undef to_float
 
 
 BasicBlock* IRGen::GetBasicBlock()
@@ -442,8 +273,8 @@ void IRGen::VisitBinaryExpr(BinaryExpr* bin)
 
     if (bin->left_->IsConstant() && bin->right_->IsConstant())
     {
-        bin->Val() = EvalBinary(
-            bin->op_, bin->left_->Val(), bin->right_->Val());
+        bin->Val() = Evaluator::EvalBinary(
+            curfunc_, bin->op_, bin->left_->Val(), bin->right_->Val());
         return;
     }
 
@@ -643,7 +474,7 @@ void IRGen::VisitLogicalExpr(LogicalExpr* logical)
         logical->right_->Accept(this);
         auto lhs = static_cast<const Constant*>(logical->left_->Val());
         auto rhs = static_cast<const Constant*>(logical->right_->Val());
-        logical->Val() = EvalBinary(logical->op_, lhs, rhs);
+        logical->Val() = Evaluator::EvalBinary(curfunc_, logical->op_, lhs, rhs);
         return;
     }
     else if (logical->left_->IsConstant())
@@ -722,7 +553,8 @@ void IRGen::VisitUnaryExpr(UnaryExpr* unary)
 
     if (unary->content_->IsConstant())
     {
-        unary->Val() = EvalUnary(unary->op_, unary->content_->Val());
+        unary->Val() = Evaluator::EvalUnary(
+            curfunc_, unary->op_, unary->content_->Val());
         return;
     }
 
