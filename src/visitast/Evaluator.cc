@@ -2,9 +2,10 @@
 #include "IR/IROperand.h"
 
 
-bool Evaluator::IsComparsionTag(Tag op)
+bool Evaluator::IsLogicalTag(Tag op)
 {
-    return op == Tag::lessthan || op == Tag::lessequal ||
+    return op == Tag::logical_and || op == Tag::logical_or ||
+        op == Tag::lessthan || op == Tag::lessequal ||
         op == Tag::greathan || op == Tag::greatequal ||
         op == Tag::equal || op == Tag::notequal;
 }
@@ -19,6 +20,7 @@ RET Evaluator::Calc(Tag op, LHS l, RHS r)
     case Tag::minus: return (RET)(l - r);
     case Tag::asterisk: return (RET)(l * r);
     case Tag::slash: return (RET)(l / r);
+    case Tag::percent: return (RET)(l % r);
     case Tag::_and: return (RET)(l & r);
     case Tag::_or: return (RET)(l | r);
     case Tag::logical_and: return (RET)(l && r);
@@ -36,6 +38,40 @@ RET Evaluator::Calc(Tag op, LHS l, RHS r)
     }
 }
 
+
+#define switch_body                     \
+switch (op)                             \
+{                                       \
+case Tag::plus: return l + r;           \
+case Tag::minus: return l - r;          \
+case Tag::asterisk: return l * r;       \
+case Tag::slash: return l / r;          \
+case Tag::logical_and: return l && r;   \
+case Tag::logical_or: return l || r;    \
+case Tag::lessthan: return l < r;       \
+case Tag::greathan: return l > r;       \
+case Tag::lessequal: return l <= r;     \
+case Tag::greatequal: return l >= r;    \
+case Tag::equal: return l == r;         \
+case Tag::notequal: return l != r;      \
+default: return 0;                      \
+}
+
+template <>
+double Evaluator::Calc<double, double, double>(Tag op, double l, double r)
+{
+    switch_body;
+}
+
+template <typename LHS, typename RHS>
+double Evaluator::Calc(Tag op, LHS l, RHS r)
+{
+    switch_body;
+}
+
+#undef switch_body
+
+
 template <typename RET, typename NUM>
 RET Evaluator::Calc(Tag op, NUM num)
 {
@@ -44,7 +80,7 @@ RET Evaluator::Calc(Tag op, NUM num)
     case Tag::plus: return (RET)num;
     case Tag::minus: return (RET)(-num);
     case Tag::exclamation: return (RET)(!num);
-    case Tag::tilde: return (RET)(~num);
+    case Tag::tilde: return (RET)(~(unsigned long)num);
     default: return 0;
     }
 }
@@ -60,10 +96,10 @@ const IROperand* Evaluator::EvalBinary(Function* func, Tag op, const IROperand* 
         auto left = to_float(lhs)->Val();
         auto right = to_float(rhs)->Val();
 
-        if (IsComparsionTag(op))
+        if (IsLogicalTag(op))
             return IntConst::CreateIntConst(
                 func,
-                Calc<unsigned long, double, double>(op, left, right),
+                Calc<double, double, double>(op, left, right),
                 IntType::GetInt32(true));
 
         double result = Calc<double, double, double>(op, left, right);
@@ -77,10 +113,10 @@ const IROperand* Evaluator::EvalBinary(Function* func, Tag op, const IROperand* 
 
         double result;
         if (rhs->Type()->ToInteger()->IsSigned())
-            result = Calc<double, double, double>(op, left, (long)right);
-        else result = Calc<double, double, double>(op, left, right);
+            result = Calc<double, long>(op, left, (long)right);
+        else result = Calc<double, unsigned long>(op, left, right);
 
-        if (IsComparsionTag(op))
+        if (IsLogicalTag(op))
             return IntConst::CreateIntConst(func, (unsigned long)result, IntType::GetInt32(true));
         return FloatConst::CreateFloatConst(func, result, lhs->Type()->ToFloatPoint());
     }
@@ -90,10 +126,10 @@ const IROperand* Evaluator::EvalBinary(Function* func, Tag op, const IROperand* 
         auto right = to_float(rhs)->Val();
         double result;
         if (lhs->Type()->ToInteger()->IsSigned())
-            result = Calc<double, double, double>(op, (long)left, right);
-        else result = Calc<double, double, double>(op, left, right);
+            result = Calc<long, double>(op, (long)left, right);
+        else result = Calc<unsigned long, double>(op, left, right);
 
-        if (IsComparsionTag(op))
+        if (IsLogicalTag(op))
             return IntConst::CreateIntConst(func, (unsigned long)result, IntType::GetInt32(true));
         return FloatConst::CreateFloatConst(func, result, rhs->Type()->ToFloatPoint());
     }
@@ -102,11 +138,14 @@ const IROperand* Evaluator::EvalBinary(Function* func, Tag op, const IROperand* 
         auto left = to_int(lhs)->Val();
         auto right = to_int(rhs)->Val();
 
+        if (op == Tag::lshift || op == Tag::rshift)
+            right %= lhs->Type()->Size() * 8;
+
         bool lsigned = lhs->Type()->ToInteger()->IsSigned();
         bool rsigned = rhs->Type()->ToInteger()->IsSigned();
 
         const IntType* ty = nullptr;
-        if (IsComparsionTag(op))
+        if (IsLogicalTag(op))
             ty = IntType::GetInt32(true);
         else if (lhs->Type()->operator>(*rhs->Type()))
             ty = lhs->Type()->ToInteger();
@@ -117,25 +156,12 @@ const IROperand* Evaluator::EvalBinary(Function* func, Tag op, const IROperand* 
         else if (lsigned || rsigned)
             ty = lsigned ? rhs->Type()->ToInteger() : lhs->Type()->ToInteger();
 
-        unsigned long result = 0;
-        if (lsigned && rsigned)
-            result = Calc<unsigned long, long, long>(op, left, right);
-        else if (!lsigned && rsigned)
-        {
-            if (lhs->Type()->operator<(*rhs->Type()))
-                result = Calc<unsigned long, long, long>(op, left, right);
-            else result = Calc<
-                unsigned long, unsigned long, unsigned long>(op, left, right);
-        }
-        else if (lsigned && !rsigned)
-        {
-            if (lhs->Type()->operator>(*rhs->Type()))
-                result = Calc<unsigned long, long, long>(op, left, right);
-            else result = Calc<
-                unsigned long, unsigned long, unsigned long>(op, left, right);
-        }
-        else if (!lsigned && !rsigned)
-            result = Calc<unsigned long, unsigned long, unsigned long>(op, left, right);
+        unsigned long result = Calc<unsigned long, long, long>(op, left, right);
+
+        if (op == Tag::rshift &&
+            lhs->Type()->ToInteger()->IsSigned() &&
+            (left & (1 << (lhs->Type()->Size() * 8 - 1))))
+            result |= (unsigned long)(-1ll >> (64 - lhs->Type()->Size() * 8 + right - 1));
 
         return IntConst::CreateIntConst(func, result, ty);
     }
@@ -155,7 +181,9 @@ const IROperand* Evaluator::EvalUnary(Function* func, Tag op, const IROperand* n
     else
     {
         double result = Calc<double, double>(op, to_float(num)->Val());
-        return FloatConst::CreateFloatConst(func, result, num->Type()->ToFloatPoint());
+        if (op == Tag::exclamation)
+            return IntConst::CreateIntConst(func, result, IntType::GetInt32(true));
+        else return FloatConst::CreateFloatConst(func, result, num->Type()->ToFloatPoint());
     }
 }
 

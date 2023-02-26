@@ -16,10 +16,12 @@ public:
 private:
     template <typename RET, typename LHS, typename RHS>
     static RET Calc(Tag, LHS, RHS);
+    template <typename LHS, typename RHS>
+    static double Calc(Tag, LHS, RHS);
     template <typename RET, typename NUM>
     static RET Calc(Tag, NUM);
 
-    static bool IsComparsionTag(Tag);
+    static bool IsLogicalTag(Tag);
 };
 
 #endif // _EVALUATOR_H_

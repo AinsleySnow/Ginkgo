@@ -25,33 +25,15 @@ IntConst* IntConst::CreateIntConst(Function* func, unsigned long ul, const IntTy
 
 std::string IntConst::ToString() const
 {
-    unsigned long numcopy = 0;
-    auto byte = reinterpret_cast<const char*>(&num_);
+    int bits = type_->Size() * 8;
+    bool issigned = type_->ToInteger()->IsSigned();
+    unsigned long mask = ((unsigned long)(-1ll >> (bits - 1))) >> (64 - bits + 1);
 
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-    int i = 0;
-    for (; i < type_->Size(); ++i)
-#else
-    int i = 7;
-    for (; i >= 8 - type_->Size(); --i)
-#endif
-        reinterpret_cast<char*>(&numcopy)[i] = *(byte + i);
-
-    if (type_->ToInteger()->IsSigned())
-    {
-        if (reinterpret_cast<char*>(&numcopy)[i - 1] & 0x80)
-        {
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-        for (; i < 8; ++i)
-#else
-        for (; i >= 0; --i)
-#endif
-            reinterpret_cast<char*>(&numcopy)[i] = 0xFF;
-        }
-        return std::to_string((long)numcopy);
-    }
-    else
-        return std::to_string(numcopy);
+    if (issigned && (1 << (bits - 1)) & num_)
+        return std::to_string((long)(mask & num_) | -1ll >> (64 - bits + 1));
+    else if (issigned)
+        return std::to_string((long)(mask & num_));
+    else return std::to_string(mask & num_);
 }
 
 FloatConst* FloatConst::CreateFloatConst(Function* func, double d)
