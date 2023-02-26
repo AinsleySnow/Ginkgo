@@ -25,3 +25,13 @@ set(GINKGO_SRC_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/src)
 include_directories(${GINKGO_SRC_INCLUDE_DIR})
 
 add_subdirectory(src)
+
+set(GINKGO_SRC_DIR ${PROJECT_SOURCE_DIR}/src)
+
+add_custom_target(parser
+    COMMAND bison ${GINKGO_SRC_DIR}/parser/yacc.yy -dy -o ${GINKGO_SRC_DIR}/parser/yacc.cc
+)
+
+add_custom_target(lexer
+    COMMAND lex ${GINKGO_SRC_DIR}/parser/lexer.ll -o ${GINKGO_SRC_DIR}/parser/lexer.cc
+)
