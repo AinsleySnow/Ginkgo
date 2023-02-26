@@ -124,7 +124,6 @@ ConstExpr::ConstExpr(double d, char suffix)
     {
         if (d < FLT_MAX) type_ = std::make_unique<CArithmType>(TypeTag::flt32);
         else type_ = std::make_unique<CArithmType>(TypeTag::flt64);
-
     }
 }
 
