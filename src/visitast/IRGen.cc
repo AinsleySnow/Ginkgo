@@ -9,24 +9,55 @@
 #include <algorithm>
 
 
-BasicBlock* IRGen::GetBasicBlock()
+BasicBlock* IRGen::CurrentEnv::GetBasicBlock(const std::string& name)
 {
-    std::string name = '%' + std::to_string(index_++);
-    return BasicBlock::CreateBasicBlock(curfunc_, name);
+    if (env_.index() == 0)
+        return BasicBlock::CreateBasicBlock(std::get<0>(env_), name);
+    else return BasicBlock::CreateBasicBlock(std::get<1>(env_), name);
 }
 
-Instr* IRGen::GetLastInstr()
+BasicBlock* IRGen::CurrentEnv::GetBasicBlock()
 {
-    return curfunc_->GetBasicBlock(-1)->GetLastInstr();
+    std::string name = '%' + std::to_string(index_++);
+    return GetBasicBlock(name);
+}
+
+Instr* IRGen::CurrentEnv::GetLastInstr()
+{
+    if (env_.index() == 0)
+        return std::get<0>(env_)->GetBasicBlock(-1)->GetLastInstr();
+    else return std::get<1>(env_)->GetBasicBlock()->GetLastInstr();
+}
+
+void IRGen::CurrentEnv::Epilog(BasicBlock* bb)
+{
+    Backpatch(ret_, bb);
+    for (auto gotopair : gotomap_)
+        FillNullBlk(gotopair.first, labelmap_[gotopair.second]);
 }
 
 
 const Register* IRGen::AllocaObject(const CType* raw, const std::string& name)
 {
-    auto reg = builder_.InsertAllocaInstr(
-        GetRegName(), raw->ToIRType(curfunc_));
-    scopestack_.Top().AddObject(name, raw, reg);
-    return reg;
+    if (scopestack_.Top().GetScopeType() == Scope::ScopeType::file)
+    {
+        auto ty = raw->ToIRType(transunit_.get());
+        auto regname = '@' + name;
+        auto var = GlobalVar::CreateGlobalVar(transunit_.get(), regname, ty);
+
+        env_ = CurrentEnv(var);
+        builder_.InsertPoint() = env_.GetBasicBlock("");
+        auto reg = Register::CreateRegister(builder_.InsertPoint(), regname, ty);
+        scopestack_.Top().AddObject(name, raw, reg);
+        return reg;
+    }
+    else
+    {
+        auto reg = builder_.InsertAllocaInstr(
+            env_.GetRegName(), raw->ToIRType(builder_.InsertPoint()));
+        scopestack_.Top().AddObject(name, raw, reg);
+        return reg;
+    }
 }
 
 
@@ -76,17 +107,20 @@ void IRGen::VisitDeclList(DeclList* list)
     for (auto& initdecl : *list)
     {
         initdecl->declarator_->Accept(this);
-        if (initdecl->initalizer_)
-            initdecl->initalizer_->Accept(this);
+            
         if (!dynamic_cast<FuncDef*>(initdecl->declarator_.get()))
         {
             initdecl->base_ = AllocaObject(
             initdecl->declarator_->RawType(),
             initdecl->declarator_->Name());
+
             if (initdecl->initalizer_)
+            {
+                initdecl->initalizer_->Accept(this);
                 builder_.InsertStoreInstr(
                     initdecl->initalizer_->Val(),
                     initdecl->base_, false);
+            }   
         }
     }
 }
@@ -112,12 +146,12 @@ void IRGen::VisitFuncDef(FuncDef* def)
 
     Function* pfunc = nullptr;
     if (scopestack_.SearchFunc(def->Name()))
-        pfunc = transunit_->GetFunction(def->Name());
+        pfunc = transunit_->GetFunction('@' + def->Name());
     else
     {
         scopestack_.File().AddFunc(def->Name(), funccty.get());
         pfunc = transunit_->AddFunc(
-            def->Name(), funccty->ToIRType(transunit_.get()));
+            '@' + def->Name(), funccty->ToIRType(transunit_.get()));
         pfunc->Inline() = spec->Func().IsInline();
         pfunc->Noreturn() = spec->Func().IsNoreturn();
     }
@@ -125,17 +159,15 @@ void IRGen::VisitFuncDef(FuncDef* def)
     if (!def->compound_)
         return;
 
-
-    index_ = 0;
-    curfunc_ = pfunc;
-    builder_.InsertPoint() = GetBasicBlock();
+    env_ = CurrentEnv(pfunc);
+    builder_.InsertPoint() = env_.GetBasicBlock();
     scopestack_.PushNewScope(Scope::ScopeType::block);
 
-    auto rety = curfunc_->ReturnType();
+    auto rety = env_.ToFunction()->ReturnType();
     if (!rety->ToVoid())
     {
-        curfunc_->ReturnValue() =
-            builder_.InsertAllocaInstr(GetRegName(), rety);
+        env_.ToFunction()->ReturnValue() =
+            builder_.InsertAllocaInstr(env_.GetRegName(), rety);
     }
 
     for (auto& param : def->GetParamList())
@@ -144,8 +176,10 @@ void IRGen::VisitFuncDef(FuncDef* def)
             continue;
         auto ctype = param->RawType();
         auto paramreg = Register::CreateRegister(
-            curfunc_, GetRegName(), ctype->ToIRType(curfunc_));
-        curfunc_->AddParam(paramreg);
+            builder_.InsertPoint(), env_.GetRegName(),
+            ctype->ToIRType(builder_.InsertPoint()));
+
+        env_.ToFunction()->AddParam(paramreg);
         if (!param->Name().empty())
         {
             auto addr = AllocaObject(ctype, param->Name());
@@ -155,24 +189,17 @@ void IRGen::VisitFuncDef(FuncDef* def)
 
     def->compound_->Accept(this);
     if (!builder_.InsertPoint()->Empty())
-        builder_.InsertPoint() = GetBasicBlock();
+        builder_.InsertPoint() = env_.GetBasicBlock();
 
     if (!rety->ToVoid())
     {
         auto retvalue = builder_.InsertLoadInstr(
-            GetRegName(), curfunc_->ReturnValue());
+            env_.GetRegName(), env_.ToFunction()->ReturnValue());
         builder_.InsertRetInstr(retvalue);
     }
-    else
-        builder_.InsertRetInstr();
+    else builder_.InsertRetInstr();
 
-    Backpatch(ret_, builder_.InsertPoint());
-    for (auto gotopair : gotomap_)
-        FillNullBlk(gotopair.first, labelmap_[gotopair.second]);
-
-    ret_.clear();
-    labelmap_.clear();
-    gotomap_.clear();
+    env_.Epilog(builder_.InsertPoint());
     scopestack_.PopScope();
 }
 
@@ -219,7 +246,7 @@ void IRGen::VisitAssignExpr(AssignExpr* assign)
         return;
     }
 
-    auto regname = GetRegName();
+    auto regname = env_.GetRegName();
     const Register* result = nullptr;
 
     if (assign->op_ == Tag::add_assign && lhsty->IsInt())
@@ -273,7 +300,7 @@ void IRGen::VisitBinaryExpr(BinaryExpr* bin)
     if (bin->left_->IsConstant() && bin->right_->IsConstant())
     {
         bin->Val() = Evaluator::EvalBinary(
-            curfunc_, bin->op_, bin->left_->Val(), bin->right_->Val());
+            builder_.InsertPoint(), bin->op_, bin->left_->Val(), bin->right_->Val());
         return;
     }
 
@@ -281,7 +308,7 @@ void IRGen::VisitBinaryExpr(BinaryExpr* bin)
     auto lhsty = lhs->Type(), rhsty = rhs->Type();
     bool hasfloat = lhsty->IsFloat() || rhsty->IsFloat();
 
-    std::string regname = GetRegName();
+    std::string regname = env_.GetRegName();
     const Register* result = nullptr;
 
     if (bin->op_ == Tag::plus && !hasfloat)
@@ -348,19 +375,19 @@ void IRGen::VisitCallExpr(CallExpr* call)
     {
         auto pfunc = transunit_->GetFunction(ident->name_);
         const FuncType* functy = pfunc->Type();
-        call->Val() = builder_.InsertCallInstr(GetRegName(), functy, ident->name_);
+        call->Val() = builder_.InsertCallInstr(env_.GetRegName(), functy, ident->name_);
     }
     else // if a function is called through a pointer
     {
         call->postfix_->Accept(this);
         auto pfunc = static_cast<const Register*>(call->postfix_->Val());
-        auto func = builder_.InsertLoadInstr(GetRegName(), pfunc);
-        call->Val() = builder_.InsertCallInstr(GetRegName(), func);
+        auto func = builder_.InsertLoadInstr(env_.GetRegName(), pfunc);
+        call->Val() = builder_.InsertCallInstr(env_.GetRegName(), func);
     }
 
     if (call->argvlist_)
     {
-        auto callinstr = static_cast<CallInstr*>(GetLastInstr());
+        auto callinstr = static_cast<CallInstr*>(env_.GetLastInstr());
         for (auto& argv : *call->argvlist_)
             callinstr->AddArgv(argv->Val());
     }
@@ -410,9 +437,9 @@ void IRGen::VisitCondExpr(CondExpr* cond)
     }
 
     cond->cond_->Accept(this);
-    auto trueblk = GetBasicBlock(),
-        falseblk = GetBasicBlock(),
-        endblk = GetBasicBlock();
+    auto trueblk = env_.GetBasicBlock(),
+        falseblk = env_.GetBasicBlock(),
+        endblk = env_.GetBasicBlock();
     builder_.InsertBrInstr(cond->cond_->Val(), trueblk, falseblk);
 
     builder_.InsertPoint() = trueblk;
@@ -429,8 +456,8 @@ void IRGen::VisitCondExpr(CondExpr* cond)
     auto fval = cond->false_->Val();
 
     cond->Val() =
-        builder_.InsertPhiInstr(GetRegName(), tval->Type());
-    auto phi = static_cast<PhiInstr*>(GetLastInstr());
+        builder_.InsertPhiInstr(env_.GetRegName(), tval->Type());
+    auto phi = static_cast<PhiInstr*>(env_.GetLastInstr());
     phi->AddBlockValPair(trueblk, tval);
     phi->AddBlockValPair(falseblk, fval);
 }
@@ -441,11 +468,11 @@ void IRGen::VisitConstant(ConstExpr* constant)
     auto ctype = constant->RawType();
     if (ctype->IsInteger())
         constant->Val() = IntConst::CreateIntConst(
-            curfunc_, constant->GetInt(),
+            builder_.InsertPoint(), constant->GetInt(),
             ctype->ToIRType(transunit_.get())->ToInteger());
     else
         constant->Val() = FloatConst::CreateFloatConst(
-            curfunc_, constant->GetFloat(),
+            builder_.InsertPoint(), constant->GetFloat(),
             ctype->ToIRType(transunit_.get())->ToFloatPoint());
 }
 
@@ -461,7 +488,7 @@ void IRGen::VisitIdentExpr(IdentExpr* ident)
 {
     auto object = scopestack_.SearchObject(ident->name_);
     ident->Val() = builder_.InsertLoadInstr(
-        GetRegName(), object->GetAddr());
+        env_.GetRegName(), object->GetAddr());
 }
 
 
@@ -473,7 +500,7 @@ void IRGen::VisitLogicalExpr(LogicalExpr* logical)
         logical->right_->Accept(this);
         auto lhs = static_cast<const Constant*>(logical->left_->Val());
         auto rhs = static_cast<const Constant*>(logical->right_->Val());
-        logical->Val() = Evaluator::EvalBinary(curfunc_, logical->op_, lhs, rhs);
+        logical->Val() = Evaluator::EvalBinary(builder_.InsertPoint(), logical->op_, lhs, rhs);
         return;
     }
     else if (logical->left_->IsConstant())
@@ -482,21 +509,21 @@ void IRGen::VisitLogicalExpr(LogicalExpr* logical)
         auto lhs = static_cast<const Constant*>(logical->left_->Val());
         if ((lhs->IsZero() && logical->op_ == Tag::logical_and) ||
             (!lhs->IsZero() && logical->op_ == Tag::logical_or))
-            logical->Val() = IntConst::CreateIntConst(curfunc_, !lhs->IsZero());
+            logical->Val() = IntConst::CreateIntConst(builder_.InsertPoint(), !lhs->IsZero());
         else
         {
             logical->right_->Accept(this);
-            auto zero = IntConst::CreateIntConst(curfunc_, 0);
-            auto one = IntConst::CreateIntConst(curfunc_, 1);
+            auto zero = IntConst::CreateIntConst(builder_.InsertPoint(), 0);
+            auto one = IntConst::CreateIntConst(builder_.InsertPoint(), 1);
             logical->Val() = builder_.InsertSelectInstr(
-                GetRegName(), logical->right_->Val(), true, one, zero);
+                env_.GetRegName(), logical->right_->Val(), true, one, zero);
         }
         return;
     }
 
-    auto firstblk = GetBasicBlock(),
-        midblk = GetBasicBlock(),
-        finalblk = GetBasicBlock();
+    auto firstblk = env_.GetBasicBlock(),
+        midblk = env_.GetBasicBlock(),
+        finalblk = env_.GetBasicBlock();
 
     builder_.InsertBrInstr(firstblk);
     builder_.InsertPoint() = firstblk;
@@ -504,10 +531,10 @@ void IRGen::VisitLogicalExpr(LogicalExpr* logical)
     logical->left_->Accept(this);
     auto lhs = static_cast<const Register*>(logical->left_->Val());
     if (logical->left_->IsLVal())
-        lhs = builder_.InsertLoadInstr(GetRegName(), lhs);
+        lhs = builder_.InsertLoadInstr(env_.GetRegName(), lhs);
 
-    auto zero = IntConst::CreateIntConst(curfunc_, 0);
-    auto cmpans = builder_.InsertCmpInstr(GetRegName(), Condition::ne, lhs, zero);
+    auto zero = IntConst::CreateIntConst(builder_.InsertPoint(), 0);
+    auto cmpans = builder_.InsertCmpInstr(env_.GetRegName(), Condition::ne, lhs, zero);
     
     if (logical->op_ == Tag::logical_and)
         builder_.InsertBrInstr(cmpans, midblk, finalblk);
@@ -519,28 +546,28 @@ void IRGen::VisitLogicalExpr(LogicalExpr* logical)
     logical->right_->Accept(this);
     auto rhs = static_cast<const Register*>(logical->right_->Val());
     if (logical->right_->IsLVal())
-        rhs = builder_.InsertLoadInstr(GetRegName(), rhs);
+        rhs = builder_.InsertLoadInstr(env_.GetRegName(), rhs);
 
-    cmpans = builder_.InsertCmpInstr(GetRegName(), Condition::ne, rhs, zero);
+    cmpans = builder_.InsertCmpInstr(env_.GetRegName(), Condition::ne, rhs, zero);
     builder_.InsertBrInstr(finalblk);
 
     builder_.InsertPoint() = finalblk;
 
-    auto result = GetRegName();
+    auto result = env_.GetRegName();
     if (logical->op_ == Tag::logical_and)
     {
         logical->Val() = builder_.InsertPhiInstr(result, IntType::GetInt8(true));
-        auto phi = static_cast<PhiInstr*>(GetLastInstr());
+        auto phi = static_cast<PhiInstr*>(env_.GetLastInstr());
         phi->AddBlockValPair(firstblk, zero);
         phi->AddBlockValPair(midblk, cmpans);
     }
     else if (logical->op_ == Tag::logical_or)
     {
         logical->Val() = builder_.InsertPhiInstr(result, IntType::GetInt8(true));
-        auto phi = static_cast<PhiInstr*>(GetLastInstr());
+        auto phi = static_cast<PhiInstr*>(env_.GetLastInstr());
         phi->AddBlockValPair(
             firstblk,
-            IntConst::CreateIntConst(curfunc_, 1));
+            IntConst::CreateIntConst(builder_.InsertPoint(), 1));
         phi->AddBlockValPair(midblk, cmpans);
     }
 }
@@ -553,19 +580,19 @@ void IRGen::VisitUnaryExpr(UnaryExpr* unary)
     if (unary->content_->IsConstant())
     {
         unary->Val() = Evaluator::EvalUnary(
-            curfunc_, unary->op_, unary->content_->Val());
+            builder_.InsertPoint(), unary->op_, unary->content_->Val());
         return;
     }
 
     if (unary->op_ == Tag::inc || unary->op_ == Tag::dec)
     {
         auto op = static_cast<const Register*>(unary->content_->Val());
-        auto reg = builder_.InsertLoadInstr(GetRegName(), op);
-        auto one = IntConst::CreateIntConst(curfunc_, 1);
+        auto reg = builder_.InsertLoadInstr(env_.GetRegName(), op);
+        auto one = IntConst::CreateIntConst(builder_.InsertPoint(), 1);
         if (unary->op_ == Tag::inc)
-            builder_.InsertAddInstr(GetRegName(), reg, one);
+            builder_.InsertAddInstr(env_.GetRegName(), reg, one);
         else
-            builder_.InsertSubInstr(GetRegName(), reg, one);
+            builder_.InsertSubInstr(env_.GetRegName(), reg, one);
 
         builder_.InsertStoreInstr(reg, op, false);
         unary->Val() = reg;
@@ -575,26 +602,26 @@ void IRGen::VisitUnaryExpr(UnaryExpr* unary)
     else if (unary->op_ == Tag::asterisk)
     {
         auto addreg = static_cast<const Register*>(unary->content_->Val());
-        unary->Val() = builder_.InsertLoadInstr(GetRegName(), addreg);
+        unary->Val() = builder_.InsertLoadInstr(env_.GetRegName(), addreg);
     }
     else if (unary->op_ == Tag::minus)
     {
-        auto zero = IntConst::CreateIntConst(curfunc_, 0);
+        auto zero = IntConst::CreateIntConst(builder_.InsertPoint(), 0);
         auto rhs = unary->content_->Val();
-        unary->Val() = builder_.InsertSubInstr(GetRegName(), zero, rhs);
+        unary->Val() = builder_.InsertSubInstr(env_.GetRegName(), zero, rhs);
     }
     else if (unary->op_ == Tag::tilde)
     {
-        auto minusone = IntConst::CreateIntConst(curfunc_, ~0);
+        auto minusone = IntConst::CreateIntConst(builder_.InsertPoint(), ~0);
         auto rhs = unary->content_->Val();
-        unary->Val() = builder_.InsertXorInstr(GetRegName(), minusone, rhs);
+        unary->Val() = builder_.InsertXorInstr(env_.GetRegName(), minusone, rhs);
     }
     else if (unary->op_ == Tag::exclamation)
     {
-        auto zero = IntConst::CreateIntConst(curfunc_, 0);
-        auto one = IntConst::CreateIntConst(curfunc_, 1);
+        auto zero = IntConst::CreateIntConst(builder_.InsertPoint(), 0);
+        auto one = IntConst::CreateIntConst(builder_.InsertPoint(), 1);
         unary->Val() = builder_.InsertSelectInstr(
-            GetRegName(), unary->content_->Val(), true, zero, one);
+            env_.GetRegName(), unary->content_->Val(), true, zero, one);
     }
 }
 
@@ -602,8 +629,8 @@ void IRGen::VisitUnaryExpr(UnaryExpr* unary)
 void IRGen::VisitBreakStmt(BreakStmt* stmt)
 {
     builder_.InsertBrInstr(nullptr);
-    brkcntn_.top()->NextList().push_back(
-        static_cast<BrInstr*>(GetLastInstr()));
+    env_.StackTop()->NextList().push_back(
+        static_cast<BrInstr*>(env_.GetLastInstr()));
 }
 
 
@@ -622,7 +649,7 @@ void IRGen::VisitCompoundStmt(CompoundStmt* compound)
         stmt->Accept(this);
         if (!stmt->NextList().empty())
         {
-            auto blk = GetBasicBlock();
+            auto blk = env_.GetBasicBlock();
             Backpatch(stmt->NextList(), blk);
             builder_.InsertPoint() = blk;
         }
@@ -633,7 +660,7 @@ void IRGen::VisitCompoundStmt(CompoundStmt* compound)
 
 void IRGen::VisitContinueStmt(ContinueStmt* stmt)
 {
-    IterStmt* iter = static_cast<IterStmt*>(brkcntn_.top());
+    IterStmt* iter = static_cast<IterStmt*>(env_.StackTop());
     builder_.InsertBrInstr(iter->continuepoint_);
 }
 
@@ -646,9 +673,9 @@ void IRGen::VisitDeclStmt(DeclStmt* stmt)
 
 void IRGen::VisitDoWhileStmt(DoWhileStmt* stmt)
 {
-    brkcntn_.push(stmt);
+    env_.PushStmt(stmt);
 
-    auto loopblk = GetBasicBlock();
+    auto loopblk = env_.GetBasicBlock();
     builder_.InsertBrInstr(loopblk);
     stmt->continuepoint_ = loopblk;
 
@@ -657,17 +684,17 @@ void IRGen::VisitDoWhileStmt(DoWhileStmt* stmt)
 
     stmt->expr_->Accept(this);
     auto cmpans = builder_.InsertCmpInstr(
-        GetRegName(),
+        env_.GetRegName(),
         Condition::ne, stmt->expr_->Val(),
-        IntConst::CreateIntConst(curfunc_, 0));
+        IntConst::CreateIntConst(builder_.InsertPoint(), 0));
 
     builder_.InsertBrInstr(cmpans, loopblk, nullptr);
 
     stmt->nextlist_.push_back(
-        static_cast<BrInstr*>(GetLastInstr()));
+        static_cast<BrInstr*>(env_.GetLastInstr()));
     stmt->nextlist_ = Merge(stmt->nextlist_, stmt->stmt_->NextList());
 
-    brkcntn_.pop();
+    env_.PopStmt();
 }
 
 
@@ -680,17 +707,17 @@ void IRGen::VisitExprStmt(ExprStmt* stmt)
 
 void IRGen::VisitForStmt(ForStmt* stmt)
 {
-    brkcntn_.push(stmt);
+    env_.PushStmt(stmt);
 
     if (stmt->init_)
         stmt->init_->Accept(this);
 
     BasicBlock* cmpblk = nullptr;
-    BasicBlock* loopblk = GetBasicBlock();
+    BasicBlock* loopblk = env_.GetBasicBlock();
 
     if (stmt->condition_)
     {
-        cmpblk = GetBasicBlock();
+        cmpblk = env_.GetBasicBlock();
         stmt->continuepoint_ = cmpblk;
 
         builder_.InsertBrInstr(cmpblk);
@@ -698,13 +725,13 @@ void IRGen::VisitForStmt(ForStmt* stmt)
 
         stmt->condition_->Accept(this);
         auto cmpans = builder_.InsertCmpInstr(
-            GetRegName(),
+            env_.GetRegName(),
             Condition::ne, stmt->condition_->expr_->Val(),
-            IntConst::CreateIntConst(curfunc_, 0));
+            IntConst::CreateIntConst(builder_.InsertPoint(), 0));
 
         builder_.InsertBrInstr(cmpans, loopblk, nullptr);
         stmt->nextlist_.push_back(
-            static_cast<BrInstr*>(GetLastInstr()));
+            static_cast<BrInstr*>(env_.GetLastInstr()));
     }
     else
         stmt->continuepoint_ = loopblk;
@@ -720,42 +747,42 @@ void IRGen::VisitForStmt(ForStmt* stmt)
         builder_.InsertBrInstr(loopblk);
 
     stmt->nextlist_ = Merge(stmt->nextlist_, stmt->body_->NextList());
-    brkcntn_.pop();
+    env_.PopStmt();
 }
 
 
 void IRGen::VisitGotoStmt(GotoStmt* stmt)
 {
     builder_.InsertBrInstr(nullptr);
-    auto br = static_cast<BrInstr*>(GetLastInstr());
-    gotomap_.emplace(br, stmt->ident_);
+    auto br = static_cast<BrInstr*>(env_.GetLastInstr());
+    env_.AddBrLabelPair(br, stmt->ident_);
 
-    auto bb = GetBasicBlock();
+    auto bb = env_.GetBasicBlock();
     builder_.InsertPoint() = bb;
 }
 
 
 void IRGen::VisitIfStmt(IfStmt* stmt)
 {
-    BasicBlock* trueblk = GetBasicBlock();
+    BasicBlock* trueblk = env_.GetBasicBlock();
     BasicBlock* falseblk = nullptr;
 
     stmt->expr_->Accept(this);
     auto cmpans = builder_.InsertCmpInstr(
-        GetRegName(),
+        env_.GetRegName(),
         Condition::ne, stmt->expr_->Val(),
-        IntConst::CreateIntConst(curfunc_, 0));
+        IntConst::CreateIntConst(builder_.InsertPoint(), 0));
 
     if (stmt->false_)
     {
-        falseblk = GetBasicBlock();
+        falseblk = env_.GetBasicBlock();
         builder_.InsertBrInstr(cmpans, trueblk, falseblk);
     }
     else
     {
         builder_.InsertBrInstr(cmpans, trueblk, nullptr);
         stmt->nextlist_.push_back(
-            static_cast<BrInstr*>(GetLastInstr()));
+            static_cast<BrInstr*>(env_.GetLastInstr()));
     }
 
     builder_.InsertPoint() = trueblk;
@@ -765,7 +792,7 @@ void IRGen::VisitIfStmt(IfStmt* stmt)
     {
         builder_.InsertBrInstr(nullptr);
         stmt->nextlist_.push_back(
-            static_cast<BrInstr*>(GetLastInstr()));
+            static_cast<BrInstr*>(env_.GetLastInstr()));
 
         builder_.InsertPoint() = falseblk;
         stmt->false_->Accept(this);
@@ -780,8 +807,8 @@ void IRGen::VisitIfStmt(IfStmt* stmt)
 
 void IRGen::VisitLabelStmt(LabelStmt* stmt)
 {
-    auto bb = GetBasicBlock();
-    labelmap_.emplace(stmt->label_, bb);
+    auto bb = env_.GetBasicBlock();
+    env_.AddLabelBlkPair(stmt->label_, bb);
     builder_.InsertPoint() = bb;
     stmt->stmt_->Accept(this);
 }
@@ -792,13 +819,13 @@ void IRGen::VisitRetStmt(RetStmt* stmt)
     if (stmt->retvalue_)
     {
         stmt->retvalue_->Accept(this);
-        auto retreg = curfunc_->ReturnValue();
+        auto retreg = env_.ToFunction()->ReturnValue();
         builder_.InsertStoreInstr(
             stmt->retvalue_->Val(), retreg, false);
     }
 
     builder_.InsertBrInstr(nullptr);
-    ret_.push_back(static_cast<BrInstr*>(GetLastInstr()));
+    env_.AddBrInstr4Ret(static_cast<BrInstr*>(env_.GetLastInstr()));
 }
 
 
@@ -808,7 +835,7 @@ void IRGen::VisitSwitchStmt(SwitchStmt* stmt)
     auto ident = stmt->expr_->Val();
 
     builder_.InsertSwitchInstr(ident);
-    auto switchinstr = static_cast<SwitchInstr*>(GetLastInstr());
+    auto switchinstr = static_cast<SwitchInstr*>(env_.GetLastInstr());
 
     auto compound = dynamic_cast<CompoundStmt*>(stmt->stmt_.get());
     if (!compound) return;
@@ -816,9 +843,9 @@ void IRGen::VisitSwitchStmt(SwitchStmt* stmt)
     {
         auto _case = dynamic_cast<CaseStmt*>(line.get());
         if (!_case) continue;
-        brkcntn_.push(stmt);
+        env_.PushStmt(stmt);
         line->Accept(this);
-        brkcntn_.pop();
+        env_.PopStmt();
         stmt->nextlist_ = Merge(stmt->nextlist_, line->NextList());
     }
 }
@@ -835,10 +862,10 @@ void IRGen::VisitTransUnit(TransUnit* tu)
 
 void IRGen::VisitWhileStmt(WhileStmt* stmt)
 {
-    brkcntn_.push(stmt);
+    env_.PushStmt(stmt);
 
-    auto cmpblk = GetBasicBlock(),
-        loopblk = GetBasicBlock();
+    auto cmpblk = env_.GetBasicBlock(),
+        loopblk = env_.GetBasicBlock();
 
     stmt->continuepoint_ = cmpblk;
     builder_.InsertBrInstr(cmpblk);
@@ -846,13 +873,13 @@ void IRGen::VisitWhileStmt(WhileStmt* stmt)
 
     stmt->expr_->Accept(this);
     auto cmpans = builder_.InsertCmpInstr(
-        GetRegName(),
+        env_.GetRegName(),
         Condition::ne, stmt->expr_->Val(),
-        IntConst::CreateIntConst(curfunc_, 0));
+        IntConst::CreateIntConst(builder_.InsertPoint(), 0));
 
     builder_.InsertBrInstr(cmpans, loopblk, nullptr);
     stmt->nextlist_.push_back(
-        static_cast<BrInstr*>(GetLastInstr()));
+        static_cast<BrInstr*>(env_.GetLastInstr()));
 
     builder_.InsertPoint() = loopblk;
     stmt->stmt_->Accept(this);
@@ -860,5 +887,5 @@ void IRGen::VisitWhileStmt(WhileStmt* stmt)
 
     stmt->nextlist_ = Merge(stmt->nextlist_, stmt->stmt_->NextList());
 
-    brkcntn_.pop();
+    env_.PopStmt();
 }

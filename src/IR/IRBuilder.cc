@@ -19,25 +19,25 @@ const IROperand* IRBuilder::MatchArithmType(
         {
             auto integer = static_cast<const IntConst*>(val);
             return FloatConst::CreateFloatConst(
-                insertpoint_->Parent(), integer->Val(), target->ToFloatPoint());
+        insertpoint_, integer->Val(), target->ToFloatPoint());
         }
         else if (target->IsInt() && val->Type()->IsFloat())
         {
             auto floatpoint = static_cast<const FloatConst*>(val);
             return IntConst::CreateIntConst(
-                insertpoint_->Parent(), floatpoint->Val(), target->ToInteger());
+        insertpoint_, floatpoint->Val(), target->ToInteger());
         }
         else if (target->IsFloat())
         {
             auto floatpoint = static_cast<const FloatConst*>(val);
             return FloatConst::CreateFloatConst(
-                insertpoint_->Parent(), floatpoint->Val(), target->ToFloatPoint());   
+        insertpoint_, floatpoint->Val(), target->ToFloatPoint());   
         }
         else
         {
             auto integer = static_cast<const IntConst*>(val);
             return IntConst::CreateIntConst(
-                insertpoint_->Parent(), integer->Val(), target->ToInteger());
+        insertpoint_, integer->Val(), target->ToInteger());
         }
     }
 
@@ -127,8 +127,7 @@ const Register* IRBuilder::InsertCallInstr(
 {
     auto pcall = std::make_unique<CallInstr>(result, proto, func);
     insertpoint_->AddInstr(std::move(pcall));
-    return Register::CreateRegister(
-        insertpoint_->Parent(), result, proto->ReturnType());
+    return Register::CreateRegister(insertpoint_, result, proto->ReturnType());
 }
 
 const Register* IRBuilder::InsertCallInstr(
@@ -137,8 +136,7 @@ const Register* IRBuilder::InsertCallInstr(
     auto rety = func->Type()->ToFunction()->ReturnType();
     auto pcall = std::make_unique<CallInstr>(result, func);
     insertpoint_->AddInstr(std::move(pcall));
-    return Register::CreateRegister(
-        insertpoint_->Parent(), result, rety);
+    return Register::CreateRegister(insertpoint_, result, rety);
 }
 
 
@@ -148,8 +146,7 @@ const Register* IRBuilder::InsertAddInstr(
     MatchArithmType(lhs, rhs);
     auto padd = std::make_unique<AddInstr>(result, lhs, rhs);
     insertpoint_->AddInstr(std::move(padd));
-    return Register::CreateRegister(
-        insertpoint_->Parent(), result, lhs->Type());
+    return Register::CreateRegister(insertpoint_, result, lhs->Type());
 }
 
 const Register* IRBuilder::InsertFaddInstr(
@@ -158,8 +155,7 @@ const Register* IRBuilder::InsertFaddInstr(
     MatchArithmType(lhs, rhs);
     auto pfadd = std::make_unique<FaddInstr>(result, lhs, rhs);
     insertpoint_->AddInstr(std::move(pfadd));
-    return Register::CreateRegister(
-        insertpoint_->Parent(), result, lhs->Type());
+    return Register::CreateRegister(insertpoint_, result, lhs->Type());
 }
 
 const Register* IRBuilder::InsertSubInstr(
@@ -168,8 +164,7 @@ const Register* IRBuilder::InsertSubInstr(
     MatchArithmType(lhs, rhs);
     auto psub = std::make_unique<SubInstr>(result, lhs, rhs);
     insertpoint_->AddInstr(std::move(psub));
-    return Register::CreateRegister(
-        insertpoint_->Parent(), result, lhs->Type());
+    return Register::CreateRegister(insertpoint_, result, lhs->Type());
 }
 
 const Register* IRBuilder::InsertFsubInstr(
@@ -178,8 +173,7 @@ const Register* IRBuilder::InsertFsubInstr(
     MatchArithmType(lhs, rhs);
     auto pfsub = std::make_unique<FsubInstr>(result, lhs, rhs);
     insertpoint_->AddInstr(std::move(pfsub));
-    return Register::CreateRegister(
-        insertpoint_->Parent(), result, lhs->Type());
+    return Register::CreateRegister(insertpoint_, result, lhs->Type());
 }
 
 const Register* IRBuilder::InsertMulInstr(
@@ -188,8 +182,7 @@ const Register* IRBuilder::InsertMulInstr(
     MatchArithmType(lhs, rhs);
     auto pmul = std::make_unique<MulInstr>(result, lhs, rhs);
     insertpoint_->AddInstr(std::move(pmul));
-    return Register::CreateRegister(
-        insertpoint_->Parent(), result, lhs->Type());
+    return Register::CreateRegister(insertpoint_, result, lhs->Type());
 }
 
 const Register* IRBuilder::InsertFmulInstr(
@@ -198,8 +191,7 @@ const Register* IRBuilder::InsertFmulInstr(
     MatchArithmType(lhs, rhs);
     auto pfmul = std::make_unique<FmulInstr>(result, lhs, rhs);
     insertpoint_->AddInstr(std::move(pfmul));
-    return Register::CreateRegister(
-        insertpoint_->Parent(), result, lhs->Type());
+    return Register::CreateRegister(insertpoint_, result, lhs->Type());
 }
 
 const Register* IRBuilder::InsertDivInstr(
@@ -208,8 +200,7 @@ const Register* IRBuilder::InsertDivInstr(
     MatchArithmType(lhs, rhs);
     auto pdiv = std::make_unique<DivInstr>(result, lhs, rhs);
     insertpoint_->AddInstr(std::move(pdiv));
-    return Register::CreateRegister(
-        insertpoint_->Parent(), result, lhs->Type());
+    return Register::CreateRegister(insertpoint_, result, lhs->Type());
 }
 
 const Register* IRBuilder::InsertFdivInstr(
@@ -218,8 +209,7 @@ const Register* IRBuilder::InsertFdivInstr(
     MatchArithmType(lhs, rhs);
     auto pfdiv = std::make_unique<FdivInstr>(result, lhs, rhs);
     insertpoint_->AddInstr(std::move(pfdiv));
-    return Register::CreateRegister(
-        insertpoint_->Parent(), result, lhs->Type());
+    return Register::CreateRegister(insertpoint_, result, lhs->Type());
 }
 
 const Register* IRBuilder::InsertModInstr(
@@ -228,8 +218,7 @@ const Register* IRBuilder::InsertModInstr(
     MatchArithmType(lhs, rhs);
     auto pmod = std::make_unique<ModInstr>(result, lhs, rhs);
     insertpoint_->AddInstr(std::move(pmod));
-    return Register::CreateRegister(
-        insertpoint_->Parent(), result, lhs->Type());
+    return Register::CreateRegister(insertpoint_, result, lhs->Type());
 }
 
 const Register* IRBuilder::InsertShlInstr(
@@ -238,8 +227,7 @@ const Register* IRBuilder::InsertShlInstr(
     MatchArithmType(lhs, rhs);
     auto pshl = std::make_unique<ShlInstr>(result, lhs, rhs);
     insertpoint_->AddInstr(std::move(pshl));
-    return Register::CreateRegister(
-        insertpoint_->Parent(), result, lhs->Type());
+    return Register::CreateRegister(insertpoint_, result, lhs->Type());
 }
 
 const Register* IRBuilder::InsertLshrInstr(
@@ -248,8 +236,7 @@ const Register* IRBuilder::InsertLshrInstr(
     MatchArithmType(lhs, rhs);
     auto plshr = std::make_unique<LshrInstr>(result, lhs, rhs);
     insertpoint_->AddInstr(std::move(plshr));
-    return Register::CreateRegister(
-        insertpoint_->Parent(), result, lhs->Type());
+    return Register::CreateRegister(insertpoint_, result, lhs->Type());
 }
 
 const Register* IRBuilder::InsertAshrInstr(
@@ -258,8 +245,7 @@ const Register* IRBuilder::InsertAshrInstr(
     MatchArithmType(lhs, rhs);
     auto pashr = std::make_unique<AshrInstr>(result, lhs, rhs);
     insertpoint_->AddInstr(std::move(pashr));
-    return Register::CreateRegister(
-        insertpoint_->Parent(), result, lhs->Type());
+    return Register::CreateRegister(insertpoint_, result, lhs->Type());
 }
 
 const Register* IRBuilder::InsertAndInstr(
@@ -268,8 +254,7 @@ const Register* IRBuilder::InsertAndInstr(
     MatchArithmType(lhs, rhs);
     auto pand = std::make_unique<AndInstr>(result, lhs, rhs);
     insertpoint_->AddInstr(std::move(pand));
-    return Register::CreateRegister(
-        insertpoint_->Parent(), result, lhs->Type());
+    return Register::CreateRegister(insertpoint_, result, lhs->Type());
 }
 
 const Register* IRBuilder::InsertOrInstr(
@@ -278,8 +263,7 @@ const Register* IRBuilder::InsertOrInstr(
     MatchArithmType(lhs, rhs);
     auto por = std::make_unique<OrInstr>(result, lhs, rhs);
     insertpoint_->AddInstr(std::move(por));
-    return Register::CreateRegister(
-        insertpoint_->Parent(), result, lhs->Type());
+    return Register::CreateRegister(insertpoint_, result, lhs->Type());
 }
 
 const Register* IRBuilder::InsertXorInstr(
@@ -288,8 +272,7 @@ const Register* IRBuilder::InsertXorInstr(
     MatchArithmType(lhs, rhs);
     auto pxor = std::make_unique<XorInstr>(result, lhs, rhs);
     insertpoint_->AddInstr(std::move(pxor));
-    return Register::CreateRegister(
-        insertpoint_->Parent(), result, lhs->Type());
+    return Register::CreateRegister(insertpoint_, result, lhs->Type());
 }
 
 
@@ -297,8 +280,8 @@ const Register* IRBuilder::InsertAllocaInstr(const std::string& result, const IR
 {
     auto palloca = std::make_unique<AllocaInstr>(result, ty);
     insertpoint_->AddInstr(std::move(palloca));
-    auto ptrty = PtrType::GetPtrType(insertpoint_->Parent()->TypePool(), ty);
-    return Register::CreateRegister(insertpoint_->Parent(), result, ptrty);
+    auto ptrty = PtrType::GetPtrType(insertpoint_, ty);
+    return Register::CreateRegister(insertpoint_, result, ptrty);
 }
 
 const Register* IRBuilder::InsertAllocaInstr(
@@ -306,8 +289,8 @@ const Register* IRBuilder::InsertAllocaInstr(
 {
     auto palloca = std::make_unique<AllocaInstr>(result, ty, num);
     insertpoint_->AddInstr(std::move(palloca));
-    auto ptrty = PtrType::GetPtrType(insertpoint_->Parent()->TypePool(), ty);
-    return Register::CreateRegister(insertpoint_->Parent(), result, ptrty);
+    auto ptrty = PtrType::GetPtrType(insertpoint_, ty);
+    return Register::CreateRegister(insertpoint_, result, ptrty);
 }
 
 const Register* IRBuilder::InsertAllocaInstr(
@@ -315,8 +298,8 @@ const Register* IRBuilder::InsertAllocaInstr(
 {
     auto palloca = std::make_unique<AllocaInstr>(result, ty, num, align);
     insertpoint_->AddInstr(std::move(palloca));
-    auto ptrty = PtrType::GetPtrType(insertpoint_->Parent()->TypePool(), ty);
-    return Register::CreateRegister(insertpoint_->Parent(), result, ptrty);
+    auto ptrty = PtrType::GetPtrType(insertpoint_, ty);
+    return Register::CreateRegister(insertpoint_, result, ptrty);
 }
 
 
@@ -324,8 +307,7 @@ const Register* IRBuilder::InsertLoadInstr(const std::string& result, const Regi
 {
     auto pload = std::make_unique<LoadInstr>(result, ptr);
     insertpoint_->AddInstr(std::move(pload));
-    return Register::CreateRegister(
-        insertpoint_->Parent(), result, ptr->Type()->ToPointer()->Point2());
+    return Register::CreateRegister(insertpoint_, result, ptr->Type()->ToPointer()->Point2());
 }
 
 const Register* IRBuilder::InsertLoadInstr(
@@ -333,8 +315,7 @@ const Register* IRBuilder::InsertLoadInstr(
 {
     auto pload = std::make_unique<LoadInstr>(result, ptr, align);
     insertpoint_->AddInstr(std::move(pload));
-    return Register::CreateRegister(
-        insertpoint_->Parent(), result, ptr->Type()->ToPointer()->Point2());
+    return Register::CreateRegister(insertpoint_, result, ptr->Type()->ToPointer()->Point2());
 }
 
 const Register* IRBuilder::InsertLoadInstr(
@@ -342,8 +323,7 @@ const Register* IRBuilder::InsertLoadInstr(
 {
     auto pload = std::make_unique<LoadInstr>(result, ptr, align, vol);
     insertpoint_->AddInstr(std::move(pload));
-    return Register::CreateRegister(
-        insertpoint_->Parent(), result, ptr->Type()->ToPointer()->Point2());
+    return Register::CreateRegister(insertpoint_, result, ptr->Type()->ToPointer()->Point2());
 }
 
 
@@ -360,7 +340,7 @@ const Register* IRBuilder::InsertExtractValInstr(
     auto pexval = std::make_unique<ExtractValInstr>(result, val, index);
     insertpoint_->AddInstr(std::move(pexval));
     // FIXME : register's type shouldn't be "val->Type()"
-    return Register::CreateRegister(insertpoint_->Parent(), result, val->Type());
+    return Register::CreateRegister(insertpoint_, result, val->Type());
 }
 
 void IRBuilder::InsertSetValInstr(
@@ -376,7 +356,7 @@ const Register* IRBuilder::InsertGetElePtrInstr(
     auto pgeteleptr = std::make_unique<GetElePtrInstr>(result, val, index);
     insertpoint_->AddInstr(std::move(pgeteleptr));
     // FIXME: register type shouldn't be val->Type()
-    return Register::CreateRegister(insertpoint_->Parent(), result, val->Type());
+    return Register::CreateRegister(insertpoint_, result, val->Type());
 }
 
 
@@ -385,7 +365,7 @@ const Register* IRBuilder::InsertTruncInstr(
 {
     auto ptrunc = std::make_unique<TruncInstr>(result, ty, val);
     insertpoint_->AddInstr(std::move(ptrunc));
-    return Register::CreateRegister(insertpoint_->Parent(), result, ty);
+    return Register::CreateRegister(insertpoint_, result, ty);
 }
 
 const Register* IRBuilder::InsertFtruncInstr(
@@ -393,7 +373,7 @@ const Register* IRBuilder::InsertFtruncInstr(
 {
     auto pftrunc = std::make_unique<FtruncInstr>(result, ty, val);
     insertpoint_->AddInstr(std::move(pftrunc));
-    return Register::CreateRegister(insertpoint_->Parent(), result, ty);
+    return Register::CreateRegister(insertpoint_, result, ty);
 }
 
 const Register* IRBuilder::InsertZextInstr(
@@ -401,7 +381,7 @@ const Register* IRBuilder::InsertZextInstr(
 {
     auto pzext = std::make_unique<ZextInstr>(result, ty, val);
     insertpoint_->AddInstr(std::move(pzext));
-    return Register::CreateRegister(insertpoint_->Parent(), result, ty);
+    return Register::CreateRegister(insertpoint_, result, ty);
 }
 
 const Register* IRBuilder::InsertSextInstr(
@@ -409,7 +389,7 @@ const Register* IRBuilder::InsertSextInstr(
 {
     auto psext = std::make_unique<SextInstr>(result, ty, val);
     insertpoint_->AddInstr(std::move(psext));
-    return Register::CreateRegister(insertpoint_->Parent(), result, ty);
+    return Register::CreateRegister(insertpoint_, result, ty);
 }
 
 const Register* IRBuilder::InsertFextInstr(
@@ -417,7 +397,7 @@ const Register* IRBuilder::InsertFextInstr(
 {
     auto pfext = std::make_unique<FextInstr>(result, ty, val);
     insertpoint_->AddInstr(std::move(pfext));
-    return Register::CreateRegister(insertpoint_->Parent(), result, ty);
+    return Register::CreateRegister(insertpoint_, result, ty);
 }
 
 const Register* IRBuilder::InsertFtouInstr(
@@ -425,7 +405,7 @@ const Register* IRBuilder::InsertFtouInstr(
 {
     auto pftou = std::make_unique<FtouInstr>(result, ty, val);
     insertpoint_->AddInstr(std::move(pftou));
-    return Register::CreateRegister(insertpoint_->Parent(), result, ty);
+    return Register::CreateRegister(insertpoint_, result, ty);
 }
 
 const Register* IRBuilder::InsertFtosInstr(
@@ -433,7 +413,7 @@ const Register* IRBuilder::InsertFtosInstr(
 {
     auto pftos = std::make_unique<FtosInstr>(result, ty, val);
     insertpoint_->AddInstr(std::move(pftos));
-    return Register::CreateRegister(insertpoint_->Parent(), result, ty);
+    return Register::CreateRegister(insertpoint_, result, ty);
 }
 
 const Register* IRBuilder::InsertUtofInstr(
@@ -441,7 +421,7 @@ const Register* IRBuilder::InsertUtofInstr(
 {
     auto putof = std::make_unique<UtofInstr>(result, ty, val);
     insertpoint_->AddInstr(std::move(putof));
-    return Register::CreateRegister(insertpoint_->Parent(), result, ty);
+    return Register::CreateRegister(insertpoint_, result, ty);
 }
 
 const Register* IRBuilder::InsertStofInstr(
@@ -449,7 +429,7 @@ const Register* IRBuilder::InsertStofInstr(
 {
     auto pstof = std::make_unique<StofInstr>(result, ty, val);
     insertpoint_->AddInstr(std::move(pstof));
-    return Register::CreateRegister(insertpoint_->Parent(), result, ty);
+    return Register::CreateRegister(insertpoint_, result, ty);
 }
 
 const Register* IRBuilder::InsertPtrtoiInstr(
@@ -457,7 +437,7 @@ const Register* IRBuilder::InsertPtrtoiInstr(
 {
     auto pptrtoi = std::make_unique<PtrtoiInstr>(result, ty, val);
     insertpoint_->AddInstr(std::move(pptrtoi));
-    return Register::CreateRegister(insertpoint_->Parent(), result, ty);
+    return Register::CreateRegister(insertpoint_, result, ty);
 }
 
 const Register* IRBuilder::InsertItoptrInstr(
@@ -465,7 +445,7 @@ const Register* IRBuilder::InsertItoptrInstr(
 {
     auto pitoptr = std::make_unique<ItoptrInstr>(result, ty, val);
     insertpoint_->AddInstr(std::move(pitoptr));
-    return Register::CreateRegister(insertpoint_->Parent(), result, ty);
+    return Register::CreateRegister(insertpoint_, result, ty);
 }
 
 const Register* IRBuilder::InsertBitcastInstr(
@@ -473,7 +453,7 @@ const Register* IRBuilder::InsertBitcastInstr(
 {
     auto pbitcast = std::make_unique<BitcastInstr>(result, ty, val);
     insertpoint_->AddInstr(std::move(pbitcast));
-    return Register::CreateRegister(insertpoint_->Parent(), result, ty);
+    return Register::CreateRegister(insertpoint_, result, ty);
 }
 
 
@@ -492,7 +472,7 @@ const Register* IRBuilder::InsertIcmpInstr(
 {
     auto picmp = std::make_unique<IcmpInstr>(result, cond, lhs, rhs);
     insertpoint_->AddInstr(std::move(picmp));
-    return Register::CreateRegister(insertpoint_->Parent(), result, lhs->Type());
+    return Register::CreateRegister(insertpoint_, result, lhs->Type());
 }
 
 const Register* IRBuilder::InsertFcmpInstr(
@@ -500,7 +480,7 @@ const Register* IRBuilder::InsertFcmpInstr(
 {
     auto pfcmp = std::make_unique<FcmpInstr>(result, cond, lhs, rhs);
     insertpoint_->AddInstr(std::move(pfcmp));
-    return Register::CreateRegister(insertpoint_->Parent(), result, lhs->Type());
+    return Register::CreateRegister(insertpoint_, result, lhs->Type());
 }
 
 
@@ -510,12 +490,12 @@ const Register* IRBuilder::InsertSelectInstr(
 {
     auto pselect = std::make_unique<SelectInstr>(result, selty, cond, lhs, rhs);
     insertpoint_->AddInstr(std::move(pselect));
-    return Register::CreateRegister(insertpoint_->Parent(), result, lhs->Type());
+    return Register::CreateRegister(insertpoint_, result, lhs->Type());
 }
 
 const Register* IRBuilder::InsertPhiInstr(const std::string& result, const IRType* ty)
 {
     auto pphi = std::make_unique<PhiInstr>(result, ty);
     insertpoint_->AddInstr(std::move(pphi));
-    return Register::CreateRegister(insertpoint_->Parent(), result, ty);
+    return Register::CreateRegister(insertpoint_, result, ty);
 }

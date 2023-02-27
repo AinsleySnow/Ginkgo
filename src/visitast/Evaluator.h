@@ -3,15 +3,15 @@
 
 #include "ast/Tag.h"
 
-class Function;
+class BasicBlock;
 class IROperand;
 
 
 class Evaluator
 {
 public:
-    static const IROperand* EvalBinary(Function*, Tag, const IROperand*, const IROperand*);
-    static const IROperand* EvalUnary(Function*, Tag, const IROperand*);
+    static const IROperand* EvalBinary(BasicBlock*, Tag, const IROperand*, const IROperand*);
+    static const IROperand* EvalUnary(BasicBlock*, Tag, const IROperand*);
 
 private:
     template <typename RET, typename LHS, typename RHS>
