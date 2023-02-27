@@ -126,7 +126,7 @@ public:
 
 
 private:
-    const IROperand* MatchArithmType(const IRType*, const IROperand*);
+    void MatchArithmType(const IRType*, const IROperand*&);
     void MatchArithmType(const IROperand*&, const IROperand*&);
 
     BasicBlock* insertpoint_{};

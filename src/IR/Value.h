@@ -50,7 +50,7 @@ private:
 };
 
 
-class Function : public Value, public IOperandPool, public ITypePool
+class Function : public Value
 {
 public:
     static Function* CreateFunction(Module*, const FuncType*);
@@ -99,20 +99,24 @@ public:
     GlobalVar(const std::string& n, const IRType* t) :
         Value(n), type_(t) {}
 
-    std::string ToString() const override
-    { return type_->ToString() + ' ' + name_ + ';'; }
+    std::string ToString() const override;
     Module* Parent() const override { return static_cast<Module*>(parent_); }
+
+    void SetBasicBlock(std::unique_ptr<BasicBlock>);
+    BasicBlock* GetBasicBlock() { return blk_.get(); }
+
 
 private:
     const IRType* type_{};
-    std::vector<std::unique_ptr<IROperand>> operands_{};
+    std::unique_ptr<BasicBlock> blk_{};
 };
 
 
-class BasicBlock : public Value
+class BasicBlock : public Value, public IOperandPool, public ITypePool
 {
 public:
     static BasicBlock* CreateBasicBlock(Function*, const std::string&);
+    static BasicBlock* CreateBasicBlock(GlobalVar*, const std::string&);
     BasicBlock(const std::string& n) : Value(n) {}
 
     std::string ToString() const override;

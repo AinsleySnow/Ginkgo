@@ -17,7 +17,8 @@ enum class Tag
 
     _inline, _noreturn,
 
-    arrow, inc, dec, dot,
+    inc, dec, postfix_inc, postfix_dec,
+    arrow,  dot,
     _and, _or, _xor, asterisk, plus, minus, tilde, exclamation, 
     slash, percent, lshift, rshift, greathan,
     lessthan, greatequal, lessequal, equal, notequal,

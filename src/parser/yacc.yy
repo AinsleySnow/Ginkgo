@@ -151,8 +151,8 @@ postfix_expression
     { $$ = std::make_unique<CallExpr>(std::move($1), std::move($3)); }
 	| postfix_expression '.' IDENTIFIER { $$ = nullptr; }
 	| postfix_expression PTR_OP IDENTIFIER { $$ = nullptr; }
-	| postfix_expression INC_OP { $$ = nullptr; }
-	| postfix_expression DEC_OP { $$ = nullptr; }
+	| postfix_expression INC_OP { $$ = std::make_unique<UnaryExpr>(Tag::postfix_inc, std::move($1)); }
+	| postfix_expression DEC_OP { $$ = std::make_unique<UnaryExpr>(Tag::postfix_dec, std::move($1)); }
 	| '(' type_name ')' '{' initializer_list '}' { $$ = nullptr; }
 	| '(' type_name ')' '{' initializer_list ',' '}' { $$ = nullptr; }
 	;
@@ -326,7 +326,7 @@ assignment_expression
 	;
 
 assignment_operator
-	: '=' { $$ = Tag::equal; }
+	: '=' { $$ = Tag::assign; }
 	| MUL_ASSIGN
 	| DIV_ASSIGN
 	| MOD_ASSIGN

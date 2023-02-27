@@ -143,10 +143,13 @@ public:
 
     void Accept(Visitor*) override;
     bool IsLVal() const override { return true; }
+    auto Addr() const { return addr_; }
+    auto& Addr() { return addr_; }
 
 private:
     friend class IRGen;
     std::string name_{};
+    const Register* addr_{};
 };
 
 

@@ -22,18 +22,27 @@ Function* Module::AddFunc(const std::string& name, const FuncType* functy)
     return AddFunc(std::make_unique<Function>(name, functy));
 }
 
-GlobalVar* Module::AddGlobalVar(const std::string& name, const IRType* ptype)
+GlobalVar* Module::AddGlobalVar(std::unique_ptr<GlobalVar> var)
 {
-    auto var = std::make_unique<GlobalVar>(name, std::move(ptype));
     auto pvar = var.get();
     globalsym_.push_back(std::move(var));
     symindex_.emplace(pvar->Name(), globalsym_.size() - 1);
     return pvar;
 }
 
+GlobalVar* Module::AddGlobalVar(const std::string& name, const IRType* ptype)
+{
+    return AddGlobalVar(std::make_unique<GlobalVar>(name, ptype));
+}
+
 Function* Module::GetFunction(const std::string& name)
 {
     return static_cast<Function*>(globalsym_[symindex_[name]].get());
+}
+
+GlobalVar* Module::GetGlobalVar(const std::string& name)
+{
+    return static_cast<GlobalVar*>(globalsym_[symindex_[name]].get());
 }
 
 
@@ -110,6 +119,29 @@ void Function::AddParam(const Register* r)
     params_.push_back(r);
 }
 
+
+GlobalVar* GlobalVar::CreateGlobalVar(Module* mod, const std::string& name, const IRType* ty)
+{
+    auto var = std::make_unique<GlobalVar>(name, ty);
+    var->parent_ = mod;
+    auto pvar = var.get();
+    mod->AddGlobalVar(std::move(var));
+    return pvar;
+}
+
+std::string GlobalVar::ToString() const
+{
+    auto var = type_->ToString() + ' ' + name_ + ":\n";
+    var += blk_->ToString();
+    return var;
+}
+
+void GlobalVar::SetBasicBlock(std::unique_ptr<BasicBlock> bb)
+{
+    blk_ = std::move(bb);
+}
+
+
 BasicBlock* BasicBlock::CreateBasicBlock(Function* func, const std::string& name)
 {
     std::unique_ptr<BasicBlock> bb = std::make_unique<BasicBlock>(name);
@@ -119,9 +151,19 @@ BasicBlock* BasicBlock::CreateBasicBlock(Function* func, const std::string& name
     return raw;
 }
 
+BasicBlock* BasicBlock::CreateBasicBlock(GlobalVar* global, const std::string& name)
+{
+    std::unique_ptr<BasicBlock> bb = std::make_unique<BasicBlock>(name);
+    bb->parent_ = global;
+    auto raw = bb.get();
+    global->SetBasicBlock(std::move(bb));
+    return raw;
+}
+
 std::string BasicBlock::ToString() const
-{ 
-    std::string blk = Name() + ":\n";
+{
+    std::string blk{};
+    if (!Name().empty()) blk += Name() + ":\n";
     for (const auto& instr : instrs_)
         blk += "  " + instr->ToString() + ";\n";
     return blk;

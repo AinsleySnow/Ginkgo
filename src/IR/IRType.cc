@@ -126,6 +126,14 @@ bool IRType::operator>(const IRType& rhs) const
     return this->Size() > rhs.Size();
 }
 
+bool IRType::operator==(const IRType& rhs) const
+{
+    if (this->IsFloat() && rhs.IsFloat() ||
+        this->IsInt() && rhs.IsInt())
+        return this->Size() == rhs.Size();
+    return false;
+}
+
 
 std::string IntType::ToString() const
 {
@@ -157,8 +165,9 @@ std::string FuncType::ToString() const
         paramlist += "...)";
     else
     {
-        paramlist.pop_back();
-        paramlist.back() = ')';            
+        if (paramlist.back() != '(')
+            paramlist.pop_back();
+        paramlist += ')';
     }
     return retype_->ToString() + ' ' + paramlist;
 }

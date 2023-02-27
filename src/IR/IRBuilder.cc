@@ -10,35 +10,36 @@ void IRBuilder::InsertInstr(std::unique_ptr<Instr> instr)
 }
 
 
-const IROperand* IRBuilder::MatchArithmType(
-    const IRType* target, const IROperand* val)
+void IRBuilder::MatchArithmType(
+    const IRType* target, const IROperand*& val)
 {
     if (!dynamic_cast<const Register*>(val))
     {
         if (target->IsFloat() && val->Type()->IsInt())
         {
             auto integer = static_cast<const IntConst*>(val);
-            return FloatConst::CreateFloatConst(
-        insertpoint_, integer->Val(), target->ToFloatPoint());
+            val = FloatConst::CreateFloatConst(
+                insertpoint_, integer->Val(), target->ToFloatPoint());
         }
         else if (target->IsInt() && val->Type()->IsFloat())
         {
             auto floatpoint = static_cast<const FloatConst*>(val);
-            return IntConst::CreateIntConst(
-        insertpoint_, floatpoint->Val(), target->ToInteger());
+            val = IntConst::CreateIntConst(
+                insertpoint_, floatpoint->Val(), target->ToInteger());
         }
         else if (target->IsFloat())
         {
             auto floatpoint = static_cast<const FloatConst*>(val);
-            return FloatConst::CreateFloatConst(
-        insertpoint_, floatpoint->Val(), target->ToFloatPoint());   
+            val = FloatConst::CreateFloatConst(
+                insertpoint_, floatpoint->Val(), target->ToFloatPoint());
         }
         else
         {
             auto integer = static_cast<const IntConst*>(val);
-            return IntConst::CreateIntConst(
-        insertpoint_, integer->Val(), target->ToInteger());
+            val = IntConst::CreateIntConst(
+                insertpoint_, integer->Val(), target->ToInteger());
         }
+        return;
     }
 
     auto reg = static_cast<const Register*>(val);
@@ -48,32 +49,28 @@ const IROperand* IRBuilder::MatchArithmType(
     if (target->IsFloat() && regty->IsInt())
     {
         if (regty->ToInteger()->IsSigned())
-            return InsertStofInstr(trgname, target->ToFloatPoint(), reg);
-        else
-            return InsertUtofInstr(trgname, target->ToFloatPoint(), reg);
+            val = InsertStofInstr(trgname, target->ToFloatPoint(), reg);
+        else val = InsertUtofInstr(trgname, target->ToFloatPoint(), reg);
     }
     else if (target->IsInt() && regty->IsFloat())
     {
         if (target->ToInteger()->IsSigned())
-            return InsertFtosInstr(trgname, target->ToInteger(), reg);
-        else
-            return InsertFtouInstr(trgname, target->ToInteger(), reg);
+            val = InsertFtosInstr(trgname, target->ToInteger(), reg);
+        else val = InsertFtouInstr(trgname, target->ToInteger(), reg);
     }
     else if (target->operator>(*regty))
     {
         if (target->IsFloat())
-            return InsertFextInstr(trgname, target->ToFloatPoint(), reg);
+            val = InsertFextInstr(trgname, target->ToFloatPoint(), reg);
         else if (regty->ToInteger()->IsSigned())
-            return InsertSextInstr(trgname, target->ToInteger(), reg);
-        else
-            return InsertZextInstr(trgname, target->ToInteger(), reg);
+            val = InsertSextInstr(trgname, target->ToInteger(), reg);
+        else val = InsertZextInstr(trgname, target->ToInteger(), reg);
     }
-    else
+    else if (target->operator<(*regty))
     {
         if (target->IsFloat())
-            return InsertFtruncInstr(trgname, target->ToFloatPoint(), reg);
-        else
-            return InsertTruncInstr(trgname, target->ToInteger(), reg);
+            val = InsertFtruncInstr(trgname, target->ToFloatPoint(), reg);
+        else val = InsertTruncInstr(trgname, target->ToInteger(), reg);
     }
 }
 
@@ -81,10 +78,9 @@ void IRBuilder::MatchArithmType(
     const IROperand*& reg1, const IROperand*& reg2)
 {
     if (reg1->Type()->operator>(*(reg2->Type())))
-        reg2 = MatchArithmType(reg1->Type(), reg2);
+        MatchArithmType(reg1->Type(), reg2);
     else if (reg1->Type()->operator<(*(reg2->Type())))
-        reg1 = MatchArithmType(reg2->Type(), reg1);
-    else return;
+        MatchArithmType(reg2->Type(), reg1);
 }
 
 
@@ -224,7 +220,7 @@ const Register* IRBuilder::InsertModInstr(
 const Register* IRBuilder::InsertShlInstr(
     const std::string& result, const IROperand* lhs, const IROperand* rhs)
 {
-    MatchArithmType(lhs, rhs);
+    MatchArithmType(lhs->Type(), rhs);
     auto pshl = std::make_unique<ShlInstr>(result, lhs, rhs);
     insertpoint_->AddInstr(std::move(pshl));
     return Register::CreateRegister(insertpoint_, result, lhs->Type());
@@ -233,7 +229,7 @@ const Register* IRBuilder::InsertShlInstr(
 const Register* IRBuilder::InsertLshrInstr(
     const std::string& result, const IROperand* lhs, const IROperand* rhs)
 {
-    MatchArithmType(lhs, rhs);
+    MatchArithmType(lhs->Type(), rhs);
     auto plshr = std::make_unique<LshrInstr>(result, lhs, rhs);
     insertpoint_->AddInstr(std::move(plshr));
     return Register::CreateRegister(insertpoint_, result, lhs->Type());
@@ -242,7 +238,7 @@ const Register* IRBuilder::InsertLshrInstr(
 const Register* IRBuilder::InsertAshrInstr(
     const std::string& result, const IROperand* lhs, const IROperand* rhs)
 {
-    MatchArithmType(lhs, rhs);
+    MatchArithmType(lhs->Type(), rhs);
     auto pashr = std::make_unique<AshrInstr>(result, lhs, rhs);
     insertpoint_->AddInstr(std::move(pashr));
     return Register::CreateRegister(insertpoint_, result, lhs->Type());

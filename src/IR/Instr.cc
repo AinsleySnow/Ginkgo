@@ -44,35 +44,35 @@ std::string CallInstr::ToString() const
 
 
 std::string AddInstr::ToString() const
-{ return result_ + " = add " + lhs_->ToString() + ' ' + rhs_->ToString(); }
+{ return result_ + " = add " + lhs_->ToString() + ", " + rhs_->ToString(); }
 std::string FaddInstr::ToString() const
-{ return result_ + " = fadd " + lhs_->ToString() + ' ' + rhs_->ToString(); }
+{ return result_ + " = fadd " + lhs_->ToString() + ", " + rhs_->ToString(); }
 std::string SubInstr::ToString() const
-{ return result_ + " = sub " + lhs_->ToString() + ' ' + rhs_->ToString(); }
+{ return result_ + " = sub " + lhs_->ToString() + ", " + rhs_->ToString(); }
 std::string FsubInstr::ToString() const
-{ return result_ + " = fsub " + lhs_->ToString() + ' ' + rhs_->ToString(); }
+{ return result_ + " = fsub " + lhs_->ToString() + ", " + rhs_->ToString(); }
 std::string MulInstr::ToString() const
-{ return result_ + " = mul " + lhs_->ToString() + ' ' + rhs_->ToString(); }
+{ return result_ + " = mul " + lhs_->ToString() + ", " + rhs_->ToString(); }
 std::string FmulInstr::ToString() const
-{ return result_ + " = fmul " + lhs_->ToString() + ' ' + rhs_->ToString(); }
+{ return result_ + " = fmul " + lhs_->ToString() + ", " + rhs_->ToString(); }
 std::string DivInstr::ToString() const
-{ return result_ + " = div " + lhs_->ToString() + ' ' + rhs_->ToString(); }
+{ return result_ + " = div " + lhs_->ToString() + ", " + rhs_->ToString(); }
 std::string FdivInstr::ToString() const
-{ return result_ + " = fdiv " + lhs_->ToString() + ' ' + rhs_->ToString(); }
+{ return result_ + " = fdiv " + lhs_->ToString() + ", " + rhs_->ToString(); }
 std::string ModInstr::ToString() const
-{ return result_ + " = mod " + lhs_->ToString() + ' ' + rhs_->ToString(); }
+{ return result_ + " = mod " + lhs_->ToString() + ", " + rhs_->ToString(); }
 std::string ShlInstr::ToString() const
-{ return result_ + " = shl " + lhs_->ToString() + ' ' + rhs_->ToString(); }
+{ return result_ + " = shl " + lhs_->ToString() + ", " + rhs_->ToString(); }
 std::string LshrInstr::ToString() const
-{ return result_ + " = lshr " + lhs_->ToString() + ' ' + rhs_->ToString(); }
+{ return result_ + " = lshr " + lhs_->ToString() + ", " + rhs_->ToString(); }
 std::string AshrInstr::ToString() const
-{ return result_ + " = ashr " + lhs_->ToString() + ' ' + rhs_->ToString(); }
+{ return result_ + " = ashr " + lhs_->ToString() + ", " + rhs_->ToString(); }
 std::string AndInstr::ToString() const
-{ return result_ + " = and " + lhs_->ToString() + ' ' + rhs_->ToString(); }
+{ return result_ + " = and " + lhs_->ToString() + ", " + rhs_->ToString(); }
 std::string OrInstr::ToString() const
-{ return result_ + " = or " + lhs_->ToString() + ' ' + rhs_->ToString(); }
+{ return result_ + " = or " + lhs_->ToString() + ", " + rhs_->ToString(); }
 std::string XorInstr::ToString() const
-{ return result_ + " = xor " + lhs_->ToString() + ' ' + rhs_->ToString(); }
+{ return result_ + " = xor " + lhs_->ToString() + ", " + rhs_->ToString(); }
 
 
 std::string AllocaInstr::ToString() const
@@ -191,14 +191,10 @@ string to_string(Condition c)
     {
     case Condition::eq: return "eq";
     case Condition::ne: return "ne";
-    case Condition::ugt: return "ugt";
-    case Condition::uge: return "uge";
-    case Condition::ult: return "ult";
-    case Condition::ule: return "ule";
-    case Condition::sgt: return "sgt";
-    case Condition::sge: return "sge";
-    case Condition::slt: return "slt";
-    case Condition::sle: return "sle";
+    case Condition::gt: return "gt";
+    case Condition::le: return "le";
+    case Condition::lt: return "lt";
+    case Condition::ge: return "ge";
     default: return "";
     }
 }
@@ -207,19 +203,19 @@ string to_string(Condition c)
 std::string IcmpInstr::ToString() const
 {
     return result_ + " = icmp " + std::to_string(cond_) +
-        ' ' + op1_->ToString() + ' ' + op2_->ToString();
+        ' ' + op1_->ToString() + ", " + op2_->ToString();
 }
 std::string FcmpInstr::ToString() const
 {
     return result_ + " = fcmp " + std::to_string(cond_) +
-        ' ' + op1_->ToString() + ' ' + op2_->ToString();
+        ' ' + op1_->ToString() + ", " + op2_->ToString();
 }
 
 
 std::string SelectInstr::ToString() const
 {
     return result_ + " = select " + selty_->ToString() + " ? " +
-        value1_->ToString() + ' ' + value2_->ToString();
+        value1_->ToString() + " : " + value2_->ToString();
 }
 
 

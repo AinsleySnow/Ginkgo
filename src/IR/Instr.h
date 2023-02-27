@@ -644,8 +644,8 @@ private:
 enum class Condition
 {
     eq, ne,
-    ge, gt, ugt, uge, sgt, sge,
-    le, lt, ult, ule, slt, sle
+    ge, gt,
+    le, lt
 };
 
 

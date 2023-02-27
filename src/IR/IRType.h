@@ -50,8 +50,7 @@ public:
 
     bool operator<(const IRType& rhs) const;
     bool operator>(const IRType& rhs) const;
-    virtual bool operator==(const IRType& rhs) const { return false; }
-
+    virtual bool operator==(const IRType& rhs) const;
 
 protected:
     size_t size_{};
