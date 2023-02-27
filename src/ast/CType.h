@@ -101,6 +101,7 @@ public:
     virtual bool IsFloat() const { return false; }
     virtual bool IsInteger() const { return false; }
     virtual bool IsPtr() const { return false; }
+    virtual bool IsVoid() const { return false; }
     virtual bool IsDerived() const { return false; }
     virtual bool IsComplete() const { return false; }
 
@@ -224,6 +225,7 @@ public:
     const VoidType* ToIRType(ITypePool*) const override;
     std::string ToString() const override { return "void"; }
 
+    bool IsVoid() const override { return true; }
     bool Compatible(const CType* other) const override { return false; }
 };
 

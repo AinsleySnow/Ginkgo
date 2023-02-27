@@ -182,7 +182,8 @@ const FuncType* CFuncType::ToIRType(ITypePool* pool) const
     auto functy = FuncType::GetFuncType(
         pool, ReturnType()->ToIRType(pool), Variadic());
     for (auto& param : paramlist_)
-        functy->AddParam(param->ToIRType(pool));
+        if (!param->IsVoid())
+            functy->AddParam(param->ToIRType(pool));
     return functy;
 }
 
