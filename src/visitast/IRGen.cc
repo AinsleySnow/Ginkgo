@@ -24,7 +24,7 @@ Instr* IRGen::GetLastInstr()
 const Register* IRGen::AllocaObject(const CType* raw, const std::string& name)
 {
     auto reg = builder_.InsertAllocaInstr(
-        GetRegName(), raw->ToIRType(curfunc_->TypePool()));
+        GetRegName(), raw->ToIRType(curfunc_));
     scopestack_.Top().AddObject(name, raw, reg);
     return reg;
 }
@@ -117,7 +117,7 @@ void IRGen::VisitFuncDef(FuncDef* def)
     {
         scopestack_.File().AddFunc(def->Name(), funccty.get());
         pfunc = transunit_->AddFunc(
-            def->Name(), funccty->ToIRType(transunit_->TypePool()));
+            def->Name(), funccty->ToIRType(transunit_.get()));
         pfunc->Inline() = spec->Func().IsInline();
         pfunc->Noreturn() = spec->Func().IsNoreturn();
     }
@@ -144,8 +144,7 @@ void IRGen::VisitFuncDef(FuncDef* def)
             continue;
         auto ctype = param->RawType();
         auto paramreg = Register::CreateRegister(
-            curfunc_, GetRegName(),
-            ctype->ToIRType(curfunc_->TypePool()));
+            curfunc_, GetRegName(), ctype->ToIRType(curfunc_));
         curfunc_->AddParam(paramreg);
         if (!param->Name().empty())
         {
@@ -443,11 +442,11 @@ void IRGen::VisitConstant(ConstExpr* constant)
     if (ctype->IsInteger())
         constant->Val() = IntConst::CreateIntConst(
             curfunc_, constant->GetInt(),
-            ctype->ToIRType(transunit_->TypePool())->ToInteger());
+            ctype->ToIRType(transunit_.get())->ToInteger());
     else
         constant->Val() = FloatConst::CreateFloatConst(
             curfunc_, constant->GetFloat(),
-            ctype->ToIRType(transunit_->TypePool())->ToFloatPoint());
+            ctype->ToIRType(transunit_.get())->ToFloatPoint());
 }
 
 

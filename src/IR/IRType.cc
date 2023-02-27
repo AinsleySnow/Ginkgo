@@ -49,18 +49,18 @@ const FloatType* FloatType::GetFloat64()
 }
 
 
-void IRTypePool::AddIRType(std::unique_ptr<IRType> ty)
+void ITypePool::AddIRType(std::unique_ptr<IRType> ty)
 {
     typelist_.push_back(std::move(ty));
 }
 
 
 FuncType* FuncType::GetFuncType(
-    IRTypePool& pool, const IRType* retty, bool vol)
+    ITypePool* pool, const IRType* retty, bool vol)
 {
     auto ty = std::make_unique<FuncType>(retty, vol);
     auto addr = ty.get();
-    pool.AddIRType(std::move(ty));
+    pool->AddIRType(std::move(ty));
     return addr;
 }
 
@@ -69,38 +69,38 @@ void FuncType::AddParam(const IRType* ty)
     param_.push_back(ty);
 }
 
-PtrType* PtrType::GetPtrType(IRTypePool& pool, const IRType* point2)
+PtrType* PtrType::GetPtrType(ITypePool* pool, const IRType* point2)
 {
     auto ty = std::make_unique<PtrType>(point2);
     auto addr = ty.get();
-    pool.AddIRType(std::move(ty));
+    pool->AddIRType(std::move(ty));
     return addr;
 }
 
 ArrayType* ArrayType::GetArrayType(
-    IRTypePool& pool, size_t size, const IRType* elety)
+    ITypePool* pool, size_t size, const IRType* elety)
 {
     auto ty = std::make_unique<ArrayType>(size, elety);
     auto addr = ty.get();
-    pool.AddIRType(std::move(ty));
+    pool->AddIRType(std::move(ty));
     return addr;
 }
 
 StructType* StructType::GetStructType(
-    IRTypePool& pool, const std::vector<const IRType*>& list)
+    ITypePool* pool, const std::vector<const IRType*>& list)
 {
     auto ty = std::make_unique<StructType>(list);
     auto addr = ty.get();
-    pool.AddIRType(std::move(ty));
+    pool->AddIRType(std::move(ty));
     return addr;
 }
 
 UnionType* UnionType::GetUnionType(
-    IRTypePool& pool, const std::vector<const IRType*>& list)
+    ITypePool* pool, const std::vector<const IRType*>& list)
 {
     auto ty = std::make_unique<UnionType>(list);
     auto addr = ty.get();
-    pool.AddIRType(std::move(ty));
+    pool->AddIRType(std::move(ty));
     return addr;
 }
 

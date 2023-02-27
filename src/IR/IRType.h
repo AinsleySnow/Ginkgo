@@ -59,9 +59,10 @@ protected:
 };
 
 
-class IRTypePool
+class ITypePool
 {
 public:
+    virtual ~ITypePool() {}
     void AddIRType(std::unique_ptr<IRType>);
 
 private:
@@ -111,7 +112,7 @@ public:
 class ArrayType : public IRType
 {
 public:
-    static ArrayType* GetArrayType(IRTypePool&, size_t, const IRType*);
+    static ArrayType* GetArrayType(ITypePool*, size_t, const IRType*);
     ArrayType(size_t s, const IRType* t) : type_(t) { size_ = s; }
 
     std::string ToString() const override;
@@ -126,7 +127,7 @@ private:
 class PtrType : public IntType
 {
 public:
-    static PtrType* GetPtrType(IRTypePool&, const IRType*);
+    static PtrType* GetPtrType(ITypePool*, const IRType*);
     PtrType(const IRType* t) :
         IntType(8, false), type_(t) {}
 
@@ -145,7 +146,7 @@ private:
 class FuncType : public IRType
 {
 public:
-    static FuncType* GetFuncType(IRTypePool&, const IRType*, bool);
+    static FuncType* GetFuncType(ITypePool*, const IRType*, bool);
     FuncType(const IRType* ret, bool v) : 
         retype_(std::move(ret)), variadic_(v) { size_ = -1; }
 
@@ -168,7 +169,7 @@ private:
 class StructType : public IRType
 {
 public:
-    static StructType* GetStructType(IRTypePool&, const std::vector<const IRType*>&);
+    static StructType* GetStructType(ITypePool*, const std::vector<const IRType*>&);
     StructType(const std::vector<const IRType*>& f) : fields_(f) {}
 
     std::string ToString() const override;
@@ -183,7 +184,7 @@ private:
 class UnionType : public IRType
 {
 public:
-    static UnionType* GetUnionType(IRTypePool&, const std::vector<const IRType*>&);
+    static UnionType* GetUnionType(ITypePool*, const std::vector<const IRType*>&);
     UnionType(const std::vector<const IRType*>& f) : fields_(f) {}
 
     std::string ToString() const override;

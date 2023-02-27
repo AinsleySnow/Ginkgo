@@ -29,7 +29,7 @@ protected:
 };
 
 
-class Module : public Value
+class Module : public Value, public ITypePool
 {
 public:
     Module(const std::string& n) : Value(n) {}
@@ -43,17 +43,14 @@ public:
     Function* GetFunction(const std::string&);
     GlobalVar* GetGlobalVar(const std::string&);
 
-    auto& TypePool() { return pool_; }
-
 
 private:
     std::vector<std::unique_ptr<Value>> globalsym_{};
     std::unordered_map<std::string, int> symindex_{};
-    IRTypePool pool_{};
 };
 
 
-class Function : public Value
+class Function : public Value, public IOperandPool, public ITypePool
 {
 public:
     static Function* CreateFunction(Module*, const FuncType*);
@@ -82,8 +79,6 @@ public:
     auto ReturnValue() const { return returnvalue_; }
     auto& ReturnValue() { return returnvalue_; }
 
-    auto& TypePool() { return pool_; }
-
 
 private:
     std::vector<std::unique_ptr<BasicBlock>> blk_{};
@@ -94,8 +89,6 @@ private:
     const Register* returnvalue_{};
     const FuncType* functype_{};
     std::vector<const Register*> params_{};
-
-    IRTypePool pool_{};
 };
 
 
@@ -112,6 +105,7 @@ public:
 
 private:
     const IRType* type_{};
+    std::vector<std::unique_ptr<IROperand>> operands_{};
 };
 
 

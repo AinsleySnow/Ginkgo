@@ -1,25 +1,30 @@
 #include "IR/IROperand.h"
-#include "IR/Value.h"
 #include <climits>
 #include <cfloat>
 
 
-IntConst* IntConst::CreateIntConst(Function* func, unsigned long ul)
+void IOperandPool::AddIROperand(std::unique_ptr<IROperand> op)
 {
-    if (ul < UINT8_MAX)
-        return CreateIntConst(func, ul, IntType::GetInt8(false));
-    else if (ul < UINT16_MAX)
-        return CreateIntConst(func, ul, IntType::GetInt16(false));
-    else if (ul < UINT32_MAX)
-        return CreateIntConst(func, ul, IntType::GetInt32(false));
-    return CreateIntConst(func, ul, IntType::GetInt64(false));
+    operands_.push_back(std::move(op));
 }
 
-IntConst* IntConst::CreateIntConst(Function* func, unsigned long ul, const IntType* t)
+
+IntConst* IntConst::CreateIntConst(IOperandPool* pool, unsigned long ul)
+{
+    if (ul < UINT8_MAX)
+        return CreateIntConst(pool, ul, IntType::GetInt8(false));
+    else if (ul < UINT16_MAX)
+        return CreateIntConst(pool, ul, IntType::GetInt16(false));
+    else if (ul < UINT32_MAX)
+        return CreateIntConst(pool, ul, IntType::GetInt32(false));
+    return CreateIntConst(pool, ul, IntType::GetInt64(false));
+}
+
+IntConst* IntConst::CreateIntConst(IOperandPool* pool, unsigned long ul, const IntType* t)
 {
     auto intconst = std::make_unique<IntConst>(ul, t);
     auto raw = intconst.get();
-    func->AddIROperand(std::move(intconst));
+    pool->AddIROperand(std::move(intconst));
     return raw;
 }
 
@@ -36,18 +41,18 @@ std::string IntConst::ToString() const
     else return std::to_string(mask & num_);
 }
 
-FloatConst* FloatConst::CreateFloatConst(Function* func, double d)
+FloatConst* FloatConst::CreateFloatConst(IOperandPool* pool, double d)
 {
     if (d < FLT_MAX)
-        return CreateFloatConst(func, d, FloatType::GetFloat32());
-    return CreateFloatConst(func, d, FloatType::GetFloat64());
+        return CreateFloatConst(pool, d, FloatType::GetFloat32());
+    return CreateFloatConst(pool, d, FloatType::GetFloat64());
 }
 
-FloatConst* FloatConst::CreateFloatConst(Function* func, double d, const FloatType* t)
+FloatConst* FloatConst::CreateFloatConst(IOperandPool* pool, double d, const FloatType* t)
 {
     auto floatconst = std::make_unique<FloatConst>(d, t);
     auto raw = floatconst.get();
-    func->AddIROperand(std::move(floatconst));
+    pool->AddIROperand(std::move(floatconst));
     return raw;
 }
 
@@ -60,11 +65,11 @@ std::string FloatConst::ToString() const
 }
 
 Register* Register::CreateRegister(
-    Function* func, const std::string& name, const IRType* ty)
+    IOperandPool* pool, const std::string& name, const IRType* ty)
 {
     auto reg = std::make_unique<Register>(name, ty);
     auto raw = reg.get();
-    func->AddIROperand(std::move(reg));
+    pool->AddIROperand(std::move(reg));
     return raw;
 }
 
