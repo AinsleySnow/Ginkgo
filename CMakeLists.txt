@@ -33,5 +33,5 @@ add_custom_target(parser
 )
 
 add_custom_target(lexer
-    COMMAND lex ${GINKGO_SRC_DIR}/parser/lexer.ll -o ${GINKGO_SRC_DIR}/parser/lexer.cc
+    COMMAND lex -o ${GINKGO_SRC_DIR}/parser/lexer.cc ${GINKGO_SRC_DIR}/parser/lexer.ll
 )
