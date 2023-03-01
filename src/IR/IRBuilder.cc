@@ -468,7 +468,7 @@ const Register* IRBuilder::InsertIcmpInstr(
 {
     auto picmp = std::make_unique<IcmpInstr>(result, cond, lhs, rhs);
     insertpoint_->AddInstr(std::move(picmp));
-    return Register::CreateRegister(insertpoint_, result, lhs->Type());
+    return Register::CreateRegister(insertpoint_, result, IntType::GetInt8(true));
 }
 
 const Register* IRBuilder::InsertFcmpInstr(
@@ -476,7 +476,7 @@ const Register* IRBuilder::InsertFcmpInstr(
 {
     auto pfcmp = std::make_unique<FcmpInstr>(result, cond, lhs, rhs);
     insertpoint_->AddInstr(std::move(pfcmp));
-    return Register::CreateRegister(insertpoint_, result, lhs->Type());
+    return Register::CreateRegister(insertpoint_, result, IntType::GetInt8(true));
 }
 
 
