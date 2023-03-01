@@ -63,6 +63,7 @@ class ITypePool
 public:
     virtual ~ITypePool() {}
     void AddIRType(std::unique_ptr<IRType>);
+    void MergeTypePool(ITypePool*);
 
 private:
     std::vector<std::unique_ptr<IRType>> typelist_{};

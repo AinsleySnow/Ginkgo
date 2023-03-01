@@ -54,6 +54,13 @@ void ITypePool::AddIRType(std::unique_ptr<IRType> ty)
     typelist_.push_back(std::move(ty));
 }
 
+void ITypePool::MergeTypePool(ITypePool* pool)
+{
+    typelist_.insert(typelist_.end(),
+        std::make_move_iterator(pool->typelist_.begin()),
+        std::make_move_iterator(pool->typelist_.end()));
+}
+
 
 FuncType* FuncType::GetFuncType(
     ITypePool* pool, const IRType* retty, bool vol)

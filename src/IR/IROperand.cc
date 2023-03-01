@@ -8,6 +8,13 @@ void IOperandPool::AddIROperand(std::unique_ptr<IROperand> op)
     operands_.push_back(std::move(op));
 }
 
+void IOperandPool::MergeOpPool(IOperandPool* pool)
+{
+    operands_.insert(operands_.end(),
+        std::make_move_iterator(pool->operands_.begin()),
+        std::make_move_iterator(pool->operands_.end()));
+}
+
 
 IntConst* IntConst::CreateIntConst(IOperandPool* pool, unsigned long ul)
 {

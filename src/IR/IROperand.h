@@ -32,6 +32,7 @@ class IOperandPool
 public:
     virtual ~IOperandPool() {}
     void AddIROperand(std::unique_ptr<IROperand>);
+    void MergeOpPool(IOperandPool*);
 
 private:
     std::vector<std::unique_ptr<IROperand>> operands_{};
