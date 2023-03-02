@@ -30,7 +30,8 @@ enum class Tag
     sub_assign, left_assign, right_assign, and_assign,
     xor_assign, or_assign,
 
-    _continue, _do, _else, _for, _if, _while
+    _case, _default, _else, _switch, _continue, _do,
+    _for, _if, _while, _goto, _return, _break
 };
 
 #endif // _TAG_H_

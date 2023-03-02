@@ -43,7 +43,7 @@ FUNC_NAME SIZEOF TYPEDEF_NAME
 %token	COMPLEX IMAGINARY 
 %token	STRUCT UNION ENUM ELLIPSIS
 
-%token	CASE DEFAULT IF ELSE SWITCH WHILE DO FOR GOTO CONTINUE BREAK RETURN
+%token	<Tag> CASE DEFAULT IF ELSE SWITCH WHILE DO FOR GOTO CONTINUE BREAK RETURN
 
 %token	ALIGNAS ALIGNOF GENERIC NORETURN STATIC_ASSERT THREAD_LOCAL
 
@@ -300,7 +300,7 @@ inclusive_or_expression
 logical_and_expression
 	: inclusive_or_expression{ $$ = std::move($1); }
 	| logical_and_expression AND_OP inclusive_or_expression
-    { $$ = std::make_unique<BinaryExpr>(std::move($1), Tag::logical_and, std::move($3)); }
+    { $$ = std::make_unique<LogicalExpr>(std::move($1), Tag::logical_and, std::move($3)); }
 	;
 
 logical_or_expression

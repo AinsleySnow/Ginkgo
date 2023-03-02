@@ -104,11 +104,13 @@ public:
     explicit ConstExpr(uint64_t u, int base, std::string);
     explicit ConstExpr(double d, char);
 
-
     uint64_t GetInt() const { return val_.intgr_; }
     double GetFloat() const { return val_.flt_; }
     bool IsZero() const { return val_.intgr_ == 0; }
+
     bool IsConstant() const override { return true; }
+    ConstExpr* ToConstant() override { return this; }
+    const ConstExpr* ToConstant() const override { return this; }
 
     void Accept(Visitor* v) override;
 
@@ -143,6 +145,11 @@ public:
 
     void Accept(Visitor*) override;
     bool IsLVal() const override { return true; }
+
+    bool IsIdentifier() const override { return true; }
+    IdentExpr* ToIdentifier() override { return this; }
+    const IdentExpr* ToIdentifier() const override { return this; }
+
     auto Addr() const { return addr_; }
     auto& Addr() { return addr_; }
 

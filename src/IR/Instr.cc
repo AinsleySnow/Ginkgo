@@ -14,19 +14,19 @@ std::string RetInstr::ToString() const
 std::string BrInstr::ToString() const
 {
     if (!cond_) return "br label " + true_->Name();
-    else    return "br " + cond_->ToString() + ' ' + true_->Name() + ' ' + false_->Name();
+    else    return "br " + cond_->ToString() + ", label " + true_->Name() + ", label " + false_->Name();
 }
 
 
 std::string SwitchInstr::ToString() const
 {
-    std::string caselist{ default_->Name() + ", [\n" };
+    std::string caselist{ default_->Name() + " [\n" };
     for (const auto& pair : cases_)
         caselist += "    " + pair.first->ToString() +
-            ": " + pair.second->Name() + '\n';
-    caselist += ']';
-    return "switch " + ident_->ToString() + ", " +
-        default_->Name() + caselist;
+            ": label " + pair.second->Name() + '\n';
+    caselist += "  ]";
+    return "switch " + ident_->ToString() +
+        ", label " + caselist;
 }
 
 
@@ -221,7 +221,7 @@ std::string SelectInstr::ToString() const
 
 std::string PhiInstr::ToString() const
 {
-    std::string line = result_ + " = phi " + type_->ToString() + '\n';
+    std::string line = result_ + " = phi " + type_->ToString() + ' ';
     for (const auto& l : labels_)
         line += '[' + l.first->Name() + ", " + l.second->ToString() + "] ";
     return line;

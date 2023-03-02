@@ -50,12 +50,12 @@ static int check_type(void);
 "//".*                  { /* consume //-comment */ }
 
 "auto"					{ return YYTOKEN::AUTO; }
-"break"					{ return YYTOKEN::BREAK; }
-"case"					{ return YYTOKEN::CASE; }
+"break"					{ yylval->emplace<Tag>() = Tag::_break; return YYTOKEN::BREAK; }
+"case"					{ yylval->emplace<Tag>() = Tag::_case; return YYTOKEN::CASE; }
 "char"					{ yylval->emplace<Tag>() = Tag::_char; return YYTOKEN::CHAR; }
 "const"					{ yylval->emplace<Tag>() = Tag::_const; return YYTOKEN::CONST; }
 "continue"				{ yylval->emplace<Tag>() = Tag::_continue; return YYTOKEN::CONTINUE; }
-"default"				{ return YYTOKEN::DEFAULT; }
+"default"				{ yylval->emplace<Tag>() = Tag::_default; return YYTOKEN::DEFAULT; }
 "do"					{ yylval->emplace<Tag>() = Tag::_do; return YYTOKEN::DO; }
 "double"				{ yylval->emplace<Tag>() = Tag::_double; return YYTOKEN::DOUBLE; }
 "else"					{ yylval->emplace<Tag>() = Tag::_else; return YYTOKEN::ELSE; }
@@ -63,14 +63,14 @@ static int check_type(void);
 "extern"				{ return YYTOKEN::EXTERN; }
 "float"					{ yylval->emplace<Tag>() = Tag::_float; return YYTOKEN::FLOAT; }
 "for"					{ yylval->emplace<Tag>() = Tag::_for; return YYTOKEN::FOR; }
-"goto"					{ return YYTOKEN::GOTO; }
+"goto"					{ yylval->emplace<Tag>() = Tag::_goto; return YYTOKEN::GOTO; }
 "if"					{ yylval->emplace<Tag>() = Tag::_if; return YYTOKEN::IF; }
 "inline"				{ yylval->emplace<Tag>() = Tag::_inline; return YYTOKEN::INLINE; }
 "int"					{ yylval->emplace<Tag>() = Tag::_int; return YYTOKEN::INT; }
 "long"					{ yylval->emplace<Tag>() = Tag::_long; return YYTOKEN::LONG; }
 "register"				{ return YYTOKEN::REGISTER; }
 "restrict"				{ yylval->emplace<Tag>() = Tag::_restrict; return YYTOKEN::RESTRICT; }
-"return"				{ return YYTOKEN::RETURN; }
+"return"				{ yylval->emplace<Tag>() = Tag::_return; return YYTOKEN::RETURN; }
 "short"					{ yylval->emplace<Tag>() = Tag::_short; return YYTOKEN::SHORT; }
 "signed"				{ yylval->emplace<Tag>() = Tag::_signed; return YYTOKEN::SIGNED; }
 "sizeof"				{ return YYTOKEN::SIZEOF; }
@@ -119,27 +119,27 @@ static int check_type(void);
 ({SP}?\"([^"\\\n]|{ES})*\"{WS}*)+	{ return YYTOKEN::STRING_LITERAL; }
 
 "..."					{ return YYTOKEN::ELLIPSIS; }
-">>="					{ yylval->emplace<Tag>() =Tag::right_assign; return YYTOKEN::RIGHT_ASSIGN; }
-"<<="					{ yylval->emplace<Tag>() =Tag::left_assign; return YYTOKEN::LEFT_ASSIGN; }
-"+="					{ yylval->emplace<Tag>() =Tag::add_assign; return YYTOKEN::ADD_ASSIGN; }
-"-="					{ yylval->emplace<Tag>() =Tag::sub_assign; return YYTOKEN::SUB_ASSIGN; }
-"*="					{ yylval->emplace<Tag>() =Tag::mul_assign; return YYTOKEN::MUL_ASSIGN; }
-"/="					{ yylval->emplace<Tag>() =Tag::div_assign; return YYTOKEN::DIV_ASSIGN; }
-"%="					{ yylval->emplace<Tag>() =Tag::mod_assign; return YYTOKEN::MOD_ASSIGN; }
-"&="					{ yylval->emplace<Tag>() =Tag::and_assign; return YYTOKEN::AND_ASSIGN; }
-"^="					{ yylval->emplace<Tag>() =Tag::xor_assign; return YYTOKEN::XOR_ASSIGN; }
-"|="					{ yylval->emplace<Tag>() =Tag::or_assign; return YYTOKEN::OR_ASSIGN; }
-">>"					{ yylval->emplace<Tag>() =Tag::rshift; return YYTOKEN::RIGHT_OP; }
-"<<"					{ yylval->emplace<Tag>() =Tag::lshift; return YYTOKEN::LEFT_OP; }
-"++"					{ yylval->emplace<Tag>() =Tag::inc; return YYTOKEN::INC_OP; }
-"--"					{ yylval->emplace<Tag>() =Tag::dec; return YYTOKEN::DEC_OP; }
-"->"					{ yylval->emplace<Tag>() =Tag::arrow; return YYTOKEN::PTR_OP; }
-"&&"					{ yylval->emplace<Tag>() =Tag::logical_and; return YYTOKEN::AND_OP; }
-"||"					{ yylval->emplace<Tag>() =Tag::logical_or; return YYTOKEN::OR_OP; }
-"<="					{ yylval->emplace<Tag>() =Tag::lessequal; return YYTOKEN::LE_OP; }
-">="					{ yylval->emplace<Tag>() =Tag::greatequal; return YYTOKEN::GE_OP; }
-"=="					{ yylval->emplace<Tag>() =Tag::equal; return YYTOKEN::EQ_OP; }
-"!="					{ yylval->emplace<Tag>() =Tag::notequal; return YYTOKEN::NE_OP; }
+">>="					{ yylval->emplace<Tag>() = Tag::right_assign; return YYTOKEN::RIGHT_ASSIGN; }
+"<<="					{ yylval->emplace<Tag>() = Tag::left_assign; return YYTOKEN::LEFT_ASSIGN; }
+"+="					{ yylval->emplace<Tag>() = Tag::add_assign; return YYTOKEN::ADD_ASSIGN; }
+"-="					{ yylval->emplace<Tag>() = Tag::sub_assign; return YYTOKEN::SUB_ASSIGN; }
+"*="					{ yylval->emplace<Tag>() = Tag::mul_assign; return YYTOKEN::MUL_ASSIGN; }
+"/="					{ yylval->emplace<Tag>() = Tag::div_assign; return YYTOKEN::DIV_ASSIGN; }
+"%="					{ yylval->emplace<Tag>() = Tag::mod_assign; return YYTOKEN::MOD_ASSIGN; }
+"&="					{ yylval->emplace<Tag>() = Tag::and_assign; return YYTOKEN::AND_ASSIGN; }
+"^="					{ yylval->emplace<Tag>() = Tag::xor_assign; return YYTOKEN::XOR_ASSIGN; }
+"|="					{ yylval->emplace<Tag>() = Tag::or_assign; return YYTOKEN::OR_ASSIGN; }
+">>"					{ yylval->emplace<Tag>() = Tag::rshift; return YYTOKEN::RIGHT_OP; }
+"<<"					{ yylval->emplace<Tag>() = Tag::lshift; return YYTOKEN::LEFT_OP; }
+"++"					{ yylval->emplace<Tag>() = Tag::inc; return YYTOKEN::INC_OP; }
+"--"					{ yylval->emplace<Tag>() = Tag::dec; return YYTOKEN::DEC_OP; }
+"->"					{ yylval->emplace<Tag>() = Tag::arrow; return YYTOKEN::PTR_OP; }
+"&&"					{ yylval->emplace<Tag>() = Tag::logical_and; return YYTOKEN::AND_OP; }
+"||"					{ yylval->emplace<Tag>() = Tag::logical_or; return YYTOKEN::OR_OP; }
+"<="					{ yylval->emplace<Tag>() = Tag::lessequal; return YYTOKEN::LE_OP; }
+">="					{ yylval->emplace<Tag>() = Tag::greatequal; return YYTOKEN::GE_OP; }
+"=="					{ yylval->emplace<Tag>() = Tag::equal; return YYTOKEN::EQ_OP; }
+"!="					{ yylval->emplace<Tag>() = Tag::notequal; return YYTOKEN::NE_OP; }
 ";"					    { return ';'; }
 ("{"|"<%")				{ return '{'; }
 ("}"|"%>")				{ return '}'; }

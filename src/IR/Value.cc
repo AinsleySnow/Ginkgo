@@ -76,7 +76,7 @@ std::string Function::ToString() const
     func += ')';
 
     if (blk_.empty())
-        func += ";";
+        func += ';';
     else
     {
         func += " {\n";
@@ -167,4 +167,10 @@ std::string BasicBlock::ToString() const
     for (const auto& instr : instrs_)
         blk += "  " + instr->ToString() + ";\n";
     return blk;
+}
+
+void BasicBlock::MergePools(BasicBlock* bb)
+{
+    MergeTypePool(bb);
+    MergeOpPool(bb);
 }

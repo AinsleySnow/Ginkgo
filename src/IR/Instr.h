@@ -36,6 +36,12 @@ public:
     virtual std::string ToString() const { return ""; }
 
     InstrType GetInstrType() const { return instr_; }
+    bool IsControlInstr() const 
+    { 
+        return instr_ == InstrType::br ||
+            instr_ == InstrType::ret || 
+            instr_ == InstrType::swtch;
+    }
 
 private:
     InstrType instr_{};
@@ -88,6 +94,7 @@ public:
 
     void AddValueBlkPair(const IntConst* val, const BasicBlock* blk) { cases_.push_back({ val, blk }); }
     void SetDefault(const BasicBlock* bb) { default_ = bb; }
+    auto GetDefault() { return default_; }
 
 private:
     const IROperand* ident_{};

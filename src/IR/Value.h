@@ -128,6 +128,8 @@ public:
     const Instr* GetLastInstr() const { return instrs_.back().get(); }
     bool Empty() const { return instrs_.empty(); }
 
+    void MergePools(BasicBlock*);
+
 private:
     std::vector<std::unique_ptr<Instr>> instrs_{};
 };
