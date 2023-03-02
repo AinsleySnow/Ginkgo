@@ -222,8 +222,11 @@ std::string SelectInstr::ToString() const
 std::string PhiInstr::ToString() const
 {
     std::string line = result_ + " = phi " + type_->ToString() + ' ';
-    for (const auto& l : labels_)
-        line += '[' + l.first->Name() + ", " + l.second->ToString() + "] ";
+    for (auto l = labels_.begin(); l < labels_.end() - 1; ++l)
+        line += '[' + l->first->Name() + ", " +
+            l->second->ToString() + "] ";
+    line += '[' + labels_.back().first->Name() + ", " +
+        labels_.back().second->ToString() + ']';
     return line;
 }
 

@@ -42,10 +42,11 @@ std::string IntConst::ToString() const
     unsigned long mask = ((unsigned long)(-1ll >> (bits - 1))) >> (64 - bits + 1);
 
     if (issigned && (1 << (bits - 1)) & num_)
-        return std::to_string((long)(mask & num_) | -1ll >> (64 - bits + 1));
+        return type_->ToString() + ' ' +
+            std::to_string((long)(mask & num_) | -1ll >> (64 - bits + 1));
     else if (issigned)
-        return std::to_string((long)(mask & num_));
-    else return std::to_string(mask & num_);
+        return type_->ToString() + ' ' + std::to_string((long)(mask & num_));
+    else return type_->ToString() + ' ' + std::to_string(mask & num_);
 }
 
 FloatConst* FloatConst::CreateFloatConst(IOperandPool* pool, double d)
@@ -66,9 +67,9 @@ FloatConst* FloatConst::CreateFloatConst(IOperandPool* pool, double d, const Flo
 std::string FloatConst::ToString() const
 {
     if (type_->Size() == 4)
-        return std::to_string((float)num_);
+        return type_->ToString() + ' ' + std::to_string((float)num_);
     else
-        return std::to_string(num_);
+        return type_->ToString() + ' ' + std::to_string(num_);
 }
 
 Register* Register::CreateRegister(

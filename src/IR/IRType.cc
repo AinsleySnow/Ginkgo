@@ -166,16 +166,16 @@ std::string ArrayType::ToString() const
 std::string FuncType::ToString() const
 {
     std::string paramlist{ '(' };
-    for (const auto& t : param_)
-        paramlist += t->ToString() + ", ";
-    if (variadic_)
-        paramlist += "...)";
-    else
+    if (!param_.empty())
     {
-        if (paramlist.back() != '(')
-            paramlist.pop_back();
-        paramlist += ')';
+        for (auto t = param_.begin(); t < param_.end() - 1; ++t)
+            paramlist += (*t)->ToString() + ", ";
+        paramlist += param_.back()->ToString();
     }
+    if (variadic_)
+        paramlist += ", ...)";
+    else
+        paramlist += ')';
     return retype_->ToString() + ' ' + paramlist;
 }
 
