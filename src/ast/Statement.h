@@ -2,6 +2,7 @@
 #define _STATEMENT_H_
 
 class BasicBlock;
+class Instr;
 class BrInstr;
 class Declaration;
 class Visitor;
@@ -22,6 +23,8 @@ public:
 
     const auto& NextList() const { return nextlist_; }
     auto& NextList() { return nextlist_; }
+
+    void PushBrInstr(Instr*);
 
 protected:
     std::list<BrInstr*> nextlist_{};
@@ -111,6 +114,8 @@ class ExprStmt : public Statement
 public:
     ExprStmt(std::unique_ptr<Expr> e) : expr_(std::move(e)) {}
     void Accept(Visitor* v) override;
+
+    bool Empty() const { return expr_ == nullptr; }
 
 private:
     friend class IRGen;

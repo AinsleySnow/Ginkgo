@@ -87,6 +87,20 @@ const Register* IRGen::LoadAddr(Expr* expr)
     return static_cast<const Register*>(expr->Val());
 }
 
+void IRGen::InsertBrIfNoBranchAhead(BasicBlock* bb)
+{
+    if (builder_.InsertPoint()->Empty() ||
+        builder_.InsertPoint()->GetLastInstr()->IsControlInstr())
+        builder_.InsertBrInstr(bb);
+}
+
+void IRGen::InsertBrIfNoBranchAhead(const IROperand* cond, BasicBlock* tbb, BasicBlock* fbb)
+{
+    if (builder_.InsertPoint()->Empty() ||
+        builder_.InsertPoint()->GetLastInstr()->IsControlInstr())
+        builder_.InsertBrInstr(cond, tbb, fbb);
+}
+
 
 void IRGen::FillNullBlk(BrInstr* br, BasicBlock* blk)
 {
@@ -418,7 +432,7 @@ void IRGen::VisitCallExpr(CallExpr* call)
 
     if (call->argvlist_)
     {
-        auto callinstr = static_cast<CallInstr*>(env_.GetLastInstr());
+        auto callinstr = static_cast<CallInstr*>(builder_.GetLastInstr());
         for (auto& argv : *call->argvlist_)
             callinstr->AddArgv(argv->Val());
     }
@@ -794,7 +808,7 @@ void IRGen::VisitDoWhileStmt(DoWhileStmt* stmt)
 
 void IRGen::VisitExprStmt(ExprStmt* stmt)
 {
-    if (stmt->expr_)
+    if (!stmt->Empty())
         stmt->expr_->Accept(this);
 }
 
@@ -807,38 +821,53 @@ void IRGen::VisitForStmt(ForStmt* stmt)
         stmt->init_->Accept(this);
 
     BasicBlock* cmpblk = nullptr;
-    BasicBlock* loopblk = env_.GetBasicBlock();
+    BasicBlock* loopblk = nullptr;
+    BasicBlock* incblk = nullptr;
 
-    if (stmt->condition_)
+    if (!stmt->condition_->Empty())
     {
         cmpblk = env_.GetBasicBlock();
-        stmt->continuepoint_ = cmpblk;
+        loopblk = env_.GetBasicBlock();
 
         builder_.InsertBrInstr(cmpblk);
         builder_.InsertPoint() = cmpblk;
-
         stmt->condition_->Accept(this);
-        auto cmpans = builder_.InsertCmpInstr(
-            env_.GetRegName(),
-            Condition::ne, LoadVal(stmt->condition_->expr_.get()),
-            IntConst::CreateIntConst(builder_.InsertPoint(), 0));
-
-        builder_.InsertBrInstr(cmpans, loopblk, nullptr);
-        stmt->nextlist_.push_back(
-            static_cast<BrInstr*>(env_.GetLastInstr()));
+        builder_.InsertBrInstr(
+            LoadVal(stmt->condition_->expr_.get()), loopblk, nullptr);
+        stmt->PushBrInstr(builder_.GetLastInstr());
     }
     else
-        stmt->continuepoint_ = loopblk;
+    {
+        loopblk = env_.GetBasicBlock();
+        builder_.InsertBrInstr(loopblk);
+    }
+
+    if (stmt->increment_)
+    {
+        incblk = env_.GetBasicBlock();
+
+        builder_.InsertPoint() = incblk;
+        stmt->increment_->Accept(this);
+
+        if (!stmt->condition_->Empty())
+            builder_.InsertBrInstr(cmpblk);
+        else builder_.InsertBrInstr(loopblk);
+    }
 
     builder_.InsertPoint() = loopblk;
     if (stmt->increment_)
-        stmt->increment_->Accept(this);
+        stmt->continuepoint_ = incblk;
+    else if (!stmt->condition_->Empty())
+        stmt->continuepoint_ = cmpblk;
+    else stmt->continuepoint_ = loopblk;
+
     stmt->body_->Accept(this);
 
-    if (stmt->condition_)
+    if (stmt->increment_)
+        builder_.InsertBrInstr(incblk);
+    else if (!stmt->condition_->Empty())
         builder_.InsertBrInstr(cmpblk);
-    else
-        builder_.InsertBrInstr(loopblk);
+    else builder_.InsertBrInstr(loopblk);
 
     Merge(stmt->body_->NextList(), stmt->nextlist_);
     env_.PopStmt();

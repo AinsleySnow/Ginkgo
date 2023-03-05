@@ -17,6 +17,7 @@ public:
     auto InsertPoint() const { return insertpoint_; }
 
     void InsertInstr(std::unique_ptr<Instr> instr);
+    Instr* GetLastInstr();
 
     void InsertRetInstr();
     void InsertRetInstr(const IROperand* val);

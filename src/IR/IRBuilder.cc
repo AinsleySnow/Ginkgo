@@ -9,6 +9,11 @@ void IRBuilder::InsertInstr(std::unique_ptr<Instr> instr)
     insertpoint_->AddInstr(std::move(instr));
 }
 
+Instr* IRBuilder::GetLastInstr()
+{
+    return insertpoint_->GetLastInstr();
+}
+
 
 void IRBuilder::MatchArithmType(
     const IRType* target, const IROperand*& val)

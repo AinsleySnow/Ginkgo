@@ -1,5 +1,12 @@
 #include "ast/Statement.h"
+#include "IR/Instr.h"
 #include "visitast/Visitor.h"
+
+
+void Statement::PushBrInstr(Instr* i)
+{
+    nextlist_.push_back(static_cast<BrInstr*>(i));
+}
 
 
 void BreakStmt::Accept(Visitor* v)

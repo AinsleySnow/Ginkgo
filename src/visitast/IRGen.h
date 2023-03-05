@@ -109,6 +109,8 @@ private:
     const Register* AllocaObject(const CType*, const std::string&);
     const IROperand* LoadVal(Expr*);
     const Register* LoadAddr(Expr*);
+    void InsertBrIfNoBranchAhead(BasicBlock*);
+    void InsertBrIfNoBranchAhead(const IROperand*, BasicBlock*, BasicBlock*);
 
     static void FillNullBlk(BrInstr*, BasicBlock*);
     static void Backpatch(std::list<BrInstr*>&, BasicBlock*);
