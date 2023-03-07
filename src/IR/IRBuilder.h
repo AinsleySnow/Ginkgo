@@ -20,6 +20,7 @@ public:
     {
         insertmode_ = InsertMode::begin;
         insertpoint_.container_ = container;
+        insertpoint_.index_ = 0;
     }
     // Set the insert point to the front of a ELE in CNT.
     void SetInsertPoint(CNT* container, ELE* element)
@@ -76,7 +77,7 @@ class BlockBuilder : public IRBuilderBase<Function, BasicBlock>
 public:
     void InsertBasicBlock(const std::string&);
     BasicBlock* GetBasicBlock(const std::string&);
-    BasicBlock* CurrentBlock() { return *InsertPoint(); }
+    BasicBlock* CurrentBlock() { return *std::prev(InsertPoint()); }
 
     void RemoveCurrentBlock();
 };

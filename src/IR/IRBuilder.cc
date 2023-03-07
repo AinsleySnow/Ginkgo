@@ -21,7 +21,7 @@ BasicBlock* BlockBuilder::GetBasicBlock(const std::string& name)
 void BlockBuilder::RemoveCurrentBlock()
 {
     if (InsertPoint() != CntBegin())
-        (*std::prev(InsertPoint()))->MergePools(*InsertPoint());
+        (*(InsertPoint() - 2))->MergePools(*(InsertPoint() - 1));
     Remove();
 }
 

@@ -927,9 +927,9 @@ void IRGen::VisitLabelStmt(LabelStmt* stmt)
     if (!ibud_.Container()->Empty())
     {
         auto bb = bbud_.GetBasicBlock(env_.GetLabelName());
-        ibud_.SetInsertPoint(bb);
         if (!ibud_.LastInstr()->IsControlInstr())
             ibud_.InsertBrInstr(bb);
+        ibud_.SetInsertPoint(bb);   
     }
 
     env_.AddLabelBlkPair(stmt->label_, ibud_.Container());
