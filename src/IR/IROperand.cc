@@ -26,11 +26,11 @@ std::string IntConst::ToString() const
 {
     int bits = type_->Size() * 8;
     bool issigned = type_->ToInteger()->IsSigned();
-    unsigned long mask = ((unsigned long)(-1ll >> (bits - 1))) >> (64 - bits + 1);
+    unsigned long mask = ((unsigned long)(-1ll)) >> (64 - bits);
 
     if (issigned && (1 << (bits - 1)) & num_)
         return type_->ToString() + ' ' +
-            std::to_string((long)(mask & num_) | -1ll >> (64 - bits + 1));
+            std::to_string((long)(mask & num_) | ((~INT64_MAX) >> (64 - bits)));
     else if (issigned)
         return type_->ToString() + ' ' + std::to_string((long)(mask & num_));
     else return type_->ToString() + ' ' + std::to_string(mask & num_);
