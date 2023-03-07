@@ -37,15 +37,16 @@ FUNC_NAME SIZEOF TYPEDEF_NAME
 %token	<Tag> XOR_ASSIGN OR_ASSIGN
 %token	ENUMERATION_CONSTANT
 
-%token	TYPEDEF EXTERN STATIC AUTO REGISTER INLINE
+%token	TYPEDEF EXTERN STATIC AUTO REGISTER
 %token	<Tag> CONST RESTRICT VOLATILE ATOMIC
+%token  <Tag> INLINE NORETURN
 %token  <Tag> BOOL CHAR SHORT INT LONG SIGNED UNSIGNED FLOAT DOUBLE VOID
 %token	COMPLEX IMAGINARY 
 %token	STRUCT UNION ENUM ELLIPSIS
 
 %token	<Tag> CASE DEFAULT IF ELSE SWITCH WHILE DO FOR GOTO CONTINUE BREAK RETURN
 
-%token	ALIGNAS ALIGNOF GENERIC NORETURN STATIC_ASSERT THREAD_LOCAL
+%token	ALIGNAS ALIGNOF GENERIC STATIC_ASSERT THREAD_LOCAL
 
 %type <std::unique_ptr<ExprList>> argument_expression_list
 %type <std::unique_ptr<Expr>> primary_expression postfix_expression  
@@ -549,8 +550,8 @@ type_qualifier
 	;
 
 function_specifier
-	: INLINE
-	| NORETURN
+	: INLINE    { $$ = Tag::_inline; }
+	| NORETURN  { $$ = Tag::_noreturn; }
 	;
 
 alignment_specifier

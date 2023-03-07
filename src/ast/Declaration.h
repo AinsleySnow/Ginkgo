@@ -64,7 +64,7 @@ public:
 
     void SetStorage(Tag t) { storagelist_.push_back(t); }
     void SetQual(Tag t) { quallist_.push_back(t); }
-    void SetFuncSpec(Tag t) {  }
+    void SetFuncSpec(Tag t) { funcspeclist_.push_back(t); }
     void AddTypeSpec(std::unique_ptr<::TypeSpec> ts);
 
     auto& Type() { return type_; }
