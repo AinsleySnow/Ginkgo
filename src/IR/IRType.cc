@@ -49,25 +49,12 @@ const FloatType* FloatType::GetFloat64()
 }
 
 
-void ITypePool::AddIRType(std::unique_ptr<IRType> ty)
-{
-    typelist_.push_back(std::move(ty));
-}
-
-void ITypePool::MergeTypePool(ITypePool* pool)
-{
-    typelist_.insert(typelist_.end(),
-        std::make_move_iterator(pool->typelist_.begin()),
-        std::make_move_iterator(pool->typelist_.end()));
-}
-
-
 FuncType* FuncType::GetFuncType(
-    ITypePool* pool, const IRType* retty, bool vol)
+    MemPool<IRType>* pool, const IRType* retty, bool vol)
 {
     auto ty = std::make_unique<FuncType>(retty, vol);
     auto addr = ty.get();
-    pool->AddIRType(std::move(ty));
+    pool->Add(std::move(ty));
     return addr;
 }
 
@@ -76,38 +63,38 @@ void FuncType::AddParam(const IRType* ty)
     param_.push_back(ty);
 }
 
-PtrType* PtrType::GetPtrType(ITypePool* pool, const IRType* point2)
+PtrType* PtrType::GetPtrType(MemPool<IRType>* pool, const IRType* point2)
 {
     auto ty = std::make_unique<PtrType>(point2);
     auto addr = ty.get();
-    pool->AddIRType(std::move(ty));
+    pool->Add(std::move(ty));
     return addr;
 }
 
 ArrayType* ArrayType::GetArrayType(
-    ITypePool* pool, size_t size, const IRType* elety)
+    MemPool<IRType>* pool, size_t size, const IRType* elety)
 {
     auto ty = std::make_unique<ArrayType>(size, elety);
     auto addr = ty.get();
-    pool->AddIRType(std::move(ty));
+    pool->Add(std::move(ty));
     return addr;
 }
 
 StructType* StructType::GetStructType(
-    ITypePool* pool, const std::vector<const IRType*>& list)
+    MemPool<IRType>* pool, const std::vector<const IRType*>& list)
 {
     auto ty = std::make_unique<StructType>(list);
     auto addr = ty.get();
-    pool->AddIRType(std::move(ty));
+    pool->Add(std::move(ty));
     return addr;
 }
 
 UnionType* UnionType::GetUnionType(
-    ITypePool* pool, const std::vector<const IRType*>& list)
+    MemPool<IRType>* pool, const std::vector<const IRType*>& list)
 {
     auto ty = std::make_unique<UnionType>(list);
     auto addr = ty.get();
-    pool->AddIRType(std::move(ty));
+    pool->Add(std::move(ty));
     return addr;
 }
 

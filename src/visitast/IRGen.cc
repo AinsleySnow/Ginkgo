@@ -9,33 +9,6 @@
 #include <algorithm>
 
 
-BasicBlock* IRGen::CurrentEnv::GetBasicBlock(const std::string& name)
-{
-    if (env_.index() == 0)
-        return BasicBlock::CreateBasicBlock(std::get<0>(env_), name);
-    else return BasicBlock::CreateBasicBlock(std::get<1>(env_), name);
-}
-
-BasicBlock* IRGen::CurrentEnv::GetBasicBlock()
-{
-    std::string name = '%' + std::to_string(index_++);
-    return GetBasicBlock(name);
-}
-
-Instr* IRGen::CurrentEnv::GetLastInstr()
-{
-    if (env_.index() == 0)
-    {
-        auto func = std::get<0>(env_);
-        for (int i = -1; ; --i)
-        {
-            auto bb = func->GetBasicBlock(i);
-            if (!bb->Empty()) return bb->GetLastInstr();
-        }
-    }
-    else return std::get<1>(env_)->GetBasicBlock()->GetLastInstr();
-}
-
 void IRGen::CurrentEnv::Epilog(BasicBlock* bb)
 {
     Backpatch(ret_, bb);
@@ -53,17 +26,18 @@ const Register* IRGen::AllocaObject(const CType* raw, const std::string& name)
         auto var = GlobalVar::CreateGlobalVar(transunit_.get(), regname, ty);
 
         env_ = CurrentEnv(var);
-        builder_.InsertPoint() = env_.GetBasicBlock("");
+        ibud_.SetInsertPoint(
+            BasicBlock::CreateBasicBlock(var, ""));
         auto reg = Register::CreateRegister(
-            builder_.InsertPoint(), regname,
-            PtrType::GetPtrType(builder_.InsertPoint(), ty));
+            ibud_.Container(), regname,
+            PtrType::GetPtrType(ibud_.Container(), ty));
         scopestack_.Top().AddObject(name, raw, reg);
         return reg;
     }
     else
     {
-        auto reg = builder_.InsertAllocaInstr(
-            env_.GetRegName(), raw->ToIRType(builder_.InsertPoint()));
+        auto reg = ibud_.InsertAllocaInstr(
+            env_.GetRegName(), raw->ToIRType(ibud_.Container()));
         scopestack_.Top().AddObject(name, raw, reg);
         return reg;
     }
@@ -74,7 +48,7 @@ const IROperand* IRGen::LoadVal(Expr* expr)
     if (expr->IsIdentifier())
     {
         auto ident = expr->ToIdentifier();
-        ident->Val() = builder_.InsertLoadInstr(env_.GetRegName(), ident->Addr());
+        ident->Val() = ibud_.InsertLoadInstr(env_.GetRegName(), ident->Addr());
         return ident->Val();
     }
     else return expr->Val();
@@ -89,16 +63,16 @@ const Register* IRGen::LoadAddr(Expr* expr)
 
 void IRGen::InsertBrIfNoBranchAhead(BasicBlock* bb)
 {
-    if (builder_.InsertPoint()->Empty() ||
-        builder_.InsertPoint()->GetLastInstr()->IsControlInstr())
-        builder_.InsertBrInstr(bb);
+    if (ibud_.Container()->Empty() ||
+        ibud_.LastInstr()->IsControlInstr())
+        ibud_.InsertBrInstr(bb);
 }
 
 void IRGen::InsertBrIfNoBranchAhead(const IROperand* cond, BasicBlock* tbb, BasicBlock* fbb)
 {
-    if (builder_.InsertPoint()->Empty() ||
-        builder_.InsertPoint()->GetLastInstr()->IsControlInstr())
-        builder_.InsertBrInstr(cond, tbb, fbb);
+    if (ibud_.Container()->Empty() ||
+        ibud_.LastInstr()->IsControlInstr())
+        ibud_.InsertBrInstr(cond, tbb, fbb);
 }
 
 
@@ -156,7 +130,7 @@ void IRGen::VisitDeclList(DeclList* list)
             if (initdecl->initalizer_)
             {
                 initdecl->initalizer_->Accept(this);
-                builder_.InsertStoreInstr(
+                ibud_.InsertStoreInstr(
                     initdecl->initalizer_->Val(),
                     initdecl->base_, false);
             }   
@@ -199,14 +173,17 @@ void IRGen::VisitFuncDef(FuncDef* def)
         return;
 
     env_ = CurrentEnv(pfunc);
-    builder_.InsertPoint() = env_.GetBasicBlock();
+    bbud_.SetInsertPoint(pfunc);
+
+    ibud_.SetInsertPoint(
+        bbud_.GetBasicBlock(env_.GetLabelName()));
     scopestack_.PushNewScope(Scope::ScopeType::block);
 
     auto rety = env_.GetFunction()->ReturnType();
     if (!rety->ToVoid())
     {
         env_.GetFunction()->ReturnValue() =
-            builder_.InsertAllocaInstr(env_.GetRegName(), rety);
+            ibud_.InsertAllocaInstr(env_.GetRegName(), rety);
     }
 
     for (auto& param : def->GetParamList())
@@ -215,30 +192,30 @@ void IRGen::VisitFuncDef(FuncDef* def)
             continue;
         auto ctype = param->RawType();
         auto paramreg = Register::CreateRegister(
-            builder_.InsertPoint(), env_.GetRegName(),
-            ctype->ToIRType(builder_.InsertPoint()));
+            ibud_.Container(), env_.GetRegName(),
+            ctype->ToIRType(ibud_.Container()));
 
         env_.GetFunction()->AddParam(paramreg);
         if (!param->Name().empty())
         {
             auto addr = AllocaObject(ctype, param->Name());
-            builder_.InsertStoreInstr(paramreg, addr, false);
+            ibud_.InsertStoreInstr(paramreg, addr, false);
         }
     }
 
     def->compound_->Accept(this);
-    if (!builder_.InsertPoint()->Empty())
-        builder_.InsertPoint() = env_.GetBasicBlock();
+    if (!ibud_.Container()->Empty())
+        ibud_.SetInsertPoint(bbud_.GetBasicBlock(env_.GetLabelName()));
 
     if (!rety->ToVoid())
     {
-        auto retvalue = builder_.InsertLoadInstr(
+        auto retvalue = ibud_.InsertLoadInstr(
             env_.GetRegName(), env_.GetFunction()->ReturnValue());
-        builder_.InsertRetInstr(retvalue);
+        ibud_.InsertRetInstr(retvalue);
     }
-    else builder_.InsertRetInstr();
+    else ibud_.InsertRetInstr();
 
-    env_.Epilog(builder_.InsertPoint());
+    env_.Epilog(ibud_.Container());
     scopestack_.PopScope();
 }
 
@@ -277,7 +254,7 @@ void IRGen::VisitAssignExpr(AssignExpr* assign)
 
     if (assign->op_ == Tag::assign)
     {
-        builder_.InsertStoreInstr(rhs, addr, false);
+        ibud_.InsertStoreInstr(rhs, addr, false);
         assign->Val() = rhs;
         return;
     }
@@ -290,44 +267,44 @@ void IRGen::VisitAssignExpr(AssignExpr* assign)
     const Register* result = nullptr;
 
     if (assign->op_ == Tag::add_assign && lhsty->IsInt())
-        result = builder_.InsertAddInstr(regname, lhs, rhs);
+        result = ibud_.InsertAddInstr(regname, lhs, rhs);
     else if (assign->op_ == Tag::add_assign && lhsty->IsFloat())
-        result = builder_.InsertFaddInstr(regname, lhs, rhs);
+        result = ibud_.InsertFaddInstr(regname, lhs, rhs);
 
     else if (assign->op_ == Tag::sub_assign && lhsty->IsInt())
-        result = builder_.InsertSubInstr(regname, lhs, rhs);
+        result = ibud_.InsertSubInstr(regname, lhs, rhs);
     else if (assign->op_ == Tag::sub_assign && lhsty->IsFloat())
-        result = builder_.InsertFsubInstr(regname, lhs, rhs);
+        result = ibud_.InsertFsubInstr(regname, lhs, rhs);
 
     else if (assign->op_ == Tag::mul_assign && lhsty->IsInt())
-        result = builder_.InsertMulInstr(regname, lhs, rhs);
+        result = ibud_.InsertMulInstr(regname, lhs, rhs);
     else if (assign->op_ == Tag::mul_assign && lhsty->IsFloat())
-        result = builder_.InsertFmulInstr(regname, lhs, rhs);
+        result = ibud_.InsertFmulInstr(regname, lhs, rhs);
 
     else if (assign->op_ == Tag::div_assign && lhsty->IsInt())
-        result = builder_.InsertDivInstr(regname, lhs, rhs);
+        result = ibud_.InsertDivInstr(regname, lhs, rhs);
     else if (assign->op_ == Tag::div_assign && lhsty->IsFloat())
-        result = builder_.InsertFdivInstr(regname, lhs, rhs);
+        result = ibud_.InsertFdivInstr(regname, lhs, rhs);
 
     else if (assign->op_ == Tag::mod_assign && lhsty->IsInt())
-        result = builder_.InsertModInstr(regname, lhs, rhs);
+        result = ibud_.InsertModInstr(regname, lhs, rhs);
 
     else if (assign->op_ == Tag::left_assign)
-        result = builder_.InsertShlInstr(regname, lhs, rhs);
+        result = ibud_.InsertShlInstr(regname, lhs, rhs);
     else if (assign->op_ == Tag::right_assign && lhsty->ToInteger()->IsSigned())
-        result = builder_.InsertAshrInstr(regname, lhs, rhs);
+        result = ibud_.InsertAshrInstr(regname, lhs, rhs);
     else if (assign->op_ == Tag::right_assign)
-        result = builder_.InsertLshrInstr(regname, lhs, rhs);
+        result = ibud_.InsertLshrInstr(regname, lhs, rhs);
 
     else if (assign->op_ == Tag::and_assign)
-        result = builder_.InsertAndInstr(regname, lhs, rhs);
+        result = ibud_.InsertAndInstr(regname, lhs, rhs);
     else if (assign->op_ == Tag::or_assign)
-        result = builder_.InsertOrInstr(regname, lhs, rhs);
+        result = ibud_.InsertOrInstr(regname, lhs, rhs);
     else if (assign->op_ == Tag::xor_assign)
-        result = builder_.InsertXorInstr(regname, lhs, rhs);
+        result = ibud_.InsertXorInstr(regname, lhs, rhs);
 
 
-    builder_.InsertStoreInstr(result, addr, false);
+    ibud_.InsertStoreInstr(result, addr, false);
     assign->Val() = result;
 }
 
@@ -340,7 +317,7 @@ void IRGen::VisitBinaryExpr(BinaryExpr* bin)
     if (bin->left_->IsConstant() && bin->right_->IsConstant())
     {
         bin->Val() = Evaluator::EvalBinary(
-            builder_.InsertPoint(), bin->op_, bin->left_->Val(), bin->right_->Val());
+            ibud_.Container(), bin->op_, bin->left_->Val(), bin->right_->Val());
         return;
     }
 
@@ -352,54 +329,54 @@ void IRGen::VisitBinaryExpr(BinaryExpr* bin)
     const Register* result = nullptr;
 
     if (bin->op_ == Tag::plus && !hasfloat)
-        result = builder_.InsertAddInstr(regname, lhs, rhs);
+        result = ibud_.InsertAddInstr(regname, lhs, rhs);
     else if (bin->op_ == Tag::plus)
-        result = builder_.InsertFaddInstr(regname, lhs, rhs);
+        result = ibud_.InsertFaddInstr(regname, lhs, rhs);
 
     else if (bin->op_ == Tag::minus && !hasfloat)
-        result = builder_.InsertSubInstr(regname, lhs, rhs);
+        result = ibud_.InsertSubInstr(regname, lhs, rhs);
     else if (bin->op_ == Tag::minus)
-        result = builder_.InsertFsubInstr(regname, lhs, rhs);
+        result = ibud_.InsertFsubInstr(regname, lhs, rhs);
 
     else if (bin->op_ == Tag::asterisk && !hasfloat)
-        result = builder_.InsertMulInstr(regname, lhs, rhs);
+        result = ibud_.InsertMulInstr(regname, lhs, rhs);
     else if (bin->op_ == Tag::asterisk)
-        result = builder_.InsertFmulInstr(regname, lhs, rhs);
+        result = ibud_.InsertFmulInstr(regname, lhs, rhs);
 
     else if (bin->op_ == Tag::slash && !hasfloat)
-        result = builder_.InsertDivInstr(regname, lhs, rhs);
+        result = ibud_.InsertDivInstr(regname, lhs, rhs);
     else if (bin->op_ == Tag::slash)
-        result = builder_.InsertFdivInstr(regname, lhs, rhs);
+        result = ibud_.InsertFdivInstr(regname, lhs, rhs);
 
     else if (bin->op_ == Tag::percent)
-        result = builder_.InsertModInstr(regname, lhs, rhs);
+        result = ibud_.InsertModInstr(regname, lhs, rhs);
 
     else if (bin->op_ == Tag::lshift)
-        result = builder_.InsertShlInstr(regname, lhs, rhs);
+        result = ibud_.InsertShlInstr(regname, lhs, rhs);
     else if (bin->op_ == Tag::rshift && lhsty->ToInteger()->IsSigned())
-        result = builder_.InsertAshrInstr(regname, lhs, rhs);
+        result = ibud_.InsertAshrInstr(regname, lhs, rhs);
     else if (bin->op_ == Tag::rshift)
-        result = builder_.InsertLshrInstr(regname, lhs, rhs);   
+        result = ibud_.InsertLshrInstr(regname, lhs, rhs);   
 
     else if (bin->op_ == Tag::lessthan)
-        result = builder_.InsertCmpInstr(regname, Condition::lt, lhs, rhs);
+        result = ibud_.InsertCmpInstr(regname, Condition::lt, lhs, rhs);
     else if (bin->op_ == Tag::lessequal)
-        result = builder_.InsertCmpInstr(regname, Condition::le, lhs, rhs);
+        result = ibud_.InsertCmpInstr(regname, Condition::le, lhs, rhs);
     else if (bin->op_ == Tag::greathan)
-        result = builder_.InsertCmpInstr(regname, Condition::gt, lhs, rhs);
+        result = ibud_.InsertCmpInstr(regname, Condition::gt, lhs, rhs);
     else if (bin->op_ == Tag::greatequal)
-        result = builder_.InsertCmpInstr(regname, Condition::ge, lhs, rhs);
+        result = ibud_.InsertCmpInstr(regname, Condition::ge, lhs, rhs);
     else if (bin->op_ == Tag::equal)
-        result = builder_.InsertCmpInstr(regname, Condition::eq, lhs, rhs);
+        result = ibud_.InsertCmpInstr(regname, Condition::eq, lhs, rhs);
     else if (bin->op_ == Tag::notequal)
-        result = builder_.InsertCmpInstr(regname, Condition::ne, lhs, rhs);
+        result = ibud_.InsertCmpInstr(regname, Condition::ne, lhs, rhs);
 
     else if (bin->op_ == Tag::_and)
-        result = builder_.InsertAndInstr(regname, lhs, rhs);
+        result = ibud_.InsertAndInstr(regname, lhs, rhs);
     else if (bin->op_ == Tag::_xor)
-        result = builder_.InsertXorInstr(regname, lhs, rhs);
+        result = ibud_.InsertXorInstr(regname, lhs, rhs);
     else if (bin->op_ == Tag::_or)
-        result = builder_.InsertOrInstr(regname, lhs, rhs);
+        result = ibud_.InsertOrInstr(regname, lhs, rhs);
 
     bin->Val() = result;
 }
@@ -419,20 +396,20 @@ void IRGen::VisitCallExpr(CallExpr* call)
         auto pfunc = transunit_->GetFunction(
             '@' + call->postfix_->ToIdentifier()->name_);
         const FuncType* functy = pfunc->Type();
-        call->Val() = builder_.InsertCallInstr(
+        call->Val() = ibud_.InsertCallInstr(
             env_.GetRegName(), functy, call->postfix_->ToIdentifier()->name_);
     }
     else // if a function is called through a pointer
     {
         call->postfix_->Accept(this);
         auto pfunc = static_cast<const Register*>(call->postfix_->Val());
-        auto func = builder_.InsertLoadInstr(env_.GetRegName(), pfunc);
-        call->Val() = builder_.InsertCallInstr(env_.GetRegName(), func);
+        auto func = ibud_.InsertLoadInstr(env_.GetRegName(), pfunc);
+        call->Val() = ibud_.InsertCallInstr(env_.GetRegName(), func);
     }
 
     if (call->argvlist_)
     {
-        auto callinstr = static_cast<CallInstr*>(builder_.GetLastInstr());
+        auto callinstr = static_cast<CallInstr*>(ibud_.LastInstr());
         for (auto& argv : *call->argvlist_)
             callinstr->AddArgv(argv->Val());
     }
@@ -481,53 +458,49 @@ void IRGen::VisitCondExpr(CondExpr* cond)
         return;
     }
 
-    auto initblk = builder_.InsertPoint();
+    auto initblk = ibud_.Container();
 
-    auto trueblk = std::make_unique<BasicBlock>(env_.GetRegName());
-    builder_.InsertPoint() = trueblk.get();
+    auto trueblk = bbud_.GetBasicBlock(env_.GetLabelName());
+    ibud_.SetInsertPoint(trueblk);
     cond->true_->Accept(this);
 
-    auto falseblk = std::make_unique<BasicBlock>(env_.GetRegName());
-    builder_.InsertPoint() = falseblk.get();
+    auto falseblk = bbud_.GetBasicBlock(env_.GetLabelName());
+    ibud_.SetInsertPoint(falseblk);
     cond->false_->Accept(this);
 
     if (cond->true_->IsConstant() && cond->false_->IsConstant())
     {
-        builder_.InsertPoint() = initblk;
-        cond->Val() = builder_.InsertSelectInstr(
+        ibud_.SetInsertPoint(initblk);
+        cond->Val() = ibud_.InsertSelectInstr(
             env_.GetRegName(), LoadVal(cond->cond_.get()),
             true, cond->true_->Val(), cond->false_->Val());
-
-        initblk->MergePools(trueblk.get());
-        initblk->MergePools(falseblk.get());
+        // Remove unused basic blocks
+        bbud_.RemoveCurrentBlock();
+        bbud_.RemoveCurrentBlock();
         return;
     }
 
-    auto endblk = std::make_unique<BasicBlock>(env_.GetRegName());
+    auto endblk = bbud_.GetBasicBlock(env_.GetLabelName());
 
-    builder_.InsertPoint() = initblk;
-    builder_.InsertBrInstr(
-        LoadVal(cond->cond_.get()), trueblk.get(), falseblk.get());
+    ibud_.SetInsertPoint(initblk);
+    ibud_.InsertBrInstr(
+        LoadVal(cond->cond_.get()), trueblk, falseblk);
 
-    builder_.InsertPoint() = trueblk.get();
-    builder_.InsertBrInstr(endblk.get());
+    ibud_.SetInsertPoint(trueblk);
+    ibud_.InsertBrInstr(endblk);
 
-    builder_.InsertPoint() = falseblk.get();
-    builder_.InsertBrInstr(endblk.get());
+    ibud_.SetInsertPoint(falseblk);
+    ibud_.InsertBrInstr(endblk);
 
-    builder_.InsertPoint() = endblk.get();
+    ibud_.SetInsertPoint(endblk);
     auto tval = LoadVal(cond->true_.get());
     auto fval = LoadVal(cond->false_.get());
 
-    cond->Val() = builder_.InsertPhiInstr(
+    cond->Val() = ibud_.InsertPhiInstr(
         env_.GetRegName(), tval->Type());
-    auto phi = static_cast<PhiInstr*>(endblk->GetLastInstr());
-    phi->AddBlockValPair(trueblk.get(), tval);
-    phi->AddBlockValPair(falseblk.get(), fval);
-
-    env_.GetFunction()->AddBasicBlock(std::move(trueblk));
-    env_.GetFunction()->AddBasicBlock(std::move(falseblk));
-    env_.GetFunction()->AddBasicBlock(std::move(endblk));
+    auto phi = static_cast<PhiInstr*>(ibud_.LastInstr());
+    phi->AddBlockValPair(trueblk, tval);
+    phi->AddBlockValPair(falseblk, fval);
 }
 
 
@@ -536,11 +509,11 @@ void IRGen::VisitConstant(ConstExpr* constant)
     auto ctype = constant->RawType();
     if (ctype->IsInteger())
         constant->Val() = IntConst::CreateIntConst(
-            builder_.InsertPoint(), constant->GetInt(),
+            ibud_.Container(), constant->GetInt(),
             ctype->ToIRType(transunit_.get())->ToInteger());
     else
         constant->Val() = FloatConst::CreateFloatConst(
-            builder_.InsertPoint(), constant->GetFloat(),
+            ibud_.Container(), constant->GetFloat(),
             ctype->ToIRType(transunit_.get())->ToFloatPoint());
 }
 
@@ -572,7 +545,7 @@ void IRGen::VisitLogicalExpr(LogicalExpr* logical)
             (!lconst->IsZero() && logical->op_ == Tag::logical_or))
         {
             logical->Val() = IntConst::CreateIntConst(
-                builder_.InsertPoint(), !lconst->IsZero());
+                ibud_.Container(), !lconst->IsZero());
             return;
         }
 
@@ -582,57 +555,57 @@ void IRGen::VisitLogicalExpr(LogicalExpr* logical)
         {
             auto rconst = static_cast<const Constant*>(rhs);
             logical->Val() = Evaluator::EvalBinary(
-                builder_.InsertPoint(), logical->op_, lconst, rconst);
+                ibud_.Container(), logical->op_, lconst, rconst);
             return;
         }
 
-        auto zero = IntConst::CreateIntConst(builder_.InsertPoint(), 0);
-        auto one = IntConst::CreateIntConst(builder_.InsertPoint(), 1);
+        auto zero = IntConst::CreateIntConst(ibud_.Container(), 0);
+        auto one = IntConst::CreateIntConst(ibud_.Container(), 1);
 
-        logical->Val() = builder_.InsertSelectInstr(
+        logical->Val() = ibud_.InsertSelectInstr(
             env_.GetRegName(), rhs, true, one, zero);
         return;
     }
 
-    auto firstblk = builder_.InsertPoint(),
-        midblk = env_.GetBasicBlock(),
-        finalblk = env_.GetBasicBlock();
+    auto firstblk = ibud_.Container(),
+        midblk = bbud_.GetBasicBlock(env_.GetLabelName()),
+        finalblk = bbud_.GetBasicBlock(env_.GetLabelName());
 
-    auto zero = IntConst::CreateIntConst(builder_.InsertPoint(), 0);
-    auto cmpans = builder_.InsertCmpInstr(
+    auto zero = IntConst::CreateIntConst(ibud_.Container(), 0);
+    auto cmpans = ibud_.InsertCmpInstr(
         env_.GetRegName(), Condition::ne, lhs, zero);
 
     if (logical->op_ == Tag::logical_and)
-        builder_.InsertBrInstr(cmpans, midblk, finalblk);
+        ibud_.InsertBrInstr(cmpans, midblk, finalblk);
     else if (logical->op_ == Tag::logical_or)
-        builder_.InsertBrInstr(cmpans, finalblk, midblk);
+        ibud_.InsertBrInstr(cmpans, finalblk, midblk);
 
-    builder_.InsertPoint() = midblk;
+    ibud_.SetInsertPoint(midblk);
 
     logical->right_->Accept(this);
     rhs = LoadVal(logical->right_.get());
 
-    cmpans = builder_.InsertCmpInstr(
+    cmpans = ibud_.InsertCmpInstr(
         env_.GetRegName(), Condition::ne, rhs, zero);
-    builder_.InsertBrInstr(finalblk);
+    ibud_.InsertBrInstr(finalblk);
 
-    builder_.InsertPoint() = finalblk;
+    ibud_.SetInsertPoint(finalblk);
 
     auto result = env_.GetRegName();
     if (logical->op_ == Tag::logical_and)
     {
-        logical->Val() = builder_.InsertPhiInstr(
+        logical->Val() = ibud_.InsertPhiInstr(
             result, IntType::GetInt8(true));
-        auto phi = static_cast<PhiInstr*>(env_.GetLastInstr());
+        auto phi = static_cast<PhiInstr*>(ibud_.LastInstr());
         phi->AddBlockValPair(firstblk, zero);
         phi->AddBlockValPair(midblk, cmpans);
     }
     else if (logical->op_ == Tag::logical_or)
     {
-        logical->Val() = builder_.InsertPhiInstr(
+        logical->Val() = ibud_.InsertPhiInstr(
             result, IntType::GetInt8(true));
-        auto one = IntConst::CreateIntConst(builder_.InsertPoint(), 1);
-        auto phi = static_cast<PhiInstr*>(env_.GetLastInstr());
+        auto one = IntConst::CreateIntConst(ibud_.Container(), 1);
+        auto phi = static_cast<PhiInstr*>(ibud_.LastInstr());
         phi->AddBlockValPair(firstblk, one);
         phi->AddBlockValPair(midblk, cmpans);
     }
@@ -646,7 +619,7 @@ void IRGen::VisitUnaryExpr(UnaryExpr* unary)
     if (unary->content_->IsConstant())
     {
         unary->Val() = Evaluator::EvalUnary(
-            builder_.InsertPoint(), unary->op_, unary->content_->Val());
+            ibud_.Container(), unary->op_, unary->content_->Val());
         return;
     }
 
@@ -655,14 +628,14 @@ void IRGen::VisitUnaryExpr(UnaryExpr* unary)
     {
         auto addr = LoadAddr(unary->content_.get());
         auto val = LoadVal(unary->content_.get());
-        auto one = IntConst::CreateIntConst(builder_.InsertPoint(), 1);
+        auto one = IntConst::CreateIntConst(ibud_.Container(), 1);
         const Register* newval = nullptr;
 
         if (unary->op_ == Tag::inc || unary->op_ == Tag::postfix_inc)
-            newval = builder_.InsertAddInstr(env_.GetRegName(), val, one);
-        else newval = builder_.InsertSubInstr(env_.GetRegName(), val, one);
+            newval = ibud_.InsertAddInstr(env_.GetRegName(), val, one);
+        else newval = ibud_.InsertSubInstr(env_.GetRegName(), val, one);
 
-        builder_.InsertStoreInstr(newval, addr, false);
+        ibud_.InsertStoreInstr(newval, addr, false);
         if (unary->op_ == Tag::postfix_inc || unary->op_ == Tag::postfix_dec)
             unary->Val() = val;
         else unary->Val() = newval;
@@ -672,26 +645,26 @@ void IRGen::VisitUnaryExpr(UnaryExpr* unary)
     else if (unary->op_ == Tag::asterisk)
     {
         auto addreg = static_cast<const Register*>(LoadVal(unary->content_.get()));
-        unary->Val() = builder_.InsertLoadInstr(env_.GetRegName(), addreg);
+        unary->Val() = ibud_.InsertLoadInstr(env_.GetRegName(), addreg);
     }
     else if (unary->op_ == Tag::minus)
     {
-        auto zero = IntConst::CreateIntConst(builder_.InsertPoint(), 0);
+        auto zero = IntConst::CreateIntConst(ibud_.Container(), 0);
         auto rhs = LoadVal(unary->content_.get());
-        unary->Val() = builder_.InsertSubInstr(env_.GetRegName(), zero, rhs);
+        unary->Val() = ibud_.InsertSubInstr(env_.GetRegName(), zero, rhs);
     }
     else if (unary->op_ == Tag::tilde)
     {
         auto rhs = LoadVal(unary->content_.get());
         auto minusone = IntConst::CreateIntConst(
-            builder_.InsertPoint(), ~0ull, rhs->Type()->ToInteger());
-        unary->Val() = builder_.InsertXorInstr(env_.GetRegName(), minusone, rhs);
+            ibud_.Container(), ~0ull, rhs->Type()->ToInteger());
+        unary->Val() = ibud_.InsertXorInstr(env_.GetRegName(), minusone, rhs);
     }
     else if (unary->op_ == Tag::exclamation)
     {
-        auto zero = IntConst::CreateIntConst(builder_.InsertPoint(), 0);
-        auto one = IntConst::CreateIntConst(builder_.InsertPoint(), 1);
-        unary->Val() = builder_.InsertSelectInstr(
+        auto zero = IntConst::CreateIntConst(ibud_.Container(), 0);
+        auto one = IntConst::CreateIntConst(ibud_.Container(), 1);
+        unary->Val() = ibud_.InsertSelectInstr(
             env_.GetRegName(), LoadVal(unary->content_.get()), true, zero, one);
     }
 }
@@ -699,9 +672,8 @@ void IRGen::VisitUnaryExpr(UnaryExpr* unary)
 
 void IRGen::VisitBreakStmt(BreakStmt* stmt)
 {
-    builder_.InsertBrInstr(nullptr);
-    env_.StmtStackTop()->NextList().push_back(
-        static_cast<BrInstr*>(env_.GetLastInstr()));
+    ibud_.InsertBrInstr(nullptr);
+    env_.StmtStackTop()->PushBrInstr(ibud_.LastInstr());
 }
 
 
@@ -710,35 +682,35 @@ void IRGen::VisitCaseStmt(CaseStmt* stmt)
     if (stmt->const_)
     {
         stmt->const_->Accept(this);
-        if (!builder_.InsertPoint()->Empty())
+        if (!ibud_.Container()->Empty())
         {
-            auto bb = env_.GetBasicBlock();
-            if (!env_.GetLastInstr()->IsControlInstr())
-                builder_.InsertBrInstr(bb);
-            builder_.InsertPoint() = bb;
+            auto bb = bbud_.GetBasicBlock(env_.GetLabelName());
+            if (!ibud_.LastInstr()->IsControlInstr())
+                ibud_.InsertBrInstr(bb);
+            ibud_.SetInsertPoint(bb);
         }
         env_.SwitchStackTop()->AddValueBlkPair(
             static_cast<const IntConst*>(stmt->const_->Val()),
-            builder_.InsertPoint());
+            ibud_.Container());
     }
     else // default
     {
-        auto bb = env_.GetBasicBlock();
-        if (!env_.GetLastInstr()->IsControlInstr())
-            builder_.InsertBrInstr(bb);
-        builder_.InsertPoint() = bb;
+        auto bb = bbud_.GetBasicBlock(env_.GetLabelName());
+        if (ibud_.Container()->Empty() || !ibud_.LastInstr()->IsControlInstr())
+            ibud_.InsertBrInstr(bb);
+        ibud_.SetInsertPoint(bb);
         env_.SwitchStackTop()->SetDefault(bb);
     }
 
     stmt->stmt_->Accept(this);
     
     // if this is default tag, create a new basic block
-    if (!stmt->const_ && !builder_.InsertPoint()->Empty())
+    if (!stmt->const_ && !ibud_.Container()->Empty())
     {
-        auto bb = env_.GetBasicBlock();
-        if (!env_.GetLastInstr()->IsControlInstr())
-            builder_.InsertBrInstr(bb);
-        builder_.InsertPoint() = bb;
+        auto bb = bbud_.GetBasicBlock(env_.GetLabelName());
+        if (!ibud_.LastInstr()->IsControlInstr())
+            ibud_.InsertBrInstr(bb);
+        ibud_.SetInsertPoint(bb);
     }
     Merge(stmt->stmt_->NextList(), stmt->nextlist_);
 }
@@ -752,14 +724,14 @@ void IRGen::VisitCompoundStmt(CompoundStmt* compound)
         stmt->Accept(this);
         if (!stmt->NextList().empty())
         {
-            if (!builder_.InsertPoint()->Empty())
+            if (!ibud_.Container()->Empty())
             {
-                auto bb = env_.GetBasicBlock();
-                if (!env_.GetLastInstr()->IsControlInstr())
-                    builder_.InsertBrInstr(bb);
-                builder_.InsertPoint() = bb;
+                auto bb = bbud_.GetBasicBlock(env_.GetLabelName());
+                if (!ibud_.LastInstr()->IsControlInstr())
+                    ibud_.InsertBrInstr(bb);
+                ibud_.SetInsertPoint(bb);
             }
-            Backpatch(stmt->NextList(), builder_.InsertPoint());
+            Backpatch(stmt->NextList(), ibud_.Container());
         }
     }
     scopestack_.PopScope();
@@ -769,7 +741,7 @@ void IRGen::VisitCompoundStmt(CompoundStmt* compound)
 void IRGen::VisitContinueStmt(ContinueStmt* stmt)
 {
     IterStmt* iter = static_cast<IterStmt*>(env_.StmtStackTop());
-    builder_.InsertBrInstr(iter->continuepoint_);
+    ibud_.InsertBrInstr(iter->continuepoint_);
 }
 
 
@@ -783,23 +755,23 @@ void IRGen::VisitDoWhileStmt(DoWhileStmt* stmt)
 {
     env_.PushStmt(stmt);
 
-    auto loopblk = env_.GetBasicBlock();
-    builder_.InsertBrInstr(loopblk);
+    auto loopblk = bbud_.GetBasicBlock(env_.GetLabelName());
+    ibud_.InsertBrInstr(loopblk);
     stmt->continuepoint_ = loopblk;
 
-    builder_.InsertPoint() = loopblk;
+    ibud_.SetInsertPoint(loopblk);
     stmt->stmt_->Accept(this);
 
     stmt->expr_->Accept(this);
-    auto cmpans = builder_.InsertCmpInstr(
+    auto cmpans = ibud_.InsertCmpInstr(
         env_.GetRegName(),
         Condition::ne, LoadVal(stmt->expr_.get()),
-        IntConst::CreateIntConst(builder_.InsertPoint(), 0));
+        IntConst::CreateIntConst(ibud_.Container(), 0));
 
-    builder_.InsertBrInstr(cmpans, loopblk, nullptr);
+    ibud_.InsertBrInstr(cmpans, loopblk, nullptr);
 
     stmt->nextlist_.push_back(
-        static_cast<BrInstr*>(env_.GetLastInstr()));
+        static_cast<BrInstr*>(ibud_.LastInstr()));
     Merge(stmt->stmt_->NextList(), stmt->nextlist_);
 
     env_.PopStmt();
@@ -826,35 +798,35 @@ void IRGen::VisitForStmt(ForStmt* stmt)
 
     if (!stmt->condition_->Empty())
     {
-        cmpblk = env_.GetBasicBlock();
-        loopblk = env_.GetBasicBlock();
+        cmpblk = bbud_.GetBasicBlock(env_.GetLabelName());
+        loopblk = bbud_.GetBasicBlock(env_.GetLabelName());
 
-        builder_.InsertBrInstr(cmpblk);
-        builder_.InsertPoint() = cmpblk;
+        ibud_.InsertBrInstr(cmpblk);
+        ibud_.SetInsertPoint(cmpblk);
         stmt->condition_->Accept(this);
-        builder_.InsertBrInstr(
+        ibud_.InsertBrInstr(
             LoadVal(stmt->condition_->expr_.get()), loopblk, nullptr);
-        stmt->PushBrInstr(builder_.GetLastInstr());
+        stmt->PushBrInstr(ibud_.LastInstr());
     }
     else
     {
-        loopblk = env_.GetBasicBlock();
-        builder_.InsertBrInstr(loopblk);
+        loopblk = bbud_.GetBasicBlock(env_.GetLabelName());
+        ibud_.InsertBrInstr(loopblk);
     }
 
     if (stmt->increment_)
     {
-        incblk = env_.GetBasicBlock();
+        incblk = bbud_.GetBasicBlock(env_.GetLabelName());
 
-        builder_.InsertPoint() = incblk;
+        ibud_.SetInsertPoint(incblk);
         stmt->increment_->Accept(this);
 
         if (!stmt->condition_->Empty())
-            builder_.InsertBrInstr(cmpblk);
-        else builder_.InsertBrInstr(loopblk);
+            ibud_.InsertBrInstr(cmpblk);
+        else ibud_.InsertBrInstr(loopblk);
     }
 
-    builder_.InsertPoint() = loopblk;
+    ibud_.SetInsertPoint(loopblk);
     if (stmt->increment_)
         stmt->continuepoint_ = incblk;
     else if (!stmt->condition_->Empty())
@@ -864,10 +836,10 @@ void IRGen::VisitForStmt(ForStmt* stmt)
     stmt->body_->Accept(this);
 
     if (stmt->increment_)
-        builder_.InsertBrInstr(incblk);
+        ibud_.InsertBrInstr(incblk);
     else if (!stmt->condition_->Empty())
-        builder_.InsertBrInstr(cmpblk);
-    else builder_.InsertBrInstr(loopblk);
+        ibud_.InsertBrInstr(cmpblk);
+    else ibud_.InsertBrInstr(loopblk);
 
     Merge(stmt->body_->NextList(), stmt->nextlist_);
     env_.PopStmt();
@@ -876,67 +848,67 @@ void IRGen::VisitForStmt(ForStmt* stmt)
 
 void IRGen::VisitGotoStmt(GotoStmt* stmt)
 {
-    builder_.InsertBrInstr(nullptr);
-    auto br = static_cast<BrInstr*>(
-        builder_.InsertPoint()->GetLastInstr());
+    ibud_.InsertBrInstr(nullptr);
+    auto br = static_cast<BrInstr*>(ibud_.LastInstr());
     env_.AddBrLabelPair(br, stmt->ident_);
 }
 
 
 void IRGen::VisitIfStmt(IfStmt* stmt)
 {
-    BasicBlock* initblk = builder_.InsertPoint();
-    BasicBlock* trueblk = env_.GetBasicBlock();
-    BasicBlock* falseblk = stmt->false_ ? env_.GetBasicBlock() : nullptr;
+    BasicBlock* initblk = ibud_.Container();
+    BasicBlock* trueblk = bbud_.GetBasicBlock(env_.GetLabelName());
+    BasicBlock* falseblk = stmt->false_ ?
+        bbud_.GetBasicBlock(env_.GetLabelName()) : nullptr;
 
     stmt->expr_->Accept(this);
     if (stmt->expr_->IsConstant() && 
-        (initblk->Empty() || !initblk->GetLastInstr()->IsControlInstr()))
+        (initblk->Empty() || !initblk->LastInstr()->IsControlInstr()))
     {
         auto pconst = static_cast<const Constant*>(stmt->expr_->Val());
         if (pconst->IsZero() && falseblk)
-            builder_.InsertBrInstr(falseblk);
+            ibud_.InsertBrInstr(falseblk);
         else if (pconst->IsZero() && !falseblk)
         {
-            builder_.InsertBrInstr(nullptr);
+            ibud_.InsertBrInstr(nullptr);
             stmt->nextlist_.push_back(
-                static_cast<BrInstr*>(initblk->GetLastInstr()));
+                static_cast<BrInstr*>(initblk->LastInstr()));
         }
         else if (!pconst->IsZero())
-            builder_.InsertBrInstr(trueblk);
+            ibud_.InsertBrInstr(trueblk);
     }
     else if (!stmt->expr_->IsConstant())
     {
         auto cmpans = LoadVal(stmt->expr_.get());
         if (stmt->false_)
-            builder_.InsertBrInstr(cmpans, trueblk, falseblk);
+            ibud_.InsertBrInstr(cmpans, trueblk, falseblk);
         else
         {
-            builder_.InsertBrInstr(cmpans, trueblk, nullptr);
+            ibud_.InsertBrInstr(cmpans, trueblk, nullptr);
             stmt->nextlist_.push_back(
-                static_cast<BrInstr*>(initblk->GetLastInstr()));
+                static_cast<BrInstr*>(initblk->LastInstr()));
         }
     }
 
-    builder_.InsertPoint() = trueblk;
+    ibud_.SetInsertPoint(trueblk);
     stmt->true_->Accept(this);
 
-    if (trueblk->Empty() || !trueblk->GetLastInstr()->IsControlInstr())
+    if (trueblk->Empty() || !trueblk->LastInstr()->IsControlInstr())
     {
-        builder_.InsertBrInstr(nullptr);
+        ibud_.InsertBrInstr(nullptr);
         stmt->nextlist_.push_back(
-            static_cast<BrInstr*>(trueblk->GetLastInstr()));
+            static_cast<BrInstr*>(trueblk->LastInstr()));
     }
 
     if (stmt->false_)
     {
-        builder_.InsertPoint() = falseblk;
+        ibud_.SetInsertPoint(falseblk);
         stmt->false_->Accept(this);
-        if (falseblk->Empty() || !falseblk->GetLastInstr()->IsControlInstr())
+        if (falseblk->Empty() || !falseblk->LastInstr()->IsControlInstr())
         {
-            builder_.InsertBrInstr(nullptr);
+            ibud_.InsertBrInstr(nullptr);
             stmt->nextlist_.push_back(
-                static_cast<BrInstr*>(falseblk->GetLastInstr()));
+                static_cast<BrInstr*>(falseblk->LastInstr()));
         }
     }
 
@@ -952,15 +924,15 @@ void IRGen::VisitIfStmt(IfStmt* stmt)
 
 void IRGen::VisitLabelStmt(LabelStmt* stmt)
 {
-    if (!builder_.InsertPoint()->Empty())
+    if (!ibud_.Container()->Empty())
     {
-        auto bb = env_.GetBasicBlock();
-        builder_.InsertPoint() = bb;
-        if (!env_.GetLastInstr()->IsControlInstr())
-            builder_.InsertBrInstr(bb);
+        auto bb = bbud_.GetBasicBlock(env_.GetLabelName());
+        ibud_.SetInsertPoint(bb);
+        if (!ibud_.LastInstr()->IsControlInstr())
+            ibud_.InsertBrInstr(bb);
     }
 
-    env_.AddLabelBlkPair(stmt->label_, builder_.InsertPoint());
+    env_.AddLabelBlkPair(stmt->label_, ibud_.Container());
     stmt->stmt_->Accept(this);
     Merge(stmt->stmt_->NextList(), stmt->nextlist_);
 }
@@ -972,12 +944,12 @@ void IRGen::VisitRetStmt(RetStmt* stmt)
     {
         stmt->retvalue_->Accept(this);
         auto retreg = env_.GetFunction()->ReturnValue();
-        builder_.InsertStoreInstr(
+        ibud_.InsertStoreInstr(
             LoadVal(stmt->retvalue_.get()), retreg, false);
     }
 
-    builder_.InsertBrInstr(nullptr);
-    env_.AddBrInstr4Ret(static_cast<BrInstr*>(env_.GetLastInstr()));
+    ibud_.InsertBrInstr(nullptr);
+    env_.AddBrInstr4Ret(static_cast<BrInstr*>(ibud_.LastInstr()));
 }
 
 
@@ -986,9 +958,9 @@ void IRGen::VisitSwitchStmt(SwitchStmt* stmt)
     stmt->expr_->Accept(this);
     auto ident = LoadVal(stmt->expr_.get());
 
-    builder_.InsertSwitchInstr(ident);
+    ibud_.InsertSwitchInstr(ident);
     auto switchinstr = static_cast<
-        SwitchInstr*>(env_.GetLastInstr());
+        SwitchInstr*>(ibud_.LastInstr());
 
     env_.PushSwitch(switchinstr);
     env_.PushStmt(stmt);
@@ -998,10 +970,10 @@ void IRGen::VisitSwitchStmt(SwitchStmt* stmt)
 
     if (!switchinstr->GetDefault())
     {
-        auto bb = env_.GetBasicBlock();
-        if (!env_.GetLastInstr()->IsControlInstr())
-            builder_.InsertBrInstr(bb);
-        builder_.InsertPoint() = bb;
+        auto bb = bbud_.GetBasicBlock(env_.GetLabelName());
+        if (!ibud_.LastInstr()->IsControlInstr())
+            ibud_.InsertBrInstr(bb);
+        ibud_.SetInsertPoint(bb);
         Backpatch(stmt->nextlist_, bb);
         switchinstr->SetDefault(bb);
     }
@@ -1024,26 +996,26 @@ void IRGen::VisitWhileStmt(WhileStmt* stmt)
 {
     env_.PushStmt(stmt);
 
-    auto cmpblk = env_.GetBasicBlock(),
-        loopblk = env_.GetBasicBlock();
+    auto cmpblk = bbud_.GetBasicBlock(env_.GetLabelName()),
+        loopblk = bbud_.GetBasicBlock(env_.GetLabelName());
 
     stmt->continuepoint_ = cmpblk;
-    builder_.InsertBrInstr(cmpblk);
-    builder_.InsertPoint() = cmpblk;
+    ibud_.InsertBrInstr(cmpblk);
+    ibud_.SetInsertPoint(cmpblk);
 
     stmt->expr_->Accept(this);
-    auto cmpans = builder_.InsertCmpInstr(
+    auto cmpans = ibud_.InsertCmpInstr(
         env_.GetRegName(),
         Condition::ne, LoadVal(stmt->expr_.get()),
-        IntConst::CreateIntConst(builder_.InsertPoint(), 0));
+        IntConst::CreateIntConst(ibud_.Container(), 0));
 
-    builder_.InsertBrInstr(cmpans, loopblk, nullptr);
+    ibud_.InsertBrInstr(cmpans, loopblk, nullptr);
     stmt->nextlist_.push_back(
-        static_cast<BrInstr*>(env_.GetLastInstr()));
+        static_cast<BrInstr*>(ibud_.LastInstr()));
 
-    builder_.InsertPoint() = loopblk;
+    ibud_.SetInsertPoint(loopblk);
     stmt->stmt_->Accept(this);
-    builder_.InsertBrInstr(cmpblk);
+    ibud_.InsertBrInstr(cmpblk);
 
     Merge(stmt->stmt_->NextList(), stmt->nextlist_);
 

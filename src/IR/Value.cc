@@ -53,7 +53,7 @@ std::string Function::ToString() const
     if (Noreturn()) func += "noreturn ";
     func += Name() + '(';
 
-    if (blk_.empty())
+    if (Empty())
     {
         auto& paramtypes = ParamType();
         if (!paramtypes.empty())
@@ -75,27 +75,23 @@ std::string Function::ToString() const
     }
     func += ')';
 
-    if (blk_.empty())
+    if (Empty())
         func += ';';
     else
     {
         func += " {\n";
-        for (auto i = blk_.begin(); i < blk_.end() - 1; ++i)
+        for (auto i = elements_.begin(); i < elements_.end() - 1; ++i)
             func += (*i)->ToString() + '\n';
-        func += blk_.back()->ToString() + '}';
+        func += elements_.back()->ToString() + '}';
     }
 
     return func;
 }
 
-void Function::AddBasicBlock(std::unique_ptr<BasicBlock> bb)
-{
-    blk_.push_back(std::move(bb));
-}
 
 BasicBlock* Function::GetBasicBlock(const std::string& name)
 {
-    for (auto& pbb : blk_)
+    for (auto& pbb : elements_)
         if (name == pbb->Name())
             return pbb.get();
     return nullptr;
@@ -104,9 +100,9 @@ BasicBlock* Function::GetBasicBlock(const std::string& name)
 BasicBlock* Function::GetBasicBlock(int index)
 {
     if (index < 0)
-        return (blk_.end() + index)->get();
+        return (elements_.end() + index)->get();
     else
-        return blk_[index].get();
+        return elements_[index].get();
 }
 
 void Function::AddIROperand(std::unique_ptr<IROperand> op)
@@ -123,7 +119,6 @@ void Function::AddParam(const Register* r)
 GlobalVar* GlobalVar::CreateGlobalVar(Module* mod, const std::string& name, const IRType* ty)
 {
     auto var = std::make_unique<GlobalVar>(name, ty);
-    var->parent_ = mod;
     auto pvar = var.get();
     mod->AddGlobalVar(std::move(var));
     return pvar;
@@ -145,16 +140,14 @@ void GlobalVar::SetBasicBlock(std::unique_ptr<BasicBlock> bb)
 BasicBlock* BasicBlock::CreateBasicBlock(Function* func, const std::string& name)
 {
     std::unique_ptr<BasicBlock> bb = std::make_unique<BasicBlock>(name);
-    bb->parent_ = func;
     auto raw = bb.get();
-    func->AddBasicBlock(std::move(bb));
+    func->Append(std::move(bb));
     return raw;
 }
 
 BasicBlock* BasicBlock::CreateBasicBlock(GlobalVar* global, const std::string& name)
 {
     std::unique_ptr<BasicBlock> bb = std::make_unique<BasicBlock>(name);
-    bb->parent_ = global;
     auto raw = bb.get();
     global->SetBasicBlock(std::move(bb));
     return raw;
@@ -164,13 +157,13 @@ std::string BasicBlock::ToString() const
 {
     std::string blk{};
     if (!Name().empty()) blk += Name() + ":\n";
-    for (const auto& instr : instrs_)
-        blk += "  " + instr->ToString() + ";\n";
+    for (auto i = elements_.begin(); i != elements_.end(); ++i)
+        blk += "  " + (*i)->ToString() + ";\n";
     return blk;
 }
 
 void BasicBlock::MergePools(BasicBlock* bb)
 {
-    MergeTypePool(bb);
-    MergeOpPool(bb);
+    MemPool<IRType>::Merge(bb);
+    MemPool<IROperand>::Merge(bb);
 }

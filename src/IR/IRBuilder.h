@@ -2,22 +2,90 @@
 #define _IR_BUILDER_H_
 
 #include "IR/Instr.h"
+#include "IR/Value.h"
 
-class BasicBlock;
 
-
-class IRBuilder
+template <class CNT, class ELE>
+            // container, element
+class IRBuilderBase
 {
 public:
-    IRBuilder() {}
-    IRBuilder(const IRBuilder&) = delete;
-    IRBuilder(IRBuilder&&) = delete;
+    IRBuilderBase() = default;
+    virtual ~IRBuilderBase() = default;
+    IRBuilderBase(const IRBuilderBase&) = delete;
+    IRBuilderBase(IRBuilderBase&&) = delete;
 
-    auto& InsertPoint() { return insertpoint_; }
-    auto InsertPoint() const { return insertpoint_; }
+    // Set the insert point to the start a CNT.
+    void SetInsertPoint(CNT* container)
+    {
+        insertmode_ = InsertMode::begin;
+        insertpoint_.container_ = container;
+    }
+    // Set the insert point to the front of a ELE in CNT.
+    void SetInsertPoint(CNT* container, ELE* element)
+    {
+        insertmode_ = InsertMode::front;
+        insertpoint_.container_ = container;
+        insertpoint_.index_ = container->IndexOf(element);
+    }
 
-    void InsertInstr(std::unique_ptr<Instr> instr);
-    Instr* GetLastInstr();
+    auto Container() { return insertpoint_.container_; }
+    auto InsertPoint()
+    {
+        return insertpoint_.container_->begin() +
+            insertpoint_.index_;
+    }
+
+    void Insert(std::unique_ptr<ELE> ele)
+    {
+        if (insertmode_ == InsertMode::begin)
+            insertpoint_.container_->Append(std::move(ele));
+        else if (insertmode_ == InsertMode::front)
+            insertpoint_.container_->Insert(
+                insertpoint_.index_, std::move(ele));
+        insertpoint_.index_++;
+    }
+
+    void Remove()
+    {
+        if (insertmode_ == InsertMode::begin)
+            insertpoint_.container_->Remove();
+        else if (insertmode_ == InsertMode::front)
+            insertpoint_.container_->Remove(insertpoint_.index_);
+        insertpoint_.index_--;
+    }
+
+
+protected:
+    auto CntBegin() { return insertpoint_.container_->begin(); }
+    auto CntEnd() { return insertpoint_.container_->end(); }
+
+private:
+    enum class InsertMode { begin, front };
+    InsertMode insertmode_{};
+    struct
+    {
+        CNT* container_{};
+        int index_{};
+    } insertpoint_;
+};
+
+
+class BlockBuilder : public IRBuilderBase<Function, BasicBlock>
+{
+public:
+    void InsertBasicBlock(const std::string&);
+    BasicBlock* GetBasicBlock(const std::string&);
+    BasicBlock* CurrentBlock() { return *InsertPoint(); }
+
+    void RemoveCurrentBlock();
+};
+
+
+class InstrBuilder : public IRBuilderBase<BasicBlock, Instr>
+{
+public:
+    Instr* LastInstr() { return *std::prev(InsertPoint()); }
 
     void InsertRetInstr();
     void InsertRetInstr(const IROperand* val);
@@ -129,8 +197,6 @@ public:
 private:
     void MatchArithmType(const IRType*, const IROperand*&);
     void MatchArithmType(const IROperand*&, const IROperand*&);
-
-    BasicBlock* insertpoint_{};
 };
 
 

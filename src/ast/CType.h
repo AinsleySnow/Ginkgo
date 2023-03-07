@@ -92,7 +92,7 @@ class CType
 {
 public:
     virtual std::unique_ptr<CPtrType> AttachPtr(const Ptr*) const = 0;
-    virtual const IRType* ToIRType(ITypePool*) const = 0;
+    virtual const IRType* ToIRType(MemPool<IRType>*) const = 0;
     virtual std::string ToString() const = 0;
 
     virtual bool Compatible(const CType* other) const = 0;
@@ -123,7 +123,7 @@ class ErrorType : public CType
 {
 public:
     std::unique_ptr<CPtrType> AttachPtr(const Ptr*) const override { return nullptr; };
-    const IRType* ToIRType(ITypePool*) const override { return nullptr; };
+    const IRType* ToIRType(MemPool<IRType>*) const override { return nullptr; };
     std::string ToString() const override { return "<error-type>"; }
 
     bool Compatible(const CType* other) { return false; };
@@ -136,7 +136,7 @@ public:
     CArithmType(TypeTag);
 
     std::unique_ptr<CPtrType> AttachPtr(const Ptr*) const override;
-    const IRType* ToIRType(ITypePool*) const override;
+    const IRType* ToIRType(MemPool<IRType>*) const override;
 
     bool Compatible(const CType*) const override;
 
@@ -169,7 +169,7 @@ public:
 
     std::unique_ptr<CPtrType> AttachPtr(const Ptr*) const override { return nullptr; }
     std::string ToString() const override { return ""; }
-    const FuncType* ToIRType(ITypePool*) const override;
+    const FuncType* ToIRType(MemPool<IRType>*) const override;
     bool Compatible(const CType*) const override { return false; }
 
     const CType* ReturnType() const { return return_.get(); }
@@ -199,7 +199,7 @@ public:
 
     std::string ToString() const override { return ""; }
     std::unique_ptr<CPtrType> AttachPtr(const Ptr*) const override { return nullptr; } 
-    const IRType* ToIRType(ITypePool*) const { return nullptr; }
+    const IRType* ToIRType(MemPool<IRType>*) const { return nullptr; }
     bool Compatible(const CType*) const { return false; }
 
     size_t Size() { return 8; }
@@ -222,7 +222,7 @@ class CVoidType : public CType
 {
 public:
     std::unique_ptr<CPtrType> AttachPtr(const Ptr*) const override { return nullptr; }
-    const VoidType* ToIRType(ITypePool*) const override;
+    const VoidType* ToIRType(MemPool<IRType>*) const override;
     std::string ToString() const override { return "void"; }
 
     bool IsVoid() const override { return true; }

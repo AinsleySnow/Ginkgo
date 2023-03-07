@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include "IR/IRType.h"
+#include "IR/MemPool.h"
 
 
 class IROperand
@@ -27,18 +28,6 @@ protected:
 };
 
 
-class IOperandPool
-{
-public:
-    virtual ~IOperandPool() {}
-    void AddIROperand(std::unique_ptr<IROperand>);
-    void MergeOpPool(IOperandPool*);
-
-private:
-    std::vector<std::unique_ptr<IROperand>> operands_{};
-};
-
-
 class Constant : public IROperand
 {
 public:
@@ -49,8 +38,8 @@ public:
 class IntConst : public Constant
 {
 public:
-    static IntConst* CreateIntConst(IOperandPool*, unsigned long);
-    static IntConst* CreateIntConst(IOperandPool*, unsigned long, const IntType*);
+    static IntConst* CreateIntConst(MemPool<IROperand>*, unsigned long);
+    static IntConst* CreateIntConst(MemPool<IROperand>*, unsigned long, const IntType*);
     IntConst(unsigned long ul, const IntType* t) :
         num_(ul), Constant(t) {}
 
@@ -68,8 +57,8 @@ private:
 class FloatConst : public Constant
 {
 public:
-    static FloatConst* CreateFloatConst(IOperandPool*, double);
-    static FloatConst* CreateFloatConst(IOperandPool*, double, const FloatType*);
+    static FloatConst* CreateFloatConst(MemPool<IROperand>*, double);
+    static FloatConst* CreateFloatConst(MemPool<IROperand>*, double, const FloatType*);
     FloatConst(double d, const FloatType* t) :
         num_(d), Constant(t) {}
 
@@ -87,7 +76,7 @@ private:
 class Register : public IROperand
 {
 public:
-    static Register* CreateRegister(IOperandPool*, const std::string&, const IRType*);
+    static Register* CreateRegister(MemPool<IROperand>*, const std::string&, const IRType*);
     Register(const std::string& n, const IRType* t) :
         name_(n), IROperand(t) {}
 

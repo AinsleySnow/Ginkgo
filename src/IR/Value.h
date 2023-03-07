@@ -2,6 +2,7 @@
 #define _VALUE_H_
 
 #include "IR/Instr.h"
+#include <algorithm>
 #include <memory>
 #include <string>
 #include <vector>
@@ -20,16 +21,14 @@ public:
     virtual ~Value() {}
     virtual std::string ToString() const { return ""; }
 
-    virtual Value* Parent() const { return parent_; }
     std::string Name() const { return name_; }
 
 protected:
-    Value* parent_{};
     std::string name_{};
 };
 
 
-class Module : public Value, public ITypePool
+class Module : public Value, public MemPool<IRType>
 {
 public:
     Module(const std::string& n) : Value(n) {}
@@ -50,7 +49,75 @@ private:
 };
 
 
-class Function : public Value
+template <class ELE>
+class Container
+{
+public:
+    class Iterator: public std::iterator<
+        std::random_access_iterator_tag, ELE*, ptrdiff_t,
+        std::unique_ptr<ELE>*,
+        std::unique_ptr<ELE>&>
+    {
+        using ptr = std::unique_ptr<ELE>;
+
+    public:
+        Iterator(ptr* p, size_t i = 0) : start_(p), index_(i) {}
+
+        Iterator& operator++() { index_++; return *this; }
+        Iterator operator++(int) { Iterator retval = *this; ++(*this); return retval; }
+        Iterator& operator--() { index_--; return *this; }
+        Iterator operator--(int) { Iterator retval = *this; --(*this); return retval; }
+
+        Iterator& operator+=(size_t off) { index_ += off; return *this; }
+        Iterator& operator-=(size_t off) { index_ -= off; return *this; }
+        Iterator operator+(size_t off) const { Iterator retval = *this; return retval += off; }
+        Iterator operator-(size_t off) const { Iterator retval = *this; return retval -= off; }
+
+        bool operator==(Iterator other) const
+        {
+            return start_ == other.start_ &&
+                index_ == other.index_;
+        }
+        bool operator!=(Iterator other) const { return !(*this == other); }
+
+        ELE* operator*() const { return start_[index_].get(); }
+
+    private:
+        ptr* start_{};
+        size_t index_{};
+    };
+
+    auto begin() { return Iterator(elements_.data()); }
+    auto end() { return Iterator(elements_.data(), elements_.size()); }
+
+    void Append(std::unique_ptr<ELE> ele)
+    {
+        elements_.push_back(std::move(ele));
+    }
+    void Insert(int i, std::unique_ptr<ELE> ele)
+    {
+        elements_.insert(elements_.begin() + i,
+            std::move(ele));
+    }
+    void Remove() { elements_.pop_back(); }
+    void Remove(int i) { elements_.erase(elements_.begin() + i); }
+    bool Empty() const { return elements_.empty(); }
+
+    ELE* At(int i) { return elements_[i].get(); }
+    int IndexOf(const ELE* ptr) const
+    {
+        auto pos = std::find_if(elements_.begin(), elements_.end(), 
+            [ptr] (auto ele) { return ptr == ele.get(); });
+        return pos == elements_.end() ? -1 : std::distance(elements_.begin(), pos);
+    }
+
+
+protected:
+    std::vector<std::unique_ptr<ELE>> elements_{};
+};
+
+
+class Function : public Value, public Container<BasicBlock>
 {
 public:
     static Function* CreateFunction(Module*, const FuncType*);
@@ -58,9 +125,7 @@ public:
         Value(n), functype_(f) {}
 
     std::string ToString() const override;
-    Module* Parent() const override { return static_cast<Module*>(parent_); }
 
-    void AddBasicBlock(std::unique_ptr<BasicBlock>);
     BasicBlock* GetBasicBlock(const std::string&);
     BasicBlock* GetBasicBlock(int);
     void AddIROperand(std::unique_ptr<IROperand>);
@@ -81,7 +146,6 @@ public:
 
 
 private:
-    std::vector<std::unique_ptr<BasicBlock>> blk_{};
     std::vector<std::unique_ptr<IROperand>> operands_{};
 
     bool inline_{}, noreturn_{};
@@ -100,7 +164,6 @@ public:
         Value(n), type_(t) {}
 
     std::string ToString() const override;
-    Module* Parent() const override { return static_cast<Module*>(parent_); }
 
     void SetBasicBlock(std::unique_ptr<BasicBlock>);
     BasicBlock* GetBasicBlock() { return blk_.get(); }
@@ -112,7 +175,7 @@ private:
 };
 
 
-class BasicBlock : public Value, public IOperandPool, public ITypePool
+class BasicBlock : public Value, public MemPool<IROperand>, public MemPool<IRType>, public Container<Instr>
 {
 public:
     static BasicBlock* CreateBasicBlock(Function*, const std::string&);
@@ -120,18 +183,11 @@ public:
     BasicBlock(const std::string& n) : Value(n) {}
 
     std::string ToString() const override;
-    Function* Parent() const override { return static_cast<Function*>(parent_); }
 
-    void AddInstr(std::unique_ptr<Instr> instr)
-    { instrs_.push_back(std::move(instr)); }
-    Instr* GetLastInstr() { return instrs_.back().get(); }
-    const Instr* GetLastInstr() const { return instrs_.back().get(); }
-    bool Empty() const { return instrs_.empty(); }
+    Instr* LastInstr() { return *std::prev(end()); }
+    const Instr* LastInstr() const { return LastInstr(); }
 
     void MergePools(BasicBlock*);
-
-private:
-    std::vector<std::unique_ptr<Instr>> instrs_{};
 };
 
 

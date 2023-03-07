@@ -69,10 +69,8 @@ private:
         Function* GetFunction() { return std::get<0>(env_); }
         GlobalVar* GetGlobalVar() { return std::get<1>(env_); }
 
-        BasicBlock* GetBasicBlock(const std::string&);
-        BasicBlock* GetBasicBlock();
-        Instr* GetLastInstr();
         std::string GetRegName() { return '%' + std::to_string(index_++); }
+        std::string GetLabelName() { return std::to_string(index_++); }
 
         void PushStmt(Statement* s) { brkcntn_.push(s); }
         void PopStmt() { brkcntn_.pop(); }
@@ -117,7 +115,8 @@ private:
     static void Merge(const std::list<BrInstr*>&, std::list<BrInstr*>&);
 
     ScopeStack scopestack_{};
-    IRBuilder builder_{};
+    InstrBuilder ibud_{};
+    BlockBuilder bbud_{};
     CurrentEnv env_{};
 
     std::unique_ptr<Module> transunit_{};

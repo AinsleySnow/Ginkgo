@@ -3,20 +3,7 @@
 #include <cfloat>
 
 
-void IOperandPool::AddIROperand(std::unique_ptr<IROperand> op)
-{
-    operands_.push_back(std::move(op));
-}
-
-void IOperandPool::MergeOpPool(IOperandPool* pool)
-{
-    operands_.insert(operands_.end(),
-        std::make_move_iterator(pool->operands_.begin()),
-        std::make_move_iterator(pool->operands_.end()));
-}
-
-
-IntConst* IntConst::CreateIntConst(IOperandPool* pool, unsigned long ul)
+IntConst* IntConst::CreateIntConst(MemPool<IROperand>* pool, unsigned long ul)
 {
     if (ul < UINT8_MAX)
         return CreateIntConst(pool, ul, IntType::GetInt8(false));
@@ -27,11 +14,11 @@ IntConst* IntConst::CreateIntConst(IOperandPool* pool, unsigned long ul)
     return CreateIntConst(pool, ul, IntType::GetInt64(false));
 }
 
-IntConst* IntConst::CreateIntConst(IOperandPool* pool, unsigned long ul, const IntType* t)
+IntConst* IntConst::CreateIntConst(MemPool<IROperand>* pool, unsigned long ul, const IntType* t)
 {
     auto intconst = std::make_unique<IntConst>(ul, t);
     auto raw = intconst.get();
-    pool->AddIROperand(std::move(intconst));
+    pool->Add(std::move(intconst));
     return raw;
 }
 
@@ -49,18 +36,18 @@ std::string IntConst::ToString() const
     else return type_->ToString() + ' ' + std::to_string(mask & num_);
 }
 
-FloatConst* FloatConst::CreateFloatConst(IOperandPool* pool, double d)
+FloatConst* FloatConst::CreateFloatConst(MemPool<IROperand>* pool, double d)
 {
     if (d < FLT_MAX)
         return CreateFloatConst(pool, d, FloatType::GetFloat32());
     return CreateFloatConst(pool, d, FloatType::GetFloat64());
 }
 
-FloatConst* FloatConst::CreateFloatConst(IOperandPool* pool, double d, const FloatType* t)
+FloatConst* FloatConst::CreateFloatConst(MemPool<IROperand>* pool, double d, const FloatType* t)
 {
     auto floatconst = std::make_unique<FloatConst>(d, t);
     auto raw = floatconst.get();
-    pool->AddIROperand(std::move(floatconst));
+    pool->Add(std::move(floatconst));
     return raw;
 }
 
@@ -73,11 +60,11 @@ std::string FloatConst::ToString() const
 }
 
 Register* Register::CreateRegister(
-    IOperandPool* pool, const std::string& name, const IRType* ty)
+    MemPool<IROperand>* pool, const std::string& name, const IRType* ty)
 {
     auto reg = std::make_unique<Register>(name, ty);
     auto raw = reg.get();
-    pool->AddIROperand(std::move(reg));
+    pool->Add(std::move(reg));
     return raw;
 }
 

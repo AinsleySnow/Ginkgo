@@ -1,6 +1,7 @@
 #ifndef _IR_TYPE_H_
 #define _IR_TYPE_H_
 
+#include "IR/MemPool.h"
 #include <memory>
 #include <string>
 #include <vector>
@@ -58,18 +59,6 @@ protected:
 };
 
 
-class ITypePool
-{
-public:
-    virtual ~ITypePool() {}
-    void AddIRType(std::unique_ptr<IRType>);
-    void MergeTypePool(ITypePool*);
-
-private:
-    std::vector<std::unique_ptr<IRType>> typelist_{};
-};
-
-
 class IntType : public IRType
 {
 public:
@@ -112,7 +101,7 @@ public:
 class ArrayType : public IRType
 {
 public:
-    static ArrayType* GetArrayType(ITypePool*, size_t, const IRType*);
+    static ArrayType* GetArrayType(MemPool<IRType>*, size_t, const IRType*);
     ArrayType(size_t s, const IRType* t) : type_(t) { size_ = s; }
 
     std::string ToString() const override;
@@ -127,7 +116,7 @@ private:
 class PtrType : public IntType
 {
 public:
-    static PtrType* GetPtrType(ITypePool*, const IRType*);
+    static PtrType* GetPtrType(MemPool<IRType>*, const IRType*);
     PtrType(const IRType* t) :
         IntType(8, false), type_(t) {}
 
@@ -146,7 +135,7 @@ private:
 class FuncType : public IRType
 {
 public:
-    static FuncType* GetFuncType(ITypePool*, const IRType*, bool);
+    static FuncType* GetFuncType(MemPool<IRType>*, const IRType*, bool);
     FuncType(const IRType* ret, bool v) : 
         retype_(std::move(ret)), variadic_(v) { size_ = -1; }
 
@@ -169,7 +158,7 @@ private:
 class StructType : public IRType
 {
 public:
-    static StructType* GetStructType(ITypePool*, const std::vector<const IRType*>&);
+    static StructType* GetStructType(MemPool<IRType>*, const std::vector<const IRType*>&);
     StructType(const std::vector<const IRType*>& f) : fields_(f) {}
 
     std::string ToString() const override;
@@ -184,7 +173,7 @@ private:
 class UnionType : public IRType
 {
 public:
-    static UnionType* GetUnionType(ITypePool*, const std::vector<const IRType*>&);
+    static UnionType* GetUnionType(MemPool<IRType>*, const std::vector<const IRType*>&);
     UnionType(const std::vector<const IRType*>& f) : fields_(f) {}
 
     std::string ToString() const override;
