@@ -61,20 +61,6 @@ const Register* IRGen::LoadAddr(Expr* expr)
     return static_cast<const Register*>(expr->Val());
 }
 
-void IRGen::InsertBrIfNoBranchAhead(BasicBlock* bb)
-{
-    if (ibud_.Container()->Empty() ||
-        ibud_.LastInstr()->IsControlInstr())
-        ibud_.InsertBrInstr(bb);
-}
-
-void IRGen::InsertBrIfNoBranchAhead(const IROperand* cond, BasicBlock* tbb, BasicBlock* fbb)
-{
-    if (ibud_.Container()->Empty() ||
-        ibud_.LastInstr()->IsControlInstr())
-        ibud_.InsertBrInstr(cond, tbb, fbb);
-}
-
 
 void IRGen::FillNullBlk(BrInstr* br, BasicBlock* blk)
 {
@@ -475,8 +461,8 @@ void IRGen::VisitCondExpr(CondExpr* cond)
             env_.GetRegName(), LoadVal(cond->cond_.get()),
             true, cond->true_->Val(), cond->false_->Val());
         // Remove unused basic blocks
-        bbud_.RemoveCurrentBlock();
-        bbud_.RemoveCurrentBlock();
+        bbud_.PopBack();
+        bbud_.PopBack();
         return;
     }
 
@@ -763,15 +749,10 @@ void IRGen::VisitDoWhileStmt(DoWhileStmt* stmt)
     stmt->stmt_->Accept(this);
 
     stmt->expr_->Accept(this);
-    auto cmpans = ibud_.InsertCmpInstr(
-        env_.GetRegName(),
-        Condition::ne, LoadVal(stmt->expr_.get()),
-        IntConst::CreateIntConst(ibud_.Container(), 0));
+    ibud_.InsertBrInstr(
+        LoadVal(stmt->expr_.get()), loopblk, nullptr);
 
-    ibud_.InsertBrInstr(cmpans, loopblk, nullptr);
-
-    stmt->nextlist_.push_back(
-        static_cast<BrInstr*>(ibud_.LastInstr()));
+    stmt->PushBrInstr(ibud_.LastInstr());
     Merge(stmt->stmt_->NextList(), stmt->nextlist_);
 
     env_.PopStmt();
@@ -824,6 +805,8 @@ void IRGen::VisitForStmt(ForStmt* stmt)
         if (!stmt->condition_->Empty())
             ibud_.InsertBrInstr(cmpblk);
         else ibud_.InsertBrInstr(loopblk);
+
+        bbud_.SetInsertPoint(incblk);
     }
 
     ibud_.SetInsertPoint(loopblk);
@@ -836,12 +819,20 @@ void IRGen::VisitForStmt(ForStmt* stmt)
     stmt->body_->Accept(this);
 
     if (stmt->increment_)
+    {
         ibud_.InsertBrInstr(incblk);
+        bbud_.SetInsertPoint(bbud_.InsertPoint() + 1);
+    }
     else if (!stmt->condition_->Empty())
         ibud_.InsertBrInstr(cmpblk);
     else ibud_.InsertBrInstr(loopblk);
 
     Merge(stmt->body_->NextList(), stmt->nextlist_);
+
+    auto endblk = bbud_.GetBasicBlock(env_.GetLabelName());
+    ibud_.SetInsertPoint(endblk);
+    Backpatch(stmt->NextList(), endblk);
+
     env_.PopStmt();
 }
 
@@ -856,38 +847,19 @@ void IRGen::VisitGotoStmt(GotoStmt* stmt)
 
 void IRGen::VisitIfStmt(IfStmt* stmt)
 {
-    BasicBlock* initblk = ibud_.Container();
     BasicBlock* trueblk = bbud_.GetBasicBlock(env_.GetLabelName());
     BasicBlock* falseblk = stmt->false_ ?
         bbud_.GetBasicBlock(env_.GetLabelName()) : nullptr;
 
     stmt->expr_->Accept(this);
-    if (stmt->expr_->IsConstant() && 
-        (initblk->Empty() || !initblk->LastInstr()->IsControlInstr()))
+    if (falseblk)
+        ibud_.InsertBrInstr(
+            LoadVal(stmt->expr_.get()), trueblk, falseblk);
+    else
     {
-        auto pconst = static_cast<const Constant*>(stmt->expr_->Val());
-        if (pconst->IsZero() && falseblk)
-            ibud_.InsertBrInstr(falseblk);
-        else if (pconst->IsZero() && !falseblk)
-        {
-            ibud_.InsertBrInstr(nullptr);
-            stmt->nextlist_.push_back(
-                static_cast<BrInstr*>(initblk->LastInstr()));
-        }
-        else if (!pconst->IsZero())
-            ibud_.InsertBrInstr(trueblk);
-    }
-    else if (!stmt->expr_->IsConstant())
-    {
-        auto cmpans = LoadVal(stmt->expr_.get());
-        if (stmt->false_)
-            ibud_.InsertBrInstr(cmpans, trueblk, falseblk);
-        else
-        {
-            ibud_.InsertBrInstr(cmpans, trueblk, nullptr);
-            stmt->nextlist_.push_back(
-                static_cast<BrInstr*>(initblk->LastInstr()));
-        }
+        ibud_.InsertBrInstr(
+            LoadVal(stmt->expr_.get()), trueblk, nullptr);
+        stmt->PushBrInstr(ibud_.LastInstr());
     }
 
     ibud_.SetInsertPoint(trueblk);
@@ -896,8 +868,7 @@ void IRGen::VisitIfStmt(IfStmt* stmt)
     if (trueblk->Empty() || !trueblk->LastInstr()->IsControlInstr())
     {
         ibud_.InsertBrInstr(nullptr);
-        stmt->nextlist_.push_back(
-            static_cast<BrInstr*>(trueblk->LastInstr()));
+        stmt->PushBrInstr(trueblk->LastInstr());
     }
 
     if (stmt->false_)
@@ -907,8 +878,7 @@ void IRGen::VisitIfStmt(IfStmt* stmt)
         if (falseblk->Empty() || !falseblk->LastInstr()->IsControlInstr())
         {
             ibud_.InsertBrInstr(nullptr);
-            stmt->nextlist_.push_back(
-                static_cast<BrInstr*>(falseblk->LastInstr()));
+            stmt->PushBrInstr(falseblk->LastInstr());
         }
     }
 
@@ -1004,14 +974,9 @@ void IRGen::VisitWhileStmt(WhileStmt* stmt)
     ibud_.SetInsertPoint(cmpblk);
 
     stmt->expr_->Accept(this);
-    auto cmpans = ibud_.InsertCmpInstr(
-        env_.GetRegName(),
-        Condition::ne, LoadVal(stmt->expr_.get()),
-        IntConst::CreateIntConst(ibud_.Container(), 0));
-
-    ibud_.InsertBrInstr(cmpans, loopblk, nullptr);
-    stmt->nextlist_.push_back(
-        static_cast<BrInstr*>(ibud_.LastInstr()));
+    ibud_.InsertBrInstr(
+        LoadVal(stmt->expr_.get()), loopblk, nullptr);
+    stmt->PushBrInstr(ibud_.LastInstr());
 
     ibud_.SetInsertPoint(loopblk);
     stmt->stmt_->Accept(this);

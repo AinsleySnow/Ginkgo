@@ -18,11 +18,24 @@ BasicBlock* BlockBuilder::GetBasicBlock(const std::string& name)
     return pbb;
 }
 
-void BlockBuilder::RemoveCurrentBlock()
+void BlockBuilder::PopBack()
 {
-    if (InsertPoint() != CntBegin())
+    if (InsertPoint() != Container()->begin())
         (*(InsertPoint() - 2))->MergePools(*(InsertPoint() - 1));
     Remove();
+}
+
+void BlockBuilder::RemoveBlk(BasicBlock* bb)
+{
+    auto index = Container()->IndexOf(bb);
+    if (Container()->Size() != 1)
+    {
+        if (index == Container()->Size() - 1) // end of function
+            Container()->At(index - 1)->MergePools(bb);
+        else Container()->At(index + 1)->MergePools(bb);
+    }
+
+    Remove(bb);
 }
 
 

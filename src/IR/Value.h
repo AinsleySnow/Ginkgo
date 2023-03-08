@@ -72,6 +72,8 @@ public:
         Iterator& operator-=(size_t off) { index_ -= off; return *this; }
         Iterator operator+(size_t off) const { Iterator retval = *this; return retval += off; }
         Iterator operator-(size_t off) const { Iterator retval = *this; return retval -= off; }
+        size_t operator+(Iterator other) const { return index_ + other.index_; }
+        size_t operator-(Iterator other) const { return index_ - other.index_; }
 
         bool operator==(Iterator other) const
         {
@@ -101,14 +103,18 @@ public:
     }
     void Remove() { elements_.pop_back(); }
     void Remove(int i) { elements_.erase(elements_.begin() + i); }
+
     bool Empty() const { return elements_.empty(); }
+    auto Size() const { return elements_.size(); }
 
     ELE* At(int i) { return elements_[i].get(); }
     int IndexOf(const ELE* ptr) const
     {
-        auto pos = std::find_if(elements_.begin(), elements_.end(), 
-            [ptr] (auto ele) { return ptr == ele.get(); });
-        return pos == elements_.end() ? -1 : std::distance(elements_.begin(), pos);
+        auto begin = std::make_move_iterator(elements_.begin());
+        auto end = std::make_move_iterator(elements_.end());
+        auto pos = std::find_if(begin, end,
+            [ptr] (const auto& ele) { return ptr == ele.get(); });
+        return pos == end ? -1 : std::distance(begin, pos);
     }
 
 
@@ -175,7 +181,8 @@ private:
 };
 
 
-class BasicBlock : public Value, public MemPool<IROperand>, public MemPool<IRType>, public Container<Instr>
+class BasicBlock : public Value, public Container<Instr>,
+                   public MemPool<IROperand>, public MemPool<IRType>
 {
 public:
     static BasicBlock* CreateBasicBlock(Function*, const std::string&);

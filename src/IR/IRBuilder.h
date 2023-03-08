@@ -15,12 +15,18 @@ public:
     IRBuilderBase(const IRBuilderBase&) = delete;
     IRBuilderBase(IRBuilderBase&&) = delete;
 
-    // Set the insert point to the start a CNT.
+    // Set the insert point to the end of a CNT.
     void SetInsertPoint(CNT* container)
     {
-        insertmode_ = InsertMode::begin;
+        insertmode_ = InsertMode::end;
         insertpoint_.container_ = container;
-        insertpoint_.index_ = 0;
+        insertpoint_.index_ = container->Size();
+    }
+    // Equivalent to SetInsertPoint(current_container, element).
+    void SetInsertPoint(ELE* element)
+    {
+        insertmode_ = InsertMode::front;
+        insertpoint_.index_ = insertpoint_.container_->IndexOf(element);
     }
     // Set the insert point to the front of a ELE in CNT.
     void SetInsertPoint(CNT* container, ELE* element)
@@ -28,6 +34,13 @@ public:
         insertmode_ = InsertMode::front;
         insertpoint_.container_ = container;
         insertpoint_.index_ = container->IndexOf(element);
+    }
+    // Set the insert point to a certain position.
+    // Suppose insertpoint_.container_ is already set.
+    void SetInsertPoint(typename CNT::Iterator iter)
+    {
+        insertmode_ = InsertMode::front;
+        insertpoint_.index_ = std::distance(insertpoint_.container_->begin(), iter);
     }
 
     auto Container() { return insertpoint_.container_; }
@@ -39,7 +52,7 @@ public:
 
     void Insert(std::unique_ptr<ELE> ele)
     {
-        if (insertmode_ == InsertMode::begin)
+        if (insertmode_ == InsertMode::end)
             insertpoint_.container_->Append(std::move(ele));
         else if (insertmode_ == InsertMode::front)
             insertpoint_.container_->Insert(
@@ -49,20 +62,32 @@ public:
 
     void Remove()
     {
-        if (insertmode_ == InsertMode::begin)
+        if (insertmode_ == InsertMode::end)
+        {
             insertpoint_.container_->Remove();
+            insertpoint_.index_--;
+        }
         else if (insertmode_ == InsertMode::front)
             insertpoint_.container_->Remove(insertpoint_.index_);
-        insertpoint_.index_--;
+    }
+
+    void Remove(ELE* ele)
+    {
+        auto index = insertpoint_.container_->IndexOf(ele);
+        insertpoint_.container_->Remove(index);
+        if (insertmode_ == InsertMode::end)
+            insertpoint_.index_--;
+        else if (insertmode_ == InsertMode::front &&
+            InsertPoint() == insertpoint_.container_->end())
+        {
+            insertpoint_.index_ = insertpoint_.container_->Size();
+            insertmode_ = InsertMode::end;
+        }
     }
 
 
-protected:
-    auto CntBegin() { return insertpoint_.container_->begin(); }
-    auto CntEnd() { return insertpoint_.container_->end(); }
-
 private:
-    enum class InsertMode { begin, front };
+    enum class InsertMode { end, front };
     InsertMode insertmode_{};
     struct
     {
@@ -77,9 +102,9 @@ class BlockBuilder : public IRBuilderBase<Function, BasicBlock>
 public:
     void InsertBasicBlock(const std::string&);
     BasicBlock* GetBasicBlock(const std::string&);
-    BasicBlock* CurrentBlock() { return *std::prev(InsertPoint()); }
 
-    void RemoveCurrentBlock();
+    void PopBack();
+    void RemoveBlk(BasicBlock*);
 };
 
 
