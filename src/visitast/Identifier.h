@@ -48,10 +48,14 @@ private:
 class Func : public Identifier
 {
 public:
-    Func(const std::string& n, const CFuncType* t) :
-        Identifier(Identifier::IdentType::func, n, t) {}
+    Func(const std::string& n, const CFuncType* t, const Register* addr) :
+        Identifier(Identifier::IdentType::func, n, t), addr_(addr) {}
 
     Func* ToFunc() override { return this; }
+    auto GetAddr() const { return addr_; }
+
+private:
+    const Register* addr_{};
 };
 
 

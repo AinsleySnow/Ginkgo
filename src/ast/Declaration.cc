@@ -2,6 +2,14 @@
 #include "visitast/Visitor.h"
 
 
+Declaration* Declaration::InnerMost()
+{
+    if (child_)
+        return child_->InnerMost();
+    return this;
+}
+
+
 void DeclSpec::Accept(Visitor* v)
 {
     v->VisitDeclSpec(this);
@@ -124,12 +132,6 @@ bool DeclSpec::SetRawSpec(Tag t)
     return true;
 }
 
-void DeclList::SetDeclSpec(std::shared_ptr<::DeclSpec> ds)
-{
-    for (auto& initdecl : decllist_)
-        initdecl->declarator_->SetDeclSpec(ds);
-}
-
 
 void ParamList::Accept(Visitor* v)
 {
@@ -160,6 +162,11 @@ void DeclList::Append(std::unique_ptr<InitDecl> decl)
 void ObjDef::Accept(Visitor* v)
 {
     v->VisitObjDef(this);
+}
+
+void PtrDef::Accept(Visitor* v)
+{
+    v->VisitPtrDef(this);
 }
 
 void FuncDef::Accept(Visitor* v)

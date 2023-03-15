@@ -91,7 +91,6 @@ class CPtrType;
 class CType
 {
 public:
-    virtual std::unique_ptr<CPtrType> AttachPtr(const Ptr*) const = 0;
     virtual const IRType* ToIRType(MemPool<IRType>*) const = 0;
     virtual std::string ToString() const = 0;
 
@@ -102,6 +101,7 @@ public:
     virtual bool IsInteger() const { return false; }
     virtual bool IsPtr() const { return false; }
     virtual bool IsVoid() const { return false; }
+    virtual bool IsFunc() const { return false; }
     virtual bool IsDerived() const { return false; }
     virtual bool IsComplete() const { return false; }
 
@@ -122,7 +122,6 @@ private:
 class ErrorType : public CType
 {
 public:
-    std::unique_ptr<CPtrType> AttachPtr(const Ptr*) const override { return nullptr; };
     const IRType* ToIRType(MemPool<IRType>*) const override { return nullptr; };
     std::string ToString() const override { return "<error-type>"; }
 
@@ -135,8 +134,8 @@ class CArithmType : public CType
 public:
     CArithmType(TypeTag);
 
-    std::unique_ptr<CPtrType> AttachPtr(const Ptr*) const override;
     const IRType* ToIRType(MemPool<IRType>*) const override;
+    std::string ToString() const override;
 
     bool Compatible(const CType*) const override;
 
@@ -151,9 +150,6 @@ public:
     bool operator>(const CArithmType&) const;
     bool operator<(const CArithmType&) const;
 
-    std::string ToString() const override;
-
-
 private:
     TypeTag type_{};
     uint64_t size_{};
@@ -167,15 +163,22 @@ public:
     CFuncType(std::unique_ptr<CType> ret, size_t paramcount) :
         return_(std::move(ret)) { paramlist_.reserve(paramcount); }
 
-    std::unique_ptr<CPtrType> AttachPtr(const Ptr*) const override { return nullptr; }
     std::string ToString() const override { return ""; }
     const FuncType* ToIRType(MemPool<IRType>*) const override;
+
+    bool IsFunc() const override { return true; }
     bool Compatible(const CType*) const override { return false; }
 
     const CType* ReturnType() const { return return_.get(); }
     auto& ReturnType() { return return_; }
+
     bool Variadic() const { return variadic_; }
     bool& Variadic() { return variadic_; }
+    bool Inline() const { return inline_; }
+    bool& Inline() { return inline_; }
+    bool Noreturn() const { return noreturn_; }
+    bool& Noreturn() { return noreturn_; }
+
     size_t ParaCount() const { return paramlist_.size(); }
 
     bool IsDerived() const override { return true; }
@@ -186,6 +189,8 @@ public:
 
 private:
     bool variadic_{};
+    bool inline_{};
+    bool noreturn_{};
     std::vector<const CType*> paramlist_{};
     std::unique_ptr<CType> return_{};
 };
@@ -197,9 +202,8 @@ public:
     CPtrType() {}
     CPtrType(std::unique_ptr<CType> p) : point2_(std::move(p)) {}
 
-    std::string ToString() const override { return ""; }
-    std::unique_ptr<CPtrType> AttachPtr(const Ptr*) const override { return nullptr; } 
-    const IRType* ToIRType(MemPool<IRType>*) const { return nullptr; }
+    std::string ToString() const override;
+    const IRType* ToIRType(MemPool<IRType>*) const override;
     bool Compatible(const CType*) const { return false; }
 
     size_t Size() { return 8; }
@@ -221,7 +225,6 @@ private:
 class CVoidType : public CType
 {
 public:
-    std::unique_ptr<CPtrType> AttachPtr(const Ptr*) const override { return nullptr; }
     const VoidType* ToIRType(MemPool<IRType>*) const override;
     std::string ToString() const override { return "void"; }
 

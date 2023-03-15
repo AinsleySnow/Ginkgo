@@ -59,6 +59,7 @@ std::string FloatConst::ToString() const
         return type_->ToString() + ' ' + std::to_string(num_);
 }
 
+
 Register* Register::CreateRegister(
     MemPool<IROperand>* pool, const std::string& name, const IRType* ty)
 {

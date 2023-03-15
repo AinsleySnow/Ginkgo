@@ -28,7 +28,9 @@ public:
     void VisitFuncDef(FuncDef*) override;
     void VisitObjDef(ObjDef*) override;
     void VisitParamList(ParamList*) override;
+    void VisitPtrDef(PtrDef*) override;
 
+    void VisitArrayExpr(ArrayExpr*) override;
     void VisitAssignExpr(AssignExpr*) override;
     void VisitBinaryExpr(BinaryExpr*) override;
     void VisitCallExpr(CallExpr*) override;
@@ -105,6 +107,8 @@ private:
     };
 
     const Register* AllocaObject(const CType*, const std::string&);
+    Function* AllocaFunc(const CFuncType*, const std::string&);
+
     const IROperand* LoadVal(Expr*);
     const Register* LoadAddr(Expr*);
 

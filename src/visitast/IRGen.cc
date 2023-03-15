@@ -31,6 +31,8 @@ const Register* IRGen::AllocaObject(const CType* raw, const std::string& name)
         auto reg = Register::CreateRegister(
             ibud_.Container(), regname,
             PtrType::GetPtrType(ibud_.Container(), ty));
+
+        var->Addr() = reg;
         scopestack_.Top().AddObject(name, raw, reg);
         return reg;
     }
@@ -42,6 +44,31 @@ const Register* IRGen::AllocaObject(const CType* raw, const std::string& name)
         return reg;
     }
 }
+
+Function* IRGen::AllocaFunc(const CFuncType* raw, const std::string& name)
+{
+    Function* pfunc = nullptr;
+    if (scopestack_.SearchFunc(name))
+        pfunc = transunit_->GetFunction('@' + name);
+    else
+    {
+        auto functy = raw->ToIRType(transunit_.get());
+        auto irname = '@' + name;
+
+        pfunc = transunit_->AddFunc(irname, functy);
+        pfunc->Inline() = raw->Inline();
+        pfunc->Noreturn() = raw->Noreturn();
+        pfunc->Addr() = Register::CreateRegister(
+            transunit_.get(), irname,
+            PtrType::GetPtrType(transunit_.get(),
+            PtrType::GetPtrType(transunit_.get(), functy)));
+
+        scopestack_.File().AddFunc(name, raw, pfunc->Addr());
+    }
+
+    return pfunc;
+}
+
 
 const IROperand* IRGen::LoadVal(Expr* expr)
 {
@@ -58,6 +85,8 @@ const Register* IRGen::LoadAddr(Expr* expr)
 {
     if (expr->IsIdentifier())
         return expr->ToIdentifier()->Addr();
+    // Either a pointer or an identifier?
+    // Yep, as long as wrong code can't reach to this point.
     return static_cast<const Register*>(expr->Val());
 }
 
@@ -106,20 +135,20 @@ void IRGen::VisitDeclList(DeclList* list)
     for (auto& initdecl : *list)
     {
         initdecl->declarator_->Accept(this);
-            
-        if (!dynamic_cast<FuncDef*>(initdecl->declarator_.get()))
+
+        if (!initdecl->declarator_->Child()->IsFuncDef())
         {
             initdecl->base_ = AllocaObject(
-            initdecl->declarator_->RawType(),
-            initdecl->declarator_->Name());
+                initdecl->declarator_->RawType(),
+                initdecl->declarator_->ToObjDef()->Name());
 
             if (initdecl->initalizer_)
             {
                 initdecl->initalizer_->Accept(this);
                 ibud_.InsertStoreInstr(
-                    initdecl->initalizer_->Val(),
+                    LoadVal(initdecl->initalizer_.get()),
                     initdecl->base_, false);
-            }   
+            }
         }
     }
 }
@@ -127,36 +156,48 @@ void IRGen::VisitDeclList(DeclList* list)
 
 void IRGen::VisitFuncDef(FuncDef* def)
 {
-    def->declspec_->Accept(this);
-    if (def->paramlist_)
-        def->paramlist_->Accept(this);
-
-    auto spec = def->GetDeclSpec();
-    const Ptr* ptr = def->GetRawPtr();
-
-    auto retcty = std::move(spec->Type());
-    if (ptr) retcty = retcty->AttachPtr(ptr);
-    def->return_ = std::move(retcty);
+    def->Child()->Accept(this);
+    def->paramlist_->Accept(this);
 
     auto funccty = std::make_unique<CFuncType>(
-        std::move(def->return_), def->GetParamList().size());
+        std::move(def->Child()->Type()),
+        def->GetParamList().size());
+
+    DeclSpec* declspec = def->Child()->InnerMost()->ToDeclSpec();
+
+    bool _inline = declspec->Func().IsInline();
+    bool _noreturn = declspec->Func().IsNoreturn();
+    funccty->Inline() = _inline;
+    funccty->Noreturn() = _noreturn;
+
     for (auto param : def->GetParamType())
         funccty->AddParam(std::move(param));
 
-    Function* pfunc = nullptr;
-    if (scopestack_.SearchFunc(def->Name()))
-        pfunc = transunit_->GetFunction('@' + def->Name());
-    else
-    {
-        scopestack_.File().AddFunc(def->Name(), funccty.get());
-        pfunc = transunit_->AddFunc(
-            '@' + def->Name(), funccty->ToIRType(transunit_.get()));
-        pfunc->Inline() = spec->Func().IsInline();
-        pfunc->Noreturn() = spec->Func().IsNoreturn();
-    }
+    def->Type() = std::move(funccty);
+}
 
-    if (!def->compound_)
+
+void IRGen::VisitObjDef(ObjDef* def)
+{
+    def->Child()->Accept(this);
+    def->Type() = std::move(def->Child()->Type());
+
+    if (!def->Child()->IsFuncDef())
         return;
+
+    Function* pfunc = AllocaFunc(
+        static_cast<const CFuncType*>(def->RawType()),
+        def->Name());
+
+    if (!def->compound_) 
+        return;
+
+    // a function with function body
+    // It seems weird to translate function body
+    // in a method called 'VisitObjDef', but...
+    // what if functions are regarded as first-class OBJECTS?
+    // (Well, the real reason I choose this structure
+    // is that it can greatly simplify the code)
 
     env_ = CurrentEnv(pfunc);
     bbud_.SetInsertPoint(pfunc);
@@ -172,7 +213,7 @@ void IRGen::VisitFuncDef(FuncDef* def)
             ibud_.InsertAllocaInstr(env_.GetRegName(), rety);
     }
 
-    for (auto& param : def->GetParamList())
+    for (auto& param : def->Child()->ToFuncDef()->GetParamList())
     {
         if (dynamic_cast<const CVoidType*>(param->RawType()))
             continue;
@@ -182,11 +223,13 @@ void IRGen::VisitFuncDef(FuncDef* def)
             ctype->ToIRType(ibud_.Container()));
 
         env_.GetFunction()->AddParam(paramreg);
-        if (!param->Name().empty())
+
+        if (param->IsObjDef())
         {
-            auto addr = AllocaObject(ctype, param->Name());
+            auto name = param->ToObjDef()->Name();
+            auto addr = AllocaObject(ctype, name);
             ibud_.InsertStoreInstr(paramreg, addr, false);
-        }
+        } 
     }
 
     def->compound_->Accept(this);
@@ -206,20 +249,6 @@ void IRGen::VisitFuncDef(FuncDef* def)
 }
 
 
-void IRGen::VisitObjDef(ObjDef* def)
-{
-    def->declspec_->Accept(this);
-
-    auto spec = def->GetDeclSpec();
-    const Ptr* ptr = def->GetRawPtr();
-
-    auto objcty = std::move(spec->type_);
-    if (ptr) objcty = objcty->AttachPtr(ptr);
-
-    def->type_ = std::move(objcty);
-}
-
-
 void IRGen::VisitParamList(ParamList* list)
 {
     for (auto& param : list->GetParamList())
@@ -227,6 +256,29 @@ void IRGen::VisitParamList(ParamList* list)
         param->Accept(this);
         list->AppendType(param->RawType());
     }
+}
+
+
+void IRGen::VisitPtrDef(PtrDef* def)
+{
+    def->Child()->Accept(this);
+    def->Type() = std::make_unique<CPtrType>(
+        std::move(def->Child()->Type()));
+    def->Type()->Qual() = def->qual_;
+}
+
+
+void IRGen::VisitArrayExpr(ArrayExpr* array)
+{
+    array->identifier_->Accept(this);
+    array->index_->Accept(this);
+
+    auto addr = static_cast<const Register*>(
+        LoadVal(array->identifier_.get()));
+    auto index = LoadVal(array->index_.get());
+
+    array->Val() = ibud_.InsertGetElePtrInstr(
+        env_.GetRegName(), addr, index);
 }
 
 
@@ -379,18 +431,26 @@ void IRGen::VisitCallExpr(CallExpr* call)
 
     if (call->postfix_->IsIdentifier())
     {
-        auto pfunc = transunit_->GetFunction(
-            '@' + call->postfix_->ToIdentifier()->name_);
-        const FuncType* functy = pfunc->Type();
+        auto name = call->postfix_->ToIdentifier()->name_;
+        auto func = scopestack_.File().GetFunc(name);
+
+        if (!func) goto pointercall;
+
+        auto functy = transunit_->GetFunction('@' + name)->Type();
         call->Val() = ibud_.InsertCallInstr(
-            env_.GetRegName(), functy, call->postfix_->ToIdentifier()->name_);
+            env_.GetRegName(), functy, '@' + name);
     }
     else // if a function is called through a pointer
     {
+pointercall:
         call->postfix_->Accept(this);
-        auto pfunc = static_cast<const Register*>(call->postfix_->Val());
-        auto func = ibud_.InsertLoadInstr(env_.GetRegName(), pfunc);
-        call->Val() = ibud_.InsertCallInstr(env_.GetRegName(), func);
+
+        const Register* pfunc = nullptr;
+        if (call->postfix_->IsIdentifier())
+            pfunc = static_cast<const Register*>(LoadVal(call->postfix_.get()));
+        else pfunc = call->postfix_->ToIdentifier()->Addr();
+
+        call->Val() = ibud_.InsertCallInstr(env_.GetRegName(), pfunc);
     }
 
     if (call->argvlist_)
@@ -514,7 +574,13 @@ void IRGen::VisitExprList(ExprList* list)
 void IRGen::VisitIdentExpr(IdentExpr* ident)
 {
     auto object = scopestack_.SearchObject(ident->name_);
-    ident->Addr() = object->GetAddr();
+    if (object)
+        ident->Addr() = object->GetAddr();
+    else
+    {
+        auto func = scopestack_.File().GetFunc(ident->name_);
+        ident->Addr() = func->GetAddr();
+    }
 }
 
 
@@ -626,12 +692,14 @@ void IRGen::VisitUnaryExpr(UnaryExpr* unary)
             unary->Val() = val;
         else unary->Val() = newval;
     }
-    else if (unary->op_ == Tag::_and || unary->op_ == Tag::plus)
+    else if (unary->op_ == Tag::plus)
         unary->Val() = LoadVal(unary->content_.get());
+    else if (unary->op_ == Tag::_and)
+        unary->Val() = LoadAddr(unary->content_.get());
     else if (unary->op_ == Tag::asterisk)
     {
-        auto addreg = static_cast<const Register*>(LoadVal(unary->content_.get()));
-        unary->Val() = ibud_.InsertLoadInstr(env_.GetRegName(), addreg);
+        auto addreg = LoadVal(unary->content_.get());
+        unary->Val() = addreg;
     }
     else if (unary->op_ == Tag::minus)
     {

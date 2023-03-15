@@ -37,12 +37,14 @@ GlobalVar* Module::AddGlobalVar(const std::string& name, const IRType* ptype)
 
 Function* Module::GetFunction(const std::string& name)
 {
-    return static_cast<Function*>(globalsym_[symindex_[name]].get());
+    int index = symindex_.at(name);
+    return static_cast<Function*>(globalsym_[index].get());
 }
 
 GlobalVar* Module::GetGlobalVar(const std::string& name)
 {
-    return static_cast<GlobalVar*>(globalsym_[symindex_[name]].get());
+    int index = symindex_.at(name);
+    return static_cast<GlobalVar*>(globalsym_[index].get());
 }
 
 

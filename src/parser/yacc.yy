@@ -66,7 +66,7 @@ constant initializer initializer_list
 %type <std::unique_ptr<TypeSpec>> type_specifier
 %type <Tag> type_qualifier storage_class_specifier function_specifier
 %type <std::unique_ptr<DeclSpec>> declaration_specifiers
-%type <std::unique_ptr<Ptr>> pointer
+%type <std::unique_ptr<PtrDef>> pointer
 %type <std::unique_ptr<Declaration>> declarator direct_declarator
 function_definition parameter_declaration type_name
 %type <std::unique_ptr<TransUnit>> translation_unit
@@ -145,7 +145,8 @@ generic_association
 postfix_expression
 	: primary_expression
     { $$ = std::move($1); }
-	| postfix_expression '[' expression ']' { $$ = nullptr; }
+	| postfix_expression '[' expression ']'
+    { $$ = std::make_unique<ArrayExpr>(std::move($1), std::move($3)); }
 	| postfix_expression '(' ')'
     { $$ = std::make_unique<CallExpr>(std::move($1)); }
 	| postfix_expression '(' argument_expression_list ')'
@@ -193,19 +194,7 @@ unary_expression
         $$ = std::make_unique<UnaryExpr>($1, std::move($2));
     }
 	| unary_operator cast_expression
-    {
-        if ($1 == Tag::_and || $1 == Tag::asterisk)
-        {
-            if (!$2->IsLVal())
-            {
-                Error(ErrorId::needlval);
-                YYERROR;
-            }
-            $$ = std::make_unique<UnaryExpr>($1, std::move($2));
-        }
-        else
-            $$ = std::make_unique<UnaryExpr>($1, std::move($2));
-    }
+    { $$ = std::make_unique<UnaryExpr>($1, std::move($2)); }
 	| SIZEOF unary_expression
     {
         if (!$2->Type()->IsComplete())
@@ -371,7 +360,9 @@ declaration
 	: declaration_specifiers ';' { $$ = nullptr; }
 	| declaration_specifiers init_declarator_list ';'
     {
-        $2->SetDeclSpec(std::move($1));
+        std::shared_ptr<DeclSpec> ds = std::move($1);
+        for (auto& initdecl : *$2)
+            initdecl->declarator_->InnerMost()->SetChild(ds);
         $$ = std::make_unique<DeclStmt>(std::move($2));
     }
 	| static_assert_declaration { $$ = nullptr; }
@@ -562,16 +553,17 @@ alignment_specifier
 declarator
 	: pointer direct_declarator
     {
-        $2->GetPtr() = std::move($1);
+        $2->InnerMost()->SetChild(std::move($1));
         $$ = std::move($2);
     }
-	| direct_declarator{ $$ = std::move($1); }
+	| direct_declarator { $$ = std::move($1); }
 	;
 
 direct_declarator
 	: IDENTIFIER
     { $$ = std::make_unique<ObjDef>($1); }
-	| '(' declarator ')' { $$ = nullptr; }
+	| '(' declarator ')'
+    { $$ = std::move($2); }
 	| direct_declarator '[' ']' { $$ = nullptr; }
 	| direct_declarator '[' '*' ']' { $$ = nullptr; }
 	| direct_declarator '[' STATIC type_qualifier_list assignment_expression ']' { $$ = nullptr; }
@@ -582,19 +574,29 @@ direct_declarator
 	| direct_declarator '[' type_qualifier_list ']' { $$ = nullptr; }
 	| direct_declarator '[' assignment_expression ']' { $$ = nullptr; }
 	| direct_declarator '(' parameter_type_list ')'
-    { $$ = std::make_unique<FuncDef>($1->Name(), std::move($3)); }
+    {
+        auto func = std::make_unique<FuncDef>(std::move($3));
+        $1->InnerMost()->SetChild(std::move(func));
+        $$ = std::move($1);
+    }
 	| direct_declarator '(' ')'
-    { $$ = std::make_unique<FuncDef>($1->Name()); }
-	| direct_declarator '(' identifier_list ')' { $$ = nullptr; }
+    {
+        $1->InnerMost()->SetChild(std::make_unique<FuncDef>());
+        $$ = std::move($1);
+    }
+	| direct_declarator '(' identifier_list ')'
+    { $$ = nullptr; }
 	;
 
 pointer
 	: '*' type_qualifier_list pointer
-	{ $$ = std::make_unique<Ptr>($2, std::move($3)); }
+	{ $$ = std::make_unique<PtrDef>($2, std::move($3)); }
 	| '*' type_qualifier_list
-	{ $$ = std::make_unique<Ptr>($2); }
-	| '*' pointer { $$ = std::make_unique<Ptr>(std::move($2)); }
-	| '*' { $$ = std::make_unique<Ptr>(); }
+	{ $$ = std::make_unique<PtrDef>($2); }
+	| '*' pointer
+    { $$ = std::make_unique<PtrDef>(std::move($2)); }
+	| '*'
+    { $$ = std::make_unique<PtrDef>(); }
 	;
 
 type_qualifier_list
@@ -626,13 +628,13 @@ parameter_list
 
 parameter_declaration
 	: declaration_specifiers declarator
-    { $2->SetDeclSpec(std::move($1)); $$ = std::move($2); }
+    {
+        $2->InnerMost()->SetChild(std::move($1));
+        $$ = std::move($2);
+    }
 	| declaration_specifiers abstract_declarator
 	| declaration_specifiers
-    { 
-        $$ = std::make_unique<ObjDef>();
-        $$->SetDeclSpec(std::move($1));
-    }
+    { $$ = std::move($1); }
 	;
 
 identifier_list
@@ -707,12 +709,12 @@ static_assert_declaration
 	;
 
 statement
-	: labeled_statement{ $$ = std::move($1); }
-	| compound_statement{ $$ = std::move($1); }
-	| expression_statement{ $$ = std::move($1); }
-	| selection_statement{ $$ = std::move($1); }
-	| iteration_statement{ $$ = std::move($1); }
-	| jump_statement{ $$ = std::move($1); }
+	: labeled_statement     { $$ = std::move($1); }
+	| compound_statement    { $$ = std::move($1); }
+	| expression_statement  { $$ = std::move($1); }
+	| selection_statement   { $$ = std::move($1); }
+	| iteration_statement   { $$ = std::move($1); }
+	| jump_statement        { $$ = std::move($1); }
 	;
 
 labeled_statement
@@ -807,9 +809,8 @@ function_definition
 	: declaration_specifiers declarator declaration_list compound_statement { $$ = nullptr; }
 	| declaration_specifiers declarator compound_statement
     {
-        $2->SetDeclSpec(std::move($1));
-        auto funcdef = static_cast<FuncDef*>($2.get());
-        funcdef->SetCompound(std::move($3));
+        $2->InnerMost()->SetChild(std::move($1));
+        $2->ToObjDef()->SetCompound(std::move($3));
         $$ = std::move($2);
     }
 	;

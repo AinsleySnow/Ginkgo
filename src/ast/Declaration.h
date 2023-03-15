@@ -9,24 +9,11 @@
 #include <string>
 #include <vector>
 
+class DeclSpec;
+class ObjDef;
+class FuncDef;
 class Register;
 class Visitor;
-
-
-class Ptr
-{
-public:
-    Ptr() {}
-    Ptr(QualType q, std::unique_ptr<Ptr> p) :
-        qual_(q), point2_(std::move(p)) {}
-    Ptr(QualType q) : qual_(q) {}
-    Ptr(std::unique_ptr<Ptr> p) : point2_(std::move(p)) {}
-
-private:
-    friend std::unique_ptr<CPtrType> CArithmType::AttachPtr(const Ptr*) const;
-    QualType qual_{};
-    std::unique_ptr<Ptr> point2_{};
-};
 
 
 class TypeSpec
@@ -57,18 +44,49 @@ class TypedefSpec : public TypeSpec
 };
 
 
-class DeclSpec
+class Declaration
 {
 public:
-    void Accept(Visitor* v);
+    virtual void Accept(Visitor*) {}
+
+    auto& Type() { return type_; }
+    const CType* RawType() const { return type_.get(); }
+
+    virtual bool IsDeclSpec() const { return false; }
+    virtual bool IsObjDef() const { return false; }
+    virtual bool IsFuncDef() const { return false; }
+    virtual DeclSpec* ToDeclSpec() { return nullptr; }
+    virtual ObjDef* ToObjDef() { return nullptr; }
+    virtual FuncDef* ToFuncDef() { return nullptr; }
+    virtual const DeclSpec* ToDeclSpec() const { return nullptr; }
+    virtual const ObjDef* ToObjDef() const { return nullptr; }
+    virtual const FuncDef* ToFuncDef() const { return nullptr; }
+
+    Declaration* Child() { return child_.get(); }
+    const Declaration* Child() const { return child_.get(); }
+    void SetChild(std::shared_ptr<Declaration> chd) { child_ = chd; }
+
+    Declaration* InnerMost();
+
+protected:
+    std::shared_ptr<Declaration> child_{};
+    std::unique_ptr<CType> type_{};
+};
+
+
+class DeclSpec : public Declaration
+{
+public:
+    void Accept(Visitor* v) override;
+
+    bool IsDeclSpec() const override { return true; }
+    DeclSpec* ToDeclSpec() override { return this; }
+    const DeclSpec* ToDeclSpec() const override { return this; }
 
     void SetStorage(Tag t) { storagelist_.push_back(t); }
     void SetQual(Tag t) { quallist_.push_back(t); }
     void SetFuncSpec(Tag t) { funcspeclist_.push_back(t); }
     void AddTypeSpec(std::unique_ptr<::TypeSpec> ts);
-
-    auto& Type() { return type_; }
-    const CType* Type() const { return type_.get(); }
 
     TypeTag TypeSpec();
     QualType Qual();
@@ -81,39 +99,10 @@ private:
 
     unsigned rawspec_{};
 
-    std::unique_ptr<CType> type_{};
     std::list<std::unique_ptr<::TypeSpec>> speclist_{};
     std::list<Tag> storagelist_{};
     std::list<Tag> quallist_{};
     std::list<Tag> funcspeclist_{};
-};
-
-
-class Declaration
-{
-public:
-    Declaration() {}
-    Declaration(const std::string& n) : name_(n) {}
-
-    virtual void Accept(Visitor*) {}
-
-    std::string Name() const { return name_; }
-
-    auto& Type() { return type_; }
-    const CType* RawType() const { return type_.get(); }
-
-    const Ptr* GetRawPtr() const { return ptr_.get(); }
-    auto& GetPtr() { return ptr_; }
-
-    DeclSpec* GetDeclSpec() const { return declspec_.get(); }
-    virtual void SetDeclSpec(std::shared_ptr<::DeclSpec> ds)
-    { declspec_ = std::move(ds); }
-
-protected:
-    std::shared_ptr<DeclSpec> declspec_{};
-    std::unique_ptr<Ptr> ptr_{};
-    std::unique_ptr<CType> type_{};
-    std::string name_{};
 };
 
 
@@ -155,8 +144,6 @@ public:
     auto begin() { return decllist_.begin(); }
     auto end() { return decllist_.end(); }
 
-    void SetDeclSpec(std::shared_ptr<::DeclSpec>) override;
-
 private:
     std::vector<std::unique_ptr<InitDecl>> decllist_{};
 };
@@ -166,34 +153,59 @@ class ObjDef : public Declaration
 {
 public:
     ObjDef() {}
-    ObjDef(const std::string& n) : Declaration(n) {}
+    ObjDef(const std::string& n) : name_(n) {}
 
     void Accept(Visitor* v);
 
+    bool IsObjDef() const override { return true; }
+    ObjDef* ToObjDef() override { return this; }
+    const ObjDef* ToObjDef() const override { return this; }
+
+    std::string Name() { return name_; }
+    void SetCompound(std::unique_ptr<CompoundStmt> c) { compound_ = std::move(c); }
+
+private:
     friend class IRGen;
+    std::string name_{};
+    std::unique_ptr<CompoundStmt> compound_{};
+};
+
+
+class PtrDef : public Declaration
+{
+public:
+    PtrDef() {}
+    PtrDef(QualType q, std::shared_ptr<Declaration> p) :
+        qual_(q) { child_ = p; }
+    PtrDef(QualType q) : qual_(q) {}
+    PtrDef(std::shared_ptr<Declaration> p) { child_ = p; }
+
+    void Accept(Visitor*) override;
+
+private:
+    friend class IRGen;
+    QualType qual_{};
 };
 
 
 class FuncDef : public Declaration
 {
 public:
-    FuncDef(const std::string& n) :
-        Declaration(n), paramlist_(std::make_unique<ParamList>()) {}
-    FuncDef(const std::string& n, std::unique_ptr<ParamList> p) :
-        Declaration(n), paramlist_(std::move(p)) {}
+    FuncDef() : paramlist_(std::make_unique<ParamList>()) {}
+    FuncDef(std::unique_ptr<ParamList> p) : paramlist_(std::move(p)) {}
 
     void Accept(Visitor* v);
+
+    bool IsFuncDef() const override { return true; }
+    FuncDef* ToFuncDef() override { return this; }
+    const FuncDef* ToFuncDef() const override { return this; }
 
     const auto& GetParamList() { return paramlist_->GetParamList(); }
     const auto& GetParamType() { return paramlist_->GetParamType(); }
 
-    void SetCompound(std::unique_ptr<CompoundStmt> c) { compound_ = std::move(c); }
-
 private:
     friend class IRGen;
     std::unique_ptr<ParamList> paramlist_{};
-    std::unique_ptr<CType> return_{};
-    std::unique_ptr<CompoundStmt> compound_{};
 };
 
 

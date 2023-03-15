@@ -109,7 +109,7 @@ public:
     CallInstr(const std::string& result, const FuncType* proto, const std::string& name) :
         Instr(InstrType::call), proto_(proto), func_(name) {}
     CallInstr(const std::string& result, const Register* addr) :
-        Instr(InstrType::call), proto_(addr->Type()->ToFunction()), funcaddr_(addr) {}
+        Instr(InstrType::call), funcaddr_(addr) {}
 
     std::string ToString() const override;
 
@@ -414,7 +414,7 @@ private:
 class ExtractValInstr : public Instr
 {
 public:
-    ExtractValInstr(const std::string& r, const Register* p, int i) :
+    ExtractValInstr(const std::string& r, const Register* p, const IROperand* i) :
         Instr(InstrType::exval), result_(r), pointer_(p), index_(i) {}
 
     std::string ToString() const override;
@@ -422,14 +422,14 @@ public:
 private:
     std::string result_{};
     const Register* pointer_{};
-    int index_{};
+    const IROperand* index_{};
 };
 
 
 class SetValInstr : public Instr
 {
 public:
-    SetValInstr(const IROperand* nv, const Register* p, int i) :
+    SetValInstr(const IROperand* nv, const Register* p, const IROperand* i) :
         Instr(InstrType::setval), newval_(nv), pointer_(p), index_(i) {}
 
     std::string ToString() const override;
@@ -437,14 +437,14 @@ public:
 private:
     const IROperand* newval_{};
     const Register* pointer_{};
-    int index_{};
+    const IROperand* index_{};
 };
 
 
 class GetElePtrInstr : public Instr
 {
 public:
-    GetElePtrInstr(const std::string& r, const Register* p, int i) :
+    GetElePtrInstr(const std::string& r, const Register* p, const IROperand* i) :
         Instr(InstrType::geteleptr), result_(r), pointer_(p), index_(i) {}
 
     std::string ToString() const override;
@@ -452,7 +452,7 @@ public:
 private:
     std::string result_{};
     const Register* pointer_{};
-    int index_{};
+    const IROperand* index_{};
 };
 
 

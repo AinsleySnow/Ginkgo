@@ -174,11 +174,11 @@ public:
     void InsertStoreInstr(const IROperand* val, const Register* ptr, bool vol);
     
     const Register* InsertExtractValInstr(
-        const std::string& result, const Register* val, int index);
+        const std::string& result, const Register* val, const IROperand* index);
     void InsertSetValInstr(
-        const IROperand* newval, const Register* val, int index);
+        const IROperand* newval, const Register* val, const IROperand* index);
     const Register* InsertGetElePtrInstr(
-        const std::string& result, const Register* val, int index);
+        const std::string& result, const Register* val, const IROperand* index);
 
 
     const Register* InsertTruncInstr(

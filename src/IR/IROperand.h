@@ -73,6 +73,7 @@ private:
     double num_{};
 };
 
+
 class Register : public IROperand
 {
 public:

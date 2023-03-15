@@ -8,6 +8,11 @@
 #include <cfloat>
 
 
+void ArrayExpr::Accept(Visitor* v)
+{
+    v->VisitArrayExpr(this);
+}
+
 void AssignExpr::Accept(Visitor* v)
 {
     v->VisitAssignExpr(this);

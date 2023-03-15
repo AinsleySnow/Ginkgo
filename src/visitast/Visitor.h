@@ -7,7 +7,9 @@ class DeclSpec;
 class FuncDef;
 class ObjDef;
 class ParamList;
+class PtrDef;
 
+class ArrayExpr;
 class AssignExpr;
 class BinaryExpr;
 class CallExpr;
@@ -47,7 +49,9 @@ public:
     virtual void VisitFuncDef(FuncDef*) {}
     virtual void VisitObjDef(ObjDef*) {}
     virtual void VisitParamList(ParamList*) {}
+    virtual void VisitPtrDef(PtrDef*) {}
 
+    virtual void VisitArrayExpr(ArrayExpr*) {}
     virtual void VisitAssignExpr(AssignExpr*) {}
     virtual void VisitBinaryExpr(BinaryExpr*) {}
     virtual void VisitCallExpr(CallExpr*) {}

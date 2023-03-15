@@ -10,6 +10,21 @@
 class Visitor;
 
 
+class ArrayExpr : public Expr
+{
+public:
+    ArrayExpr(std::unique_ptr<Expr> ident, std::unique_ptr<Expr> index) :
+        identifier_(std::move(ident)), index_(std::move(index)) {}
+
+    void Accept(Visitor* v) override;
+
+private:
+    friend class IRGen;
+    std::unique_ptr<Expr> identifier_{};
+    std::unique_ptr<Expr> index_{};
+};
+
+
 class AssignExpr : public Expr
 {
 public:

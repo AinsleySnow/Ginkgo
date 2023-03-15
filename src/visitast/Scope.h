@@ -27,7 +27,7 @@ public:
     const Member* GetMember(const std::string&) const;
 
     void AddObject(const std::string&, const CType*, const Register*);
-    void AddFunc(const std::string&, const CFuncType*);
+    void AddFunc(const std::string&, const CFuncType*, const Register*);
     void AddLabel(const std::string&);
     void AddTypedef(const std::string&, const CType*);
     void AddMember(const std::string&, const CType*);

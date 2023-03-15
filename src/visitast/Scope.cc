@@ -49,9 +49,9 @@ void Scope::AddObject(
     identmap_.emplace(name, std::move(object));
 }
 
-void Scope::AddFunc(const std::string& name, const CFuncType* functy)
+void Scope::AddFunc(const std::string& name, const CFuncType* functy, const Register* addr)
 {
-    auto func = std::make_unique<Func>(name, functy);
+    auto func = std::make_unique<Func>(name, functy, addr);
     identmap_.emplace(name, std::move(func));
 }
 

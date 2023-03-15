@@ -28,7 +28,7 @@ protected:
 };
 
 
-class Module : public Value, public MemPool<IRType>
+class Module : public Value, public MemPool<IRType>, public MemPool<IROperand>
 {
 public:
     Module(const std::string& n) : Value(n) {}
@@ -132,6 +132,9 @@ public:
 
     std::string ToString() const override;
 
+    auto& Addr() { return addr_; }
+    const auto Addr() const { return addr_; }
+
     BasicBlock* GetBasicBlock(const std::string&);
     BasicBlock* GetBasicBlock(int);
     void AddIROperand(std::unique_ptr<IROperand>);
@@ -152,6 +155,8 @@ public:
 
 
 private:
+    const Register* addr_{};
+
     std::vector<std::unique_ptr<IROperand>> operands_{};
 
     bool inline_{}, noreturn_{};
@@ -171,12 +176,16 @@ public:
 
     std::string ToString() const override;
 
+    auto& Addr() { return addr_; }
+    const auto Addr() const { return addr_; }
+
     void SetBasicBlock(std::unique_ptr<BasicBlock>);
     BasicBlock* GetBasicBlock() { return blk_.get(); }
 
 
 private:
     const IRType* type_{};
+    const Register* addr_{};
     std::unique_ptr<BasicBlock> blk_{};
 };
 

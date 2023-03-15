@@ -44,6 +44,7 @@ public:
     virtual bool IsFloat() const { return false; }
     virtual bool IsPtr() const { return false; }
     virtual bool IsVoid() const { return false; }
+    virtual bool IsFunc() const { return false; }
     virtual bool IsAggerate() const { return false; }
 
     size_t Size() const { return size_; }
@@ -138,6 +139,8 @@ public:
     static FuncType* GetFuncType(MemPool<IRType>*, const IRType*, bool);
     FuncType(const IRType* ret, bool v) : 
         retype_(std::move(ret)), variadic_(v) { size_ = -1; }
+
+    bool IsFunc() const override { return true; }
 
     auto ReturnType() const { return retype_; }
     const auto& ParamType() const { return param_; }

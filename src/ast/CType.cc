@@ -74,7 +74,7 @@ CArithmType::CArithmType(TypeTag tt) : type_(tt)
     }
 }
 
-std::unique_ptr<CPtrType> CArithmType::AttachPtr(const Ptr* ptr) const
+/*std::unique_ptr<CPtrType> CArithmType::AttachPtr(const Ptr* ptr) const
 {
     auto current = ptr->point2_.get();
     auto ptrtype = std::make_unique<CPtrType>();
@@ -93,7 +93,7 @@ std::unique_ptr<CPtrType> CArithmType::AttachPtr(const Ptr* ptr) const
 
     (*ptrcur)->Point2() = std::make_unique<CArithmType>(*this);
     return ptrtype;
-}
+}*/
 
 const IRType* CArithmType::ToIRType(MemPool<IRType>*) const
 {
@@ -185,6 +185,18 @@ const FuncType* CFuncType::ToIRType(MemPool<IRType>* pool) const
         if (!param->IsVoid())
             functy->AddParam(param->ToIRType(pool));
     return functy;
+}
+
+
+std::string CPtrType::ToString() const
+{
+
+}
+
+const IRType* CPtrType::ToIRType(MemPool<IRType>* pool) const
+{
+    auto point2 = point2_->ToIRType(pool);
+    return PtrType::GetPtrType(pool, point2);
 }
 
 

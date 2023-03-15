@@ -158,7 +158,10 @@ const Register* InstrBuilder::InsertCallInstr(
 const Register* InstrBuilder::InsertCallInstr(
     const std::string& result, const Register* func)
 {
-    auto rety = func->Type()->ToFunction()->ReturnType();
+    // func->Type() must be a pointer in this situation.
+    auto rety = func->Type()->ToPointer()->
+        Point2()->ToFunction()->ReturnType();
+
     auto pcall = std::make_unique<CallInstr>(result, func);
     Insert(std::move(pcall));
     return Register::CreateRegister(Container(), result, rety);
@@ -360,7 +363,7 @@ void InstrBuilder::InsertStoreInstr(const IROperand* val, const Register* ptr, b
 
 
 const Register* InstrBuilder::InsertExtractValInstr(
-    const std::string& result, const Register* val, int index)
+    const std::string& result, const Register* val, const IROperand* index)
 {
     auto pexval = std::make_unique<ExtractValInstr>(result, val, index);
     Insert(std::move(pexval));
@@ -369,14 +372,14 @@ const Register* InstrBuilder::InsertExtractValInstr(
 }
 
 void InstrBuilder::InsertSetValInstr(
-    const IROperand* newval, const Register* val, int index)
+    const IROperand* newval, const Register* val, const IROperand* index)
 {
     auto psetval = std::make_unique<SetValInstr>(newval, val, index);
     Insert(std::move(psetval));
 }
 
 const Register* InstrBuilder::InsertGetElePtrInstr(
-    const std::string& result, const Register* val, int index)
+    const std::string& result, const Register* val, const IROperand* index)
 {
     auto pgeteleptr = std::make_unique<GetElePtrInstr>(result, val, index);
     Insert(std::move(pgeteleptr));
