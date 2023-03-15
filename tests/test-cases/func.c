@@ -6,6 +6,7 @@ int many_int_argv(int, int, int, int, int, int, int, int, int, int, int, int, in
 float many_float_argv(float, float, float, float, float, float, float, float, float, float, float, float, float, float);
 void _void(void);
 void _void2();
+int _void3();
 
 inline int add_up(int a, int b, int c)
 {
@@ -62,4 +63,9 @@ void _void(void)
 void _void2(void)
 {
     ;;;
+}
+
+int _void3()
+{
+    return 0;
 }
