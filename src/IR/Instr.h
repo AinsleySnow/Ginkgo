@@ -107,9 +107,9 @@ class CallInstr : public Instr
 {
 public:
     CallInstr(const std::string& result, const FuncType* proto, const std::string& name) :
-        Instr(InstrType::call), proto_(proto), func_(name) {}
+        Instr(InstrType::call), result_(result), proto_(proto), func_(name) {}
     CallInstr(const std::string& result, const Register* addr) :
-        Instr(InstrType::call), funcaddr_(addr) {}
+        Instr(InstrType::call), result_(result), funcaddr_(addr) {}
 
     std::string ToString() const override;
 

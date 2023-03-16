@@ -194,6 +194,8 @@ public:
     static const VoidType* GetVoidType();
 
     std::string ToString() const override { return "void"; }
+    bool IsVoid() const override { return true; }
+
     VoidType* ToVoid() override { return this; }
     const VoidType* ToVoid() const override { return this; }
 };

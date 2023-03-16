@@ -152,7 +152,8 @@ const Register* InstrBuilder::InsertCallInstr(
 {
     auto pcall = std::make_unique<CallInstr>(result, proto, func);
     Insert(std::move(pcall));
-    return Register::CreateRegister((Container()), result, proto->ReturnType());
+    return result.empty() ?
+        nullptr : Register::CreateRegister((Container()), result, proto->ReturnType());
 }
 
 const Register* InstrBuilder::InsertCallInstr(
@@ -164,7 +165,8 @@ const Register* InstrBuilder::InsertCallInstr(
 
     auto pcall = std::make_unique<CallInstr>(result, func);
     Insert(std::move(pcall));
-    return Register::CreateRegister(Container(), result, rety);
+    return result.empty() ?
+        nullptr : Register::CreateRegister(Container(), result, rety);
 }
 
 

@@ -437,8 +437,9 @@ void IRGen::VisitCallExpr(CallExpr* call)
         if (!func) goto pointercall;
 
         auto functy = transunit_->GetFunction('@' + name)->Type();
+        bool isvoid = functy->ReturnType()->IsVoid();
         call->Val() = ibud_.InsertCallInstr(
-            env_.GetRegName(), functy, '@' + name);
+            isvoid ? "" : env_.GetRegName(), functy, '@' + name);
     }
     else // if a function is called through a pointer
     {
@@ -450,7 +451,9 @@ pointercall:
             pfunc = static_cast<const Register*>(LoadVal(call->postfix_.get()));
         else pfunc = call->postfix_->ToIdentifier()->Addr();
 
-        call->Val() = ibud_.InsertCallInstr(env_.GetRegName(), pfunc);
+        bool isvoid = pfunc->Type()->ToPointer()->Point2()->ToFunction()->ReturnType()->IsVoid();
+        call->Val() = ibud_.InsertCallInstr(
+            isvoid ? "" : env_.GetRegName(), pfunc);
     }
 
     if (call->argvlist_)

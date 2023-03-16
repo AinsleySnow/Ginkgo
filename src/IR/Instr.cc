@@ -42,7 +42,8 @@ std::string CallInstr::ToString() const
             call += (*arg)->ToString() + ", ";
         call += arglist_.back()->ToString();
     }
-    return call + ')';
+    return result_.empty() ?
+        call + ')' : result_ + " = " + call + ')';
 }
 
 
