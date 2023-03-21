@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+class IntConst;
 class IntType;
 class FloatType;
 class FuncType;
@@ -43,9 +44,9 @@ public:
     virtual bool IsInt() const { return false; }
     virtual bool IsFloat() const { return false; }
     virtual bool IsPtr() const { return false; }
+    virtual bool IsArray() const { return false; }
     virtual bool IsVoid() const { return false; }
     virtual bool IsFunc() const { return false; }
-    virtual bool IsAggerate() const { return false; }
 
     size_t Size() const { return size_; }
     size_t Align() const { return align_; }
@@ -103,15 +104,28 @@ class ArrayType : public IRType
 {
 public:
     static ArrayType* GetArrayType(MemPool<IRType>*, size_t, const IRType*);
-    ArrayType(size_t s, const IRType* t) : type_(t) { size_ = s; }
+    ArrayType(size_t, const IRType*);
 
     std::string ToString() const override;
     ArrayType* ToArray() override { return this; }
     const ArrayType* ToArray() const override { return this; }
 
+    bool IsArray() const override { return true; }
+
+    auto ArrayOf() const { return type_; }
+    size_t Count() const { return count_; }
+    size_t& Count() { return count_; }
+    bool VarlableLen() const { return variable_; }
+    bool& VariableLen() { return variable_; }
+    bool Static() const { return static_; }
+    bool& Static() { return static_; }
 
 private:
     const IRType* type_{};
+
+    size_t count_{};
+    bool variable_{};
+    bool static_{};
 };
 
 class PtrType : public IntType
@@ -120,6 +134,8 @@ public:
     static PtrType* GetPtrType(MemPool<IRType>*, const IRType*);
     PtrType(const IRType* t) :
         IntType(8, false), type_(t) {}
+
+    bool IsPtr() const override { return true; }
 
     std::string ToString() const override;
     PtrType* ToPointer() override { return this; }

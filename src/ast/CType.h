@@ -7,8 +7,6 @@
 #include <string>
 #include <vector>
 
-class Ptr;
-
 
 enum class QualTag
 {
@@ -100,9 +98,9 @@ public:
     virtual bool IsFloat() const { return false; }
     virtual bool IsInteger() const { return false; }
     virtual bool IsPtr() const { return false; }
+    virtual bool IsArray() const { return false; }
     virtual bool IsVoid() const { return false; }
     virtual bool IsFunc() const { return false; }
-    virtual bool IsDerived() const { return false; }
     virtual bool IsComplete() const { return false; }
 
     QualType Qual() const { return qual_; }
@@ -181,7 +179,6 @@ public:
 
     size_t ParaCount() const { return paramlist_.size(); }
 
-    bool IsDerived() const override { return true; }
     bool IsComplete() const override { return true; }
 
     void AddParam(const CType* t);
@@ -203,14 +200,13 @@ public:
     CPtrType(std::unique_ptr<CType> p) : point2_(std::move(p)) {}
 
     std::string ToString() const override;
-    const IRType* ToIRType(MemPool<IRType>*) const override;
+    const PtrType* ToIRType(MemPool<IRType>*) const override;
     bool Compatible(const CType*) const { return false; }
 
     size_t Size() { return 8; }
 
     bool IsScalar() const override { return true; }
     bool IsPtr() const override { return  true; }
-    bool IsDerived() const override { return true; }
     bool IsComplete() const override { return true; }
 
     const CType* Point2() const { return point2_.get(); }
@@ -219,6 +215,33 @@ public:
 
 private:
     std::unique_ptr<CType> point2_{};
+};
+
+
+class CArrayType : public CType
+{
+public:
+    CArrayType(std::unique_ptr<CType> ty) :
+        arrayof_(std::move(ty)) {}
+    CArrayType(std::unique_ptr<CType> ty, size_t c) :
+        arrayof_(std::move(ty)), count_(c) {}
+
+    std::string ToString() const;
+    const ArrayType* ToIRType(MemPool<IRType>*) const override;
+    bool Compatible(const CType*) const { return false; }
+
+    bool IsArray() const override { return true; }
+
+    bool VarlableLen() const { return variable_; }
+    bool& VariableLen() { return variable_; }
+    bool Static() const { return static_; }
+    bool& Static() { return static_; }
+
+private:
+    std::unique_ptr<CType> arrayof_{};
+    size_t count_{};
+    bool variable_{};
+    bool static_{};
 };
 
 

@@ -23,6 +23,7 @@ public:
     IRGen(std::string name) :
         transunit_(std::make_unique<Module>(name)) {}
 
+    void VisitArrayDef(ArrayDef*) override;
     void VisitDeclSpec(DeclSpec*) override;
     void VisitDeclList(DeclList*) override;
     void VisitFuncDef(FuncDef*) override;

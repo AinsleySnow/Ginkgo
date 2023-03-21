@@ -1,6 +1,7 @@
 #ifndef _VISITOR_H_
 #define _VISITOR_H_
 
+class ArrayDef;
 class Declaration;
 class DeclList;
 class DeclSpec;
@@ -44,6 +45,7 @@ class Visitor
 public:
     virtual ~Visitor() {}
 
+    virtual void VisitArrayDef(ArrayDef*) {}
     virtual void VisitDeclList(DeclList*) {}
     virtual void VisitDeclSpec(DeclSpec*) {}
     virtual void VisitFuncDef(FuncDef*) {}

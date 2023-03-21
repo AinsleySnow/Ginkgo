@@ -1,5 +1,6 @@
 #include "IR/IRBuilder.h"
 #include "IR/IROperand.h"
+#include "IR/IRType.h"
 #include "IR/Value.h"
 #include <memory>
 
@@ -385,8 +386,15 @@ const Register* InstrBuilder::InsertGetElePtrInstr(
 {
     auto pgeteleptr = std::make_unique<GetElePtrInstr>(result, val, index);
     Insert(std::move(pgeteleptr));
-    // FIXME: register type shouldn't be val->Type()
-    return Register::CreateRegister(Container(), result, val->Type());
+
+    auto point2 = val->Type()->ToPointer()->Point2();
+    const IRType* rety = nullptr;
+
+    if (point2->IsArray())
+        rety = PtrType::GetPtrType(Container(), point2->ToArray()->ArrayOf());
+    else rety = PtrType::GetPtrType(Container(), point2);
+
+    return Register::CreateRegister(Container(), result, rety);
 }
 
 

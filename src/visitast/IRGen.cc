@@ -75,8 +75,22 @@ const IROperand* IRGen::LoadVal(Expr* expr)
     if (expr->IsIdentifier())
     {
         auto ident = expr->ToIdentifier();
-        ident->Val() = ibud_.InsertLoadInstr(env_.GetRegName(), ident->Addr());
+        if (ident->Addr()->Type()->ToPointer()->Point2()->IsArray())
+        // tl;dr: if ident is a pointer to some array
+        {
+            auto zero = IntConst::CreateIntConst(ibud_.Container(), 0);
+            ident->Val() = ibud_.InsertGetElePtrInstr(
+                env_.GetRegName(), ident->Addr(), zero);
+        }
+        else
+            ident->Val() = ibud_.InsertLoadInstr(env_.GetRegName(), ident->Addr());
         return ident->Val();
+    }
+    else if (expr->IsSubscript())
+    {
+        expr->Val() = ibud_.InsertLoadInstr(
+            env_.GetRegName(), expr->ToSubscript()->Addr());
+        return expr->Val();
     }
     else return expr->Val();
 }
@@ -85,8 +99,8 @@ const Register* IRGen::LoadAddr(Expr* expr)
 {
     if (expr->IsIdentifier())
         return expr->ToIdentifier()->Addr();
-    // Either a pointer or an identifier?
-    // Yep, as long as wrong code can't reach to this point.
+    else if (expr->IsSubscript())
+        return expr->ToSubscript()->Addr();
     return static_cast<const Register*>(expr->Val());
 }
 
@@ -109,6 +123,38 @@ void IRGen::Merge(
     const std::list<BrInstr*>& src, std::list<BrInstr*>& dest)
 {
     dest.insert(dest.end(), src.begin(), src.end());
+}
+
+
+void IRGen::VisitArrayDef(ArrayDef* def)
+{
+    if (def->Size())
+        def->Size()->Accept(this);
+    def->Child()->Accept(this);
+
+    std::unique_ptr<CArrayType> array = nullptr;
+
+    if (def->Size())
+    {
+        size_t size = 0;
+        if (def->Size()->IsConstant())
+        {
+            auto intconst = static_cast<
+                const IntConst*>(def->Size()->Val());
+            size = intconst->Val();
+        }
+        array = std::make_unique<CArrayType>(
+            std::move(def->Child()->Type()), size);
+    }
+    else
+        array = std::make_unique<CArrayType>(
+            std::move(def->Child()->Type()));
+
+    array->VariableLen() = def->Variable();
+    array->Qual() = def->Qual();
+    array->Static() = def->Static();
+
+    def->Type() = std::move(array);
 }
 
 
@@ -273,12 +319,13 @@ void IRGen::VisitArrayExpr(ArrayExpr* array)
     array->identifier_->Accept(this);
     array->index_->Accept(this);
 
-    auto addr = static_cast<const Register*>(
-        LoadVal(array->identifier_.get()));
-    auto index = LoadVal(array->index_.get());
+    const Register* addr = LoadAddr(array->identifier_.get());
+    if (addr->Type()->ToPointer()->Point2()->IsPtr())
+    // tl;dr: if array yields a pointer
+        addr = ibud_.InsertLoadInstr(env_.GetRegName(), addr);
 
-    array->Val() = ibud_.InsertGetElePtrInstr(
-        env_.GetRegName(), addr, index);
+    array->Addr() = ibud_.InsertGetElePtrInstr(
+        env_.GetRegName(), addr, LoadVal(array->index_.get()));
 }
 
 
@@ -445,12 +492,7 @@ void IRGen::VisitCallExpr(CallExpr* call)
     {
 pointercall:
         call->postfix_->Accept(this);
-
-        const Register* pfunc = nullptr;
-        if (call->postfix_->IsIdentifier())
-            pfunc = static_cast<const Register*>(LoadVal(call->postfix_.get()));
-        else pfunc = call->postfix_->ToIdentifier()->Addr();
-
+        const Register* pfunc = static_cast<const Register*>(LoadVal(call->postfix_.get()));
         bool isvoid = pfunc->Type()->ToPointer()->Point2()->ToFunction()->ReturnType()->IsVoid();
         call->Val() = ibud_.InsertCallInstr(
             isvoid ? "" : env_.GetRegName(), pfunc);
@@ -701,8 +743,13 @@ void IRGen::VisitUnaryExpr(UnaryExpr* unary)
         unary->Val() = LoadAddr(unary->content_.get());
     else if (unary->op_ == Tag::asterisk)
     {
-        auto addreg = LoadVal(unary->content_.get());
-        unary->Val() = addreg;
+        auto addreg = LoadAddr(unary->content_.get());
+        if (addreg->Type()->ToPointer()->Point2()->IsArray())
+        {
+            auto zero = IntConst::CreateIntConst(ibud_.Container(), 0);
+            addreg = ibud_.InsertGetElePtrInstr(env_.GetRegName(), addreg, zero);
+        }
+        unary->Val() = ibud_.InsertLoadInstr(env_.GetRegName(), addreg);
     }
     else if (unary->op_ == Tag::minus)
     {

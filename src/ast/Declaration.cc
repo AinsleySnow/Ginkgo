@@ -169,6 +169,11 @@ void PtrDef::Accept(Visitor* v)
     v->VisitPtrDef(this);
 }
 
+void ArrayDef::Accept(Visitor* v)
+{
+    v->VisitArrayDef(this);
+}
+
 void FuncDef::Accept(Visitor* v)
 {
     v->VisitFuncDef(this);

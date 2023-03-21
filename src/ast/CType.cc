@@ -74,27 +74,6 @@ CArithmType::CArithmType(TypeTag tt) : type_(tt)
     }
 }
 
-/*std::unique_ptr<CPtrType> CArithmType::AttachPtr(const Ptr* ptr) const
-{
-    auto current = ptr->point2_.get();
-    auto ptrtype = std::make_unique<CPtrType>();
-    auto* ptrcur = &ptrtype;
-    (*ptrcur)->Qual() = current->qual_;
-
-    current = current->point2_.get();
-    while (current)
-    {
-        (*ptrcur)->Point2() = std::make_unique<CPtrType>();
-        ptrcur = reinterpret_cast<
-            std::unique_ptr<CPtrType>*>(&(*ptrcur)->Point2());
-        (*ptrcur)->Qual() = current->qual_;
-        current = current->point2_.get();
-    }
-
-    (*ptrcur)->Point2() = std::make_unique<CArithmType>(*this);
-    return ptrtype;
-}*/
-
 const IRType* CArithmType::ToIRType(MemPool<IRType>*) const
 {
     switch (type_)
@@ -190,14 +169,30 @@ const FuncType* CFuncType::ToIRType(MemPool<IRType>* pool) const
 
 std::string CPtrType::ToString() const
 {
-
+    return "";
 }
 
-const IRType* CPtrType::ToIRType(MemPool<IRType>* pool) const
+const PtrType* CPtrType::ToIRType(MemPool<IRType>* pool) const
 {
     auto point2 = point2_->ToIRType(pool);
     return PtrType::GetPtrType(pool, point2);
 }
+
+
+const ArrayType* CArrayType::ToIRType(MemPool<IRType>* pool) const
+{
+    auto arrayof = arrayof_->ToIRType(pool);
+    auto array = ArrayType::GetArrayType(pool, count_, arrayof);
+    array->VariableLen() = variable_;
+    array->Static() = static_;
+    return array;
+}
+
+std::string CArrayType::ToString() const
+{
+    return "";
+}
+
 
 
 const VoidType* CVoidType::ToIRType(MemPool<IRType>*) const

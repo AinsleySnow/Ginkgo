@@ -18,8 +18,16 @@ public:
 
     void Accept(Visitor* v) override;
 
+    bool IsSubscript() const override { return true; }
+    ArrayExpr* ToSubscript() override { return this; }
+    const ArrayExpr* ToSubscript() const override { return this; }
+
+    auto Addr() const { return addr_; }
+    auto& Addr() { return addr_; }
+
 private:
     friend class IRGen;
+    const Register* addr_{};
     std::unique_ptr<Expr> identifier_{};
     std::unique_ptr<Expr> index_{};
 };

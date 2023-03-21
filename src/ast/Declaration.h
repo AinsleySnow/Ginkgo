@@ -188,6 +188,33 @@ private:
 };
 
 
+class ArrayDef : public Declaration
+{
+public:
+    ArrayDef() {}
+    ArrayDef(std::unique_ptr<Expr> size) :
+        size_(std::move(size)) {}
+
+    void Accept(Visitor*);
+
+    bool Variable() const { return variable_; }
+    bool& Variable() { return variable_; }
+    bool Static() const { return static_; }
+    bool& Static() { return static_; }
+    auto Qual() const { return qual_; }
+    auto& Qual() { return qual_; }
+
+    auto& Size() { return size_; }
+    const auto& Size() const { return size_; }
+
+private:
+    bool variable_{};
+    bool static_{};
+    QualType qual_{};
+    std::unique_ptr<Expr> size_{};
+};
+
+
 class FuncDef : public Declaration
 {
 public:

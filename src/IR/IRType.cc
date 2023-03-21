@@ -1,4 +1,5 @@
 #include "IR/IRType.h"
+#include "IR/IROperand.h"
 #include <memory>
 
 
@@ -63,6 +64,7 @@ void FuncType::AddParam(const IRType* ty)
     param_.push_back(ty);
 }
 
+
 PtrType* PtrType::GetPtrType(MemPool<IRType>* pool, const IRType* point2)
 {
     auto ty = std::make_unique<PtrType>(point2);
@@ -71,14 +73,22 @@ PtrType* PtrType::GetPtrType(MemPool<IRType>* pool, const IRType* point2)
     return addr;
 }
 
+
 ArrayType* ArrayType::GetArrayType(
-    MemPool<IRType>* pool, size_t size, const IRType* elety)
+    MemPool<IRType>* pool, size_t count, const IRType* elety)
 {
-    auto ty = std::make_unique<ArrayType>(size, elety);
+    auto ty = std::make_unique<ArrayType>(count, elety);
     auto addr = ty.get();
     pool->Add(std::move(ty));
     return addr;
 }
+
+ArrayType::ArrayType(size_t count, const IRType* t) : type_(t)
+{
+    size_ = count * t->Size();
+    count_ = count;
+}
+
 
 StructType* StructType::GetStructType(
     MemPool<IRType>* pool, const std::vector<const IRType*>& list)
@@ -146,8 +156,8 @@ std::string PtrType::ToString() const
 
 std::string ArrayType::ToString() const
 {
-    return "[ " + std::to_string(size_) + " x " 
-        + type_->ToString() + " ]";
+    return "[" + std::to_string(count_) + " x " 
+        + type_->ToString() + "]";
 }
 
 std::string FuncType::ToString() const

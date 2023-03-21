@@ -564,15 +564,68 @@ direct_declarator
     { $$ = std::make_unique<ObjDef>($1); }
 	| '(' declarator ')'
     { $$ = std::move($2); }
-	| direct_declarator '[' ']' { $$ = nullptr; }
-	| direct_declarator '[' '*' ']' { $$ = nullptr; }
-	| direct_declarator '[' STATIC type_qualifier_list assignment_expression ']' { $$ = nullptr; }
-	| direct_declarator '[' STATIC assignment_expression ']' { $$ = nullptr; }
-	| direct_declarator '[' type_qualifier_list '*' ']' { $$ = nullptr; }
-	| direct_declarator '[' type_qualifier_list STATIC assignment_expression ']' { $$ = nullptr; }
-	| direct_declarator '[' type_qualifier_list assignment_expression ']' { $$ = nullptr; }
-	| direct_declarator '[' type_qualifier_list ']' { $$ = nullptr; }
-	| direct_declarator '[' assignment_expression ']' { $$ = nullptr; }
+	| direct_declarator '[' ']'
+    {
+        $1->InnerMost()->SetChild(std::make_unique<ArrayDef>());
+        $$ = std::move($1);
+    }
+	| direct_declarator '[' '*' ']'
+    {
+        auto def = std::make_unique<ArrayDef>();
+        def->Variable() = true;
+        $1->InnerMost()->SetChild(std::move(def));
+        $$ = std::move($1);
+    }
+	| direct_declarator '[' STATIC type_qualifier_list assignment_expression ']'
+    {
+        auto def = std::make_unique<ArrayDef>(std::move($5));
+        def->Static() = true;
+        def->Qual() = $4;
+        $1->InnerMost()->SetChild(std::move(def));
+        $$ = std::move($1);
+    }
+	| direct_declarator '[' STATIC assignment_expression ']'
+    {
+        auto def = std::make_unique<ArrayDef>(std::move($4));
+        def->Static() = true;
+        $1->InnerMost()->SetChild(std::move(def));
+        $$ = std::move($1);
+    }
+	| direct_declarator '[' type_qualifier_list '*' ']'
+    {
+        auto def = std::make_unique<ArrayDef>();
+        def->Variable() = true;
+        def->Qual() = $3;
+        $1->InnerMost()->SetChild(std::move(def));
+        $$ = std::move($1);
+    }
+	| direct_declarator '[' type_qualifier_list STATIC assignment_expression ']'
+    {
+        auto def = std::make_unique<ArrayDef>(std::move($5));
+        def->Static() = true;
+        $1->InnerMost()->SetChild(std::move(def));
+        $$ = std::move($1);
+    }
+	| direct_declarator '[' type_qualifier_list assignment_expression ']'
+    {
+        auto def = std::make_unique<ArrayDef>(std::move($4));
+        def->Qual() = $3;
+        $1->InnerMost()->SetChild(std::move(def));
+        $$ = std::move($1);
+    }
+	| direct_declarator '[' type_qualifier_list ']'
+    {
+        auto def = std::make_unique<ArrayDef>();
+        def->Qual() = $3;
+        $1->InnerMost()->SetChild(std::move(def));
+        $$ = std::move($1);
+    }
+	| direct_declarator '[' assignment_expression ']'
+    {
+        auto def = std::make_unique<ArrayDef>(std::move($3));
+        $1->InnerMost()->SetChild(std::move(def));
+        $$ = std::move($1);
+    }
 	| direct_declarator '(' parameter_type_list ')'
     {
         auto func = std::make_unique<FuncDef>(std::move($3));
