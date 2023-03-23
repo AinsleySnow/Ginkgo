@@ -637,8 +637,6 @@ direct_declarator
         $1->InnerMost()->SetChild(std::make_unique<FuncDef>());
         $$ = std::move($1);
     }
-	| direct_declarator '(' identifier_list ')'
-    { $$ = nullptr; }
 	;
 
 pointer
@@ -688,11 +686,6 @@ parameter_declaration
 	| declaration_specifiers abstract_declarator
 	| declaration_specifiers
     { $$ = std::move($1); }
-	;
-
-identifier_list
-	: IDENTIFIER
-	| identifier_list ',' IDENTIFIER
 	;
 
 type_name
@@ -859,8 +852,7 @@ external_declaration
 	;
 
 function_definition
-	: declaration_specifiers declarator declaration_list compound_statement { $$ = nullptr; }
-	| declaration_specifiers declarator compound_statement
+	: declaration_specifiers declarator compound_statement
     {
         $2->InnerMost()->SetChild(std::move($1));
         $2->ToObjDef()->SetCompound(std::move($3));
@@ -868,10 +860,6 @@ function_definition
     }
 	;
 
-declaration_list
-	: declaration
-	| declaration_list declaration
-	;
 
 %%
 
