@@ -10,6 +10,7 @@ class Object;
 class Func;
 class Label;
 class Typedef;
+class CustomedType;
 class Member;
 class Register;
 
@@ -17,7 +18,7 @@ class Register;
 class Identifier
 {
 public:
-    enum class IdentType { obj, func, label, tydef, member };
+    enum class IdentType { obj, func, label, tydef, custom, member };
 
     Identifier(IdentType it, const std::string& n) : identype_(it), name_(n) {}
     Identifier(IdentType it, const std::string& n, const CType* t) :
@@ -31,6 +32,7 @@ public:
     virtual Object* ToObject() { return nullptr; }
     virtual Func* ToFunc() { return nullptr; }
     virtual Typedef* ToTypedef() { return nullptr; }
+    virtual CustomedType* ToCustomed() { return nullptr; }
     virtual Member* ToMember() { return nullptr; }
     virtual Label* ToLabel() { return nullptr; }
 
@@ -52,7 +54,7 @@ public:
         Identifier(Identifier::IdentType::func, n, t), addr_(addr) {}
 
     Func* ToFunc() override { return this; }
-    auto GetAddr() const { return addr_; }
+    auto Addr() const { return addr_; }
 
 private:
     const Register* addr_{};
@@ -76,10 +78,42 @@ public:
         Identifier(Identifier::IdentType::obj, n, t), reg_(r) {}
 
     Object* ToObject() override { return this; }
-    auto GetAddr() const { return reg_; }
+
+    bool IsConst() const { return value_; }
+    auto Addr() const { return reg_; }
+    auto& Value() { return value_; }
+    auto Value() const { return value_; }
 
 private:
     const Register* reg_{};
+    const Constant* value_{};
+};
+
+
+class CustomedType : public Identifier
+{
+public:
+    CustomedType(const std::string& n, const CType* ty) :
+        Identifier(Identifier::IdentType::custom, n, ty) {}
+
+    CustomedType* ToCustomed() override { return this; }
+};
+
+
+class Member : public Identifier
+{
+public:
+    Member(const std::string& n, const CType* ty) :
+        Identifier(Identifier::IdentType::member, n, ty) {}
+
+    Member* ToMember() override { return this; }
+    auto Value() const { return value_; }
+    auto& Value() { return value_; }
+
+private:
+    // This field can only be set
+    // if the instance has enum type.
+    const IntConst* value_{};
 };
 
 

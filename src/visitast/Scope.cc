@@ -35,6 +35,11 @@ const Typedef* Scope::GetTypedef(const std::string& name) const
     return ident ? ident->ToTypedef() : nullptr;
 }
 
+const CustomedType* Scope::GetCustomed(const std::string& name) const
+{
+
+}
+
 const Member* Scope::GetMember(const std::string& name) const
 {
     Identifier* ident = FindingHelper(name, Identifier::IdentType::obj);
@@ -42,17 +47,47 @@ const Member* Scope::GetMember(const std::string& name) const
 }
 
 
-void Scope::AddObject(
+Object* Scope::AddObject(
     const std::string& name, const CType* ty, const Register* reg)
 {
     auto object = std::make_unique<Object>(name, ty, reg);
+    auto pobj = object.get();
     identmap_.emplace(name, std::move(object));
+    return pobj;
 }
 
-void Scope::AddFunc(const std::string& name, const CFuncType* functy, const Register* addr)
+Func* Scope::AddFunc(
+    const std::string& name, const CFuncType* functy, const Register* addr)
 {
     auto func = std::make_unique<Func>(name, functy, addr);
+    auto pfunc = func.get();
     identmap_.emplace(name, std::move(func));
+    return pfunc;
+}
+
+Label* Scope::AddLabel(const std::string& name)
+{
+    auto label = std::make_unique<Label>(name);
+    auto plabel = label.get();
+    identmap_.emplace(name, std::move(label));
+    return plabel;
+}
+
+CustomedType* Scope::AddCustomed(const std::string& name, const CType* ty)
+{
+    auto customed = std::make_unique<CustomedType>(name, ty);
+    auto pcustomed = customed.get();
+    identmap_.emplace(name, std::move(customed));
+    return pcustomed;
+}
+
+Member* Scope::AddMember(
+    const std::string& name, const CType* ty)
+{
+    auto member = std::make_unique<Member>(name, ty);
+    auto pmem = member.get();
+    identmap_.emplace(name, std::move(member));
+    return pmem;
 }
 
 
@@ -77,7 +112,6 @@ const Object* ScopeStack::SearchObject(const std::string& name)
     return nullptr;
 }
 
-
 const Func* ScopeStack::SearchFunc(const std::string& name)
 {
     if (filescope_)
@@ -101,6 +135,49 @@ const Func* ScopeStack::SearchFunc(const std::string& name)
     return nullptr;
 }
 
+const Label* ScopeStack::SearchLabel(const std::string& name)
+{
+    if (funcscope_)
+    {
+        const Label* label = funcscope_->GetLabel(name);
+        if (label) return label;
+    }
+
+    for (auto iter = stack_.rbegin(); iter != stack_.rend(); ++iter)
+    {
+        if ((*iter)->GetScopeType() != Scope::ScopeType::func)
+            continue;
+        const Label* target = (*iter)->GetLabel(name);
+        if (target)
+        {
+            funcscope_ = iter->get();
+            return target;
+        }
+    }
+
+    return nullptr;
+}
+
+const CustomedType* ScopeStack::SearchCustomed(const std::string& name)
+{
+    for (auto iter = stack_.rbegin(); iter != stack_.rend(); ++iter)
+    {
+        const CustomedType* target = (*iter)->GetCustomed(name);
+        if (target) return target;
+    }
+    return nullptr;
+}
+
+const Member* ScopeStack::SearchMember(const std::string& name)
+{
+    for (auto iter = stack_.rbegin(); iter != stack_.rend(); ++iter)
+    {
+        const Member* target = (*iter)->GetMember(name);
+        if (target) return target;
+    }
+    return nullptr;
+}
+
 
 void ScopeStack::PushNewScope(Scope::ScopeType scpty)
 {
@@ -113,9 +190,11 @@ void ScopeStack::PushNewScope(Scope::ScopeType scpty)
 
 void ScopeStack::PopScope()
 {
-    if (stack_.back()->GetScopeType() == Scope::ScopeType::file)
+    if (stack_.back().get() == filescope_)
         filescope_ = nullptr;
-    else if (stack_.back()->GetScopeType() == Scope::ScopeType::block)
+    if (stack_.back().get() == blockscope_)
+        blockscope_ = nullptr;
+    else if (stack_.back().get() == blockscope_)
         blockscope_ = nullptr;
     stack_.pop_back();
 }

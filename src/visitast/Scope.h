@@ -24,13 +24,15 @@ public:
     const Func* GetFunc(const std::string&) const;
     const Label* GetLabel(const std::string&) const;
     const Typedef* GetTypedef(const std::string&) const;
+    const CustomedType* GetCustomed(const std::string&) const;
     const Member* GetMember(const std::string&) const;
 
-    void AddObject(const std::string&, const CType*, const Register*);
-    void AddFunc(const std::string&, const CFuncType*, const Register*);
-    void AddLabel(const std::string&);
-    void AddTypedef(const std::string&, const CType*);
-    void AddMember(const std::string&, const CType*);
+    Object* AddObject(const std::string&, const CType*, const Register*);
+    Func* AddFunc(const std::string&, const CFuncType*, const Register*);
+    Label* AddLabel(const std::string&);
+    Typedef* AddTypedef(const std::string&, const CType*);
+    CustomedType* AddCustomed(const std::string&, const CType*);
+    Member* AddMember(const std::string&, const CType*);
 
 
 private:
@@ -48,6 +50,7 @@ public:
     const Func* SearchFunc(const std::string&);
     const Label* SearchLabel(const std::string&);
     const Typedef* SearchTypedef(const std::string&);
+    const CustomedType* SearchCustomed(const std::string&);
     const Member* SearchMember(const std::string&);
 
     void PushNewScope(Scope::ScopeType);
@@ -58,6 +61,7 @@ public:
 
 private:
     Scope* filescope_{};
+    Scope* funcscope_{};
     Scope* blockscope_{};
 
     std::vector<std::unique_ptr<Scope>> stack_{};
