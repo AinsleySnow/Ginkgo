@@ -7,7 +7,7 @@ enum class Tag
     _float = 32, _double = 64, _unsigned = 128, _signed = 256,
     _bool = 512, _void = 1024,
 
-    customedtype, typedefedtype, enumtype, atomictype,
+    customedtype = 2048, typedefedtype, enumtype, atomictype,
 
     _typedef, _extern, _static, _thread_local,
     

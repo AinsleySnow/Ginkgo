@@ -15,12 +15,26 @@ void DeclSpec::Accept(Visitor* v)
     v->VisitDeclSpec(this);
 }
 
+
 void DeclSpec::AddTypeSpec(std::unique_ptr<::TypeSpec> ts)
 {
     speclist_.push_back(std::move(ts));
 }
 
-TypeTag DeclSpec::TypeSpec()
+const EnumSpec* DeclSpec::GetEnumSpec() const
+{
+    return static_cast<const EnumSpec*>(
+        speclist_.front().get());
+}
+
+const StructUnionSpec* DeclSpec::GetStructUnion() const
+{
+    return static_cast<const StructUnionSpec*>(
+        speclist_.front().get());
+}
+
+
+TypeTag DeclSpec::GetTypeTag()
 {
     for (auto& tyspec : speclist_)
         SetRawSpec(tyspec->Spec());

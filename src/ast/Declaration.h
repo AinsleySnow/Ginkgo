@@ -23,7 +23,6 @@ public:
     Tag Spec() const { return spec_; }
 
 private:
-    friend class IRGen;
     Tag spec_{};
 };
 
@@ -35,7 +34,30 @@ class StructUnionSpec : public TypeSpec
 
 class EnumSpec : public TypeSpec
 {
-    // TODO
+public:
+    EnumSpec(std::unique_ptr<EnumList> el,
+        std::unique_ptr<Declaration> ty = nullptr) :
+        TypeSpec(Tag::enumtype), enumlist_(std::move(el)),
+        enumspec_(std::move(ty)) {}
+    EnumSpec(const std::string& n,
+        std::unique_ptr<Declaration> ty = nullptr) :
+        TypeSpec(Tag::enumtype), name_(n),
+        enumspec_(std::move(ty)) {}
+    EnumSpec(const std::string& n,
+        std::unique_ptr<EnumList> el,
+        std::unique_ptr<Declaration> ty = nullptr) :
+        TypeSpec(Tag::enumtype),
+        name_(n), enumlist_(std::move(el)),
+        enumspec_(std::move(ty)) {}
+
+    const auto& Name() const { return name_; }
+    const auto& EnumeratorType() const { return enumspec_; }
+    const auto& EnumeratorList() const { return enumlist_; }
+
+private:
+    std::string name_{};
+    std::unique_ptr<Declaration> enumspec_{};
+    std::unique_ptr<EnumList> enumlist_{};
 };
 
 class TypedefSpec : public TypeSpec
@@ -86,15 +108,17 @@ public:
     void SetStorage(Tag t) { storagelist_.push_back(t); }
     void SetQual(Tag t) { quallist_.push_back(t); }
     void SetFuncSpec(Tag t) { funcspeclist_.push_back(t); }
-    void AddTypeSpec(std::unique_ptr<::TypeSpec> ts);
 
-    TypeTag TypeSpec();
+    void AddTypeSpec(std::unique_ptr<::TypeSpec> ts);
+    const EnumSpec* GetEnumSpec() const;
+    const StructUnionSpec* GetStructUnion() const;
+
+    TypeTag GetTypeTag();
     QualType Qual();
     StorageType Storage();
     FuncSpec Func();
 
 private:
-    friend class IRGen;
     bool SetRawSpec(Tag);
 
     unsigned rawspec_{};

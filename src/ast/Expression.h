@@ -4,8 +4,9 @@
 #include "ast/CType.h"
 #include "ast/Declaration.h"
 #include "ast/Expr.h"
-#include <deque>
+#include <list>
 #include <memory>
+#include <vector>
 
 class Visitor;
 
@@ -146,6 +147,46 @@ private:
 };
 
 
+class EnumConst : public Expr
+{
+public:
+    EnumConst(const std::string& n) : name_(n) {}
+    EnumConst(const std::string& n, std::unique_ptr<Expr> e) :
+        name_(n), expr_(std::move(e)) {}
+
+    void Accept(Visitor*) override;
+    bool IsConstant() const override { return true; }
+
+    const auto& Name() const { return name_; }
+    const auto& ValueExpr() const { return expr_; }
+
+private:
+    std::string name_{};
+    std::unique_ptr<Expr> expr_{};
+};
+
+
+class EnumList : public Expr
+{
+public:
+    void Accept(Visitor* v) override;
+
+    void Append(std::unique_ptr<EnumConst>);
+    auto Count() const { return exprlist_.size(); }
+    auto UnderlyingType() const { return underlying_; }
+    auto& UnderlyingType() { return underlying_; }
+
+    auto begin() { return exprlist_.begin(); }
+    auto end() { return exprlist_.end(); }
+    auto front() { return exprlist_.front().get(); }
+    auto back() { return exprlist_.back().get(); }
+
+private:
+    std::vector<std::unique_ptr<EnumConst>> exprlist_{};
+    const CType* underlying_{};
+};
+
+
 class ExprList : public Expr
 {
 public:
@@ -157,7 +198,7 @@ public:
 
 private:
     friend class IRGen;
-    std::deque<std::unique_ptr<Expr>> exprlist_{};
+    std::list<std::unique_ptr<Expr>> exprlist_{};
 };
 
 

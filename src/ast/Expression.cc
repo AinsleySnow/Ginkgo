@@ -48,6 +48,11 @@ void ConstExpr::Accept(Visitor* v)
     v->VisitConstant(this);
 }
 
+void EnumConst::Accept(Visitor* v)
+{
+    v->VisitEnumConst(this);
+}
+
 ConstExpr::ConstExpr(uint64_t u)
 {
     val_.intgr_ = u;
@@ -132,6 +137,16 @@ ConstExpr::ConstExpr(double d, char suffix)
     }
 }
 
+
+void EnumList::Accept(Visitor* v)
+{
+    v->VisitEnumList(this);
+}
+
+void EnumList::Append(std::unique_ptr<EnumConst> expr)
+{
+    exprlist_.push_back(std::move(expr));
+}
 
 void ExprList::Accept(Visitor* v)
 {

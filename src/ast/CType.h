@@ -79,12 +79,15 @@ public:
 
 enum class TypeTag
 {
-    int8, int16, int32, int64,
-    uint8, uint16, uint32, uint64,
-    flt32, flt64, _void, customed
+    int8 = 1, int16 = 2, int32 = 4, int64 = 8,
+    uint8 = 16, uint16 = 32, uint32 = 64, uint64 = 128,
+    flt32 = 256, flt64 = 512, _void = 1024, _enum = 2048,
+    _struct = 4096, _union = 8192, _typedef = 16384,
+
+    integer = 255, unsign = 240, scalar = 1023,
+    customed = 31744
 };
 
-class CPtrType;
 
 class CType
 {
@@ -99,6 +102,7 @@ public:
     virtual bool IsInteger() const { return false; }
     virtual bool IsPtr() const { return false; }
     virtual bool IsArray() const { return false; }
+    virtual bool IsEnum() const { return false; }
     virtual bool IsVoid() const { return false; }
     virtual bool IsFunc() const { return false; }
     virtual bool IsComplete() const { return false; }
@@ -138,10 +142,10 @@ public:
     bool Compatible(const CType*) const override;
 
     bool IsComplete() const override { return true; }
-    bool IsInteger() const override { return unsigned(type_) <= 7; }
-    bool IsScalar() const override { return type_ != TypeTag::customed; }
+    bool IsInteger() const override { return unsigned(type_) & unsigned(TypeTag::integer); }
+    bool IsScalar() const override { return unsigned(type_) & unsigned(TypeTag::scalar); }
     bool IsFloat() const override { return type_ == TypeTag::flt32 || type_ == TypeTag::flt64; }
-    bool IsUnsigned() const { return unsigned(type_) >= 4 && unsigned(type_) <= 7; }
+    bool IsUnsigned() const { return unsigned(type_) & unsigned(TypeTag::unsign); }
 
     uint64_t Size() const { return size_; }
 
@@ -242,6 +246,31 @@ private:
     size_t count_{};
     bool variable_{};
     bool static_{};
+};
+
+
+class Member;
+
+class CEnumType : public CType
+{
+public:
+    CEnumType(const std::string& n) : name_(n), underlying_(
+        std::make_shared<CArithmType>(TypeTag::int32)) {}
+    CEnumType(const std::string& n, std::shared_ptr<CType> ty) :
+        name_(n), underlying_(ty) {}
+
+    const IntType* ToIRType(MemPool<IRType>*) const override;
+
+    void Reserve(size_t size) { members_.reserve(size); }
+    void AddMember(const Member* m) { members_.push_back(m); }
+
+    std::string Name() const { return name_; }
+    const CType* Underlying() const { return underlying_.get(); }
+
+private:
+    std::string name_{};
+    std::shared_ptr<CType> underlying_{};
+    std::vector<const Member*> members_{};
 };
 
 

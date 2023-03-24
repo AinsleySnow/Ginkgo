@@ -160,18 +160,53 @@ void IRGen::VisitArrayDef(ArrayDef* def)
 
 void IRGen::VisitDeclSpec(DeclSpec* spec)
 {
-    auto tag = spec->TypeSpec();
+    auto tag = spec->GetTypeTag();
     if (tag == TypeTag::_void)
-        spec->type_ = std::make_unique<CVoidType>();
+    {
+        spec->Type() = std::make_unique<CVoidType>();
+        return;
+    }
     else if (tag != TypeTag::customed)
     {
-        spec->type_ = std::make_unique<CArithmType>(tag);
-        spec->type_->Qual() = spec->Qual();
-        spec->type_->Storage() = spec->Storage();
+        spec->Type() = std::make_unique<CArithmType>(tag);
+        spec->Type()->Qual() = spec->Qual();
+        spec->Type()->Storage() = spec->Storage();
+        return;
     }
-    else
+
+    if (tag == TypeTag::_enum)
     {
-        // TODO
+        auto enumdef = spec->GetEnumSpec();
+
+        auto enumty = scopestack_.SearchCustomed(enumdef->Name());
+        auto enumcty = enumty->GetCType();
+        if (enumcty)
+        {
+            spec->Type() = std::make_unique<CEnumType>(
+                *static_cast<const CEnumType*>(enumcty));
+            return;
+        }
+
+        std::shared_ptr<CType> underlying = nullptr;
+        if (enumdef->EnumeratorType())
+        {
+            enumdef->EnumeratorType()->Accept(this);
+            underlying = std::move(enumdef->EnumeratorType()->Type());
+        }
+        else
+            underlying = std::make_shared<CArithmType>(TypeTag::int32);
+
+        auto ty = std::make_unique<CEnumType>(
+            enumdef->Name(), std::move(underlying));
+        ty->Qual() = spec->Qual();
+        ty->Storage() = spec->Storage();
+
+        scopestack_.Top().AddCustomed(ty->Name(), ty.get());
+
+        ty->Reserve(enumdef->EnumeratorList()->Count());
+        enumdef->EnumeratorList()->Accept(this);
+
+        spec->Type() = std::move(ty);
     }
 }
 
@@ -609,6 +644,51 @@ void IRGen::VisitConstant(ConstExpr* constant)
 }
 
 
+void IRGen::VisitEnumConst(EnumConst* enumconst)
+{
+    // All members of an enum specifier has been evaluated in
+    // VisitEnumList and their value is in the scope stack.
+    // So if control reaches to this function, value of the enum
+    // member can be safely loaded from the scope stack.
+    auto mem = scopestack_.SearchMember(enumconst->Name());
+    enumconst->Val() = mem->Value();
+}
+
+
+void IRGen::VisitEnumList(EnumList* list)
+{
+    auto first = list->front();
+    if (first->ValueExpr())
+    {
+        first->ValueExpr()->Accept(this);
+        first->Val() = first->ValueExpr()->Val();
+    }
+
+    for (auto i = list->begin() + 1; i != list->end(); ++i)
+    {
+        if ((*i)->ValueExpr())
+        {
+            (*i)->ValueExpr()->Accept(this);
+            (*i)->Val() = (*i)->ValueExpr()->Val();
+        }
+        else
+        {
+            auto pconst = static_cast<const IntConst*>(
+                (*(i - 1))->Val());
+            (*i)->Val() = IntConst::CreateIntConst(
+                ibud_.Container(),
+                pconst->Val(),
+                list->UnderlyingType()->ToIRType(
+                    ibud_.Container())->ToInteger());
+        }
+
+        auto mem = scopestack_.Top().AddMember(
+            (*i)->Name(), list->UnderlyingType())->Value();
+        mem = static_cast<const IntConst*>((*i)->Val());
+    }
+}
+
+
 void IRGen::VisitExprList(ExprList* list)
 {
     for (auto& expr : list->exprlist_)
@@ -620,11 +700,11 @@ void IRGen::VisitIdentExpr(IdentExpr* ident)
 {
     auto object = scopestack_.SearchObject(ident->name_);
     if (object)
-        ident->Addr() = object->GetAddr();
+        ident->Addr() = object->Addr();
     else
     {
         auto func = scopestack_.File().GetFunc(ident->name_);
-        ident->Addr() = func->GetAddr();
+        ident->Addr() = func->Addr();
     }
 }
 

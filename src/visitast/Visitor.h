@@ -17,6 +17,7 @@ class CallExpr;
 class CastExpr;
 class CondExpr;
 class ConstExpr;
+class EnumConst;
 class ExprList;
 class IdentExpr;
 class LogicalExpr;
@@ -60,6 +61,8 @@ public:
     virtual void VisitCastExpr(CastExpr*) {}
     virtual void VisitCondExpr(CondExpr*) {}
     virtual void VisitConstant(ConstExpr*) {}
+    virtual void VisitEnumConst(EnumConst*) {}
+    virtual void VisitEnumList(EnumList*) {}
     virtual void VisitExprList(ExprList*) {}
     virtual void VisitIdentExpr(IdentExpr*) {}
     virtual void VisitLogicalExpr(LogicalExpr*) {}

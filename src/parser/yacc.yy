@@ -29,25 +29,28 @@ int yylex(yy::parser::value_type* yylval);
 
 %parse-param { TransUnit& transunit }
 
-%token	<std::string> IDENTIFIER I_CONSTANT F_CONSTANT STRING_LITERAL
-FUNC_NAME SIZEOF TYPEDEF_NAME
+%token	<std::string> IDENTIFIER I_CONSTANT F_CONSTANT
+STRING_LITERAL FUNC_NAME SIZEOF TYPEDEF_NAME ENUMERATION_CONSTANT
 %token	<Tag> PTR_OP INC_OP DEC_OP LEFT_OP RIGHT_OP LE_OP GE_OP EQ_OP NE_OP
 %token	<Tag> AND_OP OR_OP MUL_ASSIGN DIV_ASSIGN MOD_ASSIGN ADD_ASSIGN
 %token	<Tag> SUB_ASSIGN LEFT_ASSIGN RIGHT_ASSIGN AND_ASSIGN
 %token	<Tag> XOR_ASSIGN OR_ASSIGN
-%token	ENUMERATION_CONSTANT
 
-%token	TYPEDEF EXTERN STATIC AUTO REGISTER
+%token	<Tag> TYPEDEF EXTERN STATIC AUTO REGISTER
 %token	<Tag> CONST RESTRICT VOLATILE ATOMIC
 %token  <Tag> INLINE NORETURN
 %token  <Tag> BOOL CHAR SHORT INT LONG SIGNED UNSIGNED FLOAT DOUBLE VOID
-%token	COMPLEX IMAGINARY 
-%token	STRUCT UNION ENUM ELLIPSIS
+%token	<Tag> COMPLEX IMAGINARY 
+%token	<Tag> STRUCT UNION ENUM ELLIPSIS
 
 %token	<Tag> CASE DEFAULT IF ELSE SWITCH WHILE DO FOR GOTO CONTINUE BREAK RETURN
 
-%token	ALIGNAS ALIGNOF GENERIC STATIC_ASSERT THREAD_LOCAL
+%token	<Tag> ALIGNAS ALIGNOF GENERIC STATIC_ASSERT THREAD_LOCAL
 
+
+%type <Tag> unary_operator assignment_operator
+%type <std::unique_ptr<EnumConst>> enumerator
+%type <std::unique_ptr<EnumList>> enumerator_list
 %type <std::unique_ptr<ExprList>> argument_expression_list
 %type <std::unique_ptr<Expr>> primary_expression postfix_expression  
 unary_expression cast_expression multiplicative_expression
@@ -61,21 +64,22 @@ constant initializer initializer_list
 %type <std::unique_ptr<InitDecl>> init_declarator
 %type <std::unique_ptr<ParamList>> parameter_type_list parameter_list
 
-%type <std::string> enumerator_list string
-%type <Tag> unary_operator assignment_operator
-%type <std::unique_ptr<TypeSpec>> type_specifier
+%type <std::string> enumeration_constant string
 %type <Tag> type_qualifier storage_class_specifier function_specifier
+%type <QualType> type_qualifier_list
+%type <std::unique_ptr<TypeSpec>> type_specifier
 %type <std::unique_ptr<DeclSpec>> declaration_specifiers
 %type <std::unique_ptr<PtrDef>> pointer
 %type <std::unique_ptr<Declaration>> declarator direct_declarator
-function_definition parameter_declaration type_name
+function_definition parameter_declaration type_name specifier_qualifier_list
 %type <std::unique_ptr<TransUnit>> translation_unit
+
 %type <std::unique_ptr<DeclStmt>> declaration external_declaration
 %type <std::unique_ptr<ExprStmt>> expression_statement
 %type <std::unique_ptr<CompoundStmt>> compound_statement block_item_list
 %type <std::unique_ptr<Statement>> block_item statement
 selection_statement iteration_statement jump_statement labeled_statement
-%type <QualType> type_qualifier_list
+
 
 %precedence LOWER_THAN_ELSE
 %precedence ELSE
@@ -117,6 +121,7 @@ constant
             $$ = std::make_unique<ConstExpr>(std::stod($1));
     }
 	| ENUMERATION_CONSTANT	/* after it has been defined as such */
+    { $$ = std::make_unique<EnumConst>($1); }
 	;
 
 enumeration_constant		/* before it has been defined as such */
@@ -513,21 +518,50 @@ struct_declarator
 
 enum_specifier
 	: ENUM '{' enumerator_list '}'
+    { $$ = std::make_unique<EnumSpec>(std::move($3)); }
 	| ENUM '{' enumerator_list ',' '}'
+    { $$ = std::make_unique<EnumSpec>(std::move($3)); }
 	| ENUM IDENTIFIER '{' enumerator_list '}'
+    { $$ = std::make_unique<EnumSpec>($2, std::move($4)); }
 	| ENUM IDENTIFIER '{' enumerator_list ',' '}'
+    { $$ = std::make_unique<EnumSpec>($2, std::move($4)); }
+	| ENUM enum_type_specifier '{' enumerator_list '}'
+    { $$ = std::make_unique<EnumSpec>(std::move($4), std::move($2)); }
+	| ENUM enum_type_specifier '{' enumerator_list ',' '}'
+    { $$ = std::make_unique<EnumSpec>(std::move($4), std::move($2)); }
+	| ENUM IDENTIFIER enum_type_specifier '{' enumerator_list '}'
+    { $$ = std::make_unique<EnumSpec>($2, std::move($5), std::move($3)); }
+	| ENUM IDENTIFIER enum_type_specifier '{' enumerator_list ',' '}'
+    { $$ = std::make_unique<EnumSpec>($2, std::move($5), std::move($3)); }
 	| ENUM IDENTIFIER
+    { $$ = std::make_unique<EnumSpec>($2); }
+    | ENUM IDENTIFIER enum_type_specifier
+    { $$ = std::make_unique<EnumSpec>($2, std::move($3)); }
 	;
 
 enumerator_list
 	: enumerator
+    {
+        $$ = std::make_unique<EnumList>();
+        $$->Append(std::move($1));
+    }
 	| enumerator_list ',' enumerator
+    {
+        $1->Append($3);
+        $$ = std::move($1);
+    }
 	;
 
 enumerator	/* identifiers must be flagged as ENUMERATION_CONSTANT */
 	: enumeration_constant '=' constant_expression
+    { $$ = std::make_unique<EnumConst>(std::move($1), std::move($3)); }
 	| enumeration_constant
+    { $$ = std::make_unqiue<EnumConst>(std::move($1)); }
 	;
+
+enum_type_specifier
+    : specifier_qualifier_list
+    ;
 
 atomic_type_specifier
 	: ATOMIC '(' type_name ')'
