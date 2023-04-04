@@ -81,6 +81,34 @@ function_definition parameter_declaration type_name specifier_qualifier_list
 selection_statement iteration_statement jump_statement labeled_statement
 
 
+// much more precedence are added, in order to avoid
+// shift/reduce conflicts caused by new enum grammar
+// introduced in C23.
+// In most cases, doing shift, as it is the default behavior
+// of Bison, is enough. But when it comes to things like
+// enum enum foo { ... }, it makes more sense to reduce,
+// that is, to reduce "enum foo" to enum_type_specifier.
+// This sort of things, however, are illegal in C23(6.7.2.2[5]),
+// but handling them properly does good to error prompting.
+// I'm not that sure if the precedences below lead to
+// desired behavior, or if there're better ways to resolve
+// the conflicts. Just let me know if you have any suggestion.
+%precedence IDENTIFIER
+// Bison warns that the rules in the parser are invalid because of
+// conflicts, if you flip the precedence of IDENTIFIER and '{'.
+// I don't think make precedence of '{' higher than that of IDENTIFIER
+// will lead to reduce in the case of 'enum enum foo { ... }' -- it
+// will just shift. I hope I'm wrong, or there's a better way to do this.
+%precedence '{'
+%precedence LOWER_THAN_SPEC
+%precedence VOID %precedence BOOL %precedence CHAR
+%precedence SHORT %precedence INT %precedence LONG
+%precedence SIGNED %precedence UNSIGNED %precedence FLOAT
+%precedence DOUBLE %precedence COMPLEX %precedence IMAGINARY
+%precedence ENUM %precedence STRUCT %precedence UNION
+%precedence CONST %precedence RESTRICT %precedence VOLATILE
+%precedence ATOMIC %precedence TYPEDEF_NAME
+
 %precedence LOWER_THAN_ELSE
 %precedence ELSE
 
@@ -499,10 +527,10 @@ struct_declaration
 	;
 
 specifier_qualifier_list
-	: type_specifier specifier_qualifier_list
-	| type_specifier
-	| type_qualifier specifier_qualifier_list
-	| type_qualifier
+	: type_specifier specifier_qualifier_list   %prec LOWER_THAN_SPEC
+	| type_specifier                            %prec LOWER_THAN_SPEC
+	| type_qualifier specifier_qualifier_list   %prec LOWER_THAN_SPEC
+	| type_qualifier                            %prec LOWER_THAN_SPEC
 	;
 
 struct_declarator_list
