@@ -189,6 +189,7 @@ public:
 
 
 private:
+    int index_{};
     bool variadic_{};
     bool inline_{};
     bool noreturn_{};
@@ -259,15 +260,19 @@ public:
     CEnumType(const std::string& n, std::shared_ptr<CType> ty) :
         name_(n), underlying_(ty) {}
 
+    std::string ToString() const override;
+    bool Compatible(const CType*) const override { return false; }
+
     const IntType* ToIRType(MemPool<IRType>*) const override;
 
     void Reserve(size_t size) { members_.reserve(size); }
-    void AddMember(const Member* m) { members_.push_back(m); }
+    void AddMember(const Member* m) { members_[index_++] = m; }
 
     std::string Name() const { return name_; }
     const CType* Underlying() const { return underlying_.get(); }
 
 private:
+    int index_{};
     std::string name_{};
     std::shared_ptr<CType> underlying_{};
     std::vector<const Member*> members_{};

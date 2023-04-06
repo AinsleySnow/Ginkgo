@@ -153,7 +153,7 @@ std::string CArithmType::ToString() const
 
 void CFuncType::AddParam(const CType* t)
 {
-    paramlist_.push_back(std::move(t));
+    paramlist_[index_++] = std::move(t);
 }
 
 const FuncType* CFuncType::ToIRType(MemPool<IRType>* pool) const
@@ -193,6 +193,16 @@ std::string CArrayType::ToString() const
     return "";
 }
 
+
+std::string CEnumType::ToString() const
+{
+    return "";
+}
+
+const IntType* CEnumType::ToIRType(MemPool<IRType>* pool) const
+{
+    return static_cast<const IntType*>(underlying_->ToIRType(pool));
+}
 
 
 const VoidType* CVoidType::ToIRType(MemPool<IRType>*) const
