@@ -95,6 +95,10 @@ TypeTag DeclSpec::GetTypeTag()
     case int(Tag::_void):
         return TypeTag::_void;
 
+    // enum
+    case int(Tag::_enum):
+        return TypeTag::_enum;
+
     // others
     default: return TypeTag::customed;
     }

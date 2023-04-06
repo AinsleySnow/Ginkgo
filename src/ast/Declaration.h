@@ -3,6 +3,7 @@
 
 #include "ast/CType.h"
 #include "ast/Expr.h"
+#include "ast/Expression.h"
 #include "ast/Statement.h"
 #include <list>
 #include <memory>
@@ -14,56 +15,6 @@ class ObjDef;
 class FuncDef;
 class Register;
 class Visitor;
-
-
-class TypeSpec
-{
-public:
-    TypeSpec(Tag t) : spec_(t) {}
-    Tag Spec() const { return spec_; }
-
-private:
-    Tag spec_{};
-};
-
-
-class StructUnionSpec : public TypeSpec
-{
-    // TODO
-};
-
-class EnumSpec : public TypeSpec
-{
-public:
-    EnumSpec(std::unique_ptr<EnumList> el,
-        std::unique_ptr<Declaration> ty = nullptr) :
-        TypeSpec(Tag::enumtype), enumlist_(std::move(el)),
-        enumspec_(std::move(ty)) {}
-    EnumSpec(const std::string& n,
-        std::unique_ptr<Declaration> ty = nullptr) :
-        TypeSpec(Tag::enumtype), name_(n),
-        enumspec_(std::move(ty)) {}
-    EnumSpec(const std::string& n,
-        std::unique_ptr<EnumList> el,
-        std::unique_ptr<Declaration> ty = nullptr) :
-        TypeSpec(Tag::enumtype),
-        name_(n), enumlist_(std::move(el)),
-        enumspec_(std::move(ty)) {}
-
-    const auto& Name() const { return name_; }
-    const auto& EnumeratorType() const { return enumspec_; }
-    const auto& EnumeratorList() const { return enumlist_; }
-
-private:
-    std::string name_{};
-    std::unique_ptr<Declaration> enumspec_{};
-    std::unique_ptr<EnumList> enumlist_{};
-};
-
-class TypedefSpec : public TypeSpec
-{
-    // TODO
-};
 
 
 class Declaration
@@ -93,6 +44,55 @@ public:
 protected:
     std::shared_ptr<Declaration> child_{};
     std::unique_ptr<CType> type_{};
+};
+
+
+class TypeSpec
+{
+public:
+    TypeSpec(Tag t) : spec_(t) {}
+    Tag Spec() const { return spec_; }
+
+private:
+    Tag spec_{};
+};
+
+class StructUnionSpec : public TypeSpec
+{
+    // TODO
+};
+
+class EnumSpec : public TypeSpec
+{
+public:
+    EnumSpec(std::unique_ptr<EnumList> el,
+        std::unique_ptr<Declaration> ty = nullptr) :
+        TypeSpec(Tag::_enum), enumlist_(std::move(el)),
+        enumspec_(std::move(ty)) {}
+    EnumSpec(const std::string& n,
+        std::unique_ptr<Declaration> ty = nullptr) :
+        TypeSpec(Tag::_enum), name_(n),
+        enumspec_(std::move(ty)) {}
+    EnumSpec(const std::string& n,
+        std::unique_ptr<EnumList> el,
+        std::unique_ptr<Declaration> ty = nullptr) :
+        TypeSpec(Tag::_enum),
+        name_(n), enumlist_(std::move(el)),
+        enumspec_(std::move(ty)) {}
+
+    const auto& Name() const { return name_; }
+    const auto& EnumeratorType() const { return enumspec_; }
+    const auto& EnumeratorList() const { return enumlist_; }
+
+private:
+    std::string name_{};
+    std::unique_ptr<Declaration> enumspec_{};
+    std::unique_ptr<EnumList> enumlist_{};
+};
+
+class TypedefSpec : public TypeSpec
+{
+    // TODO
 };
 
 
