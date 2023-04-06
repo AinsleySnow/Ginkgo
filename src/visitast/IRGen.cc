@@ -825,8 +825,12 @@ void IRGen::VisitUnaryExpr(UnaryExpr* unary)
 
     if (unary->content_->IsConstant())
     {
+        MemPool<IROperand>* container = nullptr;
+        if (!ibud_.Container()) container = transunit_.get();
+        else    container = ibud_.Container();
+
         unary->Val() = Evaluator::EvalUnary(
-            ibud_.Container(), unary->op_, unary->content_->Val());
+            container, unary->op_, unary->content_->Val());
         return;
     }
 
