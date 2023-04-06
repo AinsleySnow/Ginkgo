@@ -13,7 +13,7 @@ enum f
     F_D = F_B + 1
 };
 
-enum g unsigned long
+enum g : unsigned long
 {
     G_A = 4294967296,
     G_B,
@@ -42,8 +42,8 @@ void t2()
 
 void t3()
 {
-    enum t3_e { t3_1, t3_2 } a = t2_1;
+    enum t3_e { t3_1, t3_2 } a = t3_1;
     putchar(a);
-    t3_e c = t3_2;
+    enum t3_e c = t3_2;
     putchar(c);
 }
