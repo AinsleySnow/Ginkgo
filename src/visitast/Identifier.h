@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 
+class Constant;
 class Object;
 class Func;
 class Label;

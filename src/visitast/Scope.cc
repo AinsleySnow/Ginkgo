@@ -37,12 +37,13 @@ const Typedef* Scope::GetTypedef(const std::string& name) const
 
 const CustomedType* Scope::GetCustomed(const std::string& name) const
 {
-
+    Identifier* ident = FindingHelper(name, Identifier::IdentType::custom);
+    return ident ? ident->ToCustomed() : nullptr;
 }
 
 const Member* Scope::GetMember(const std::string& name) const
 {
-    Identifier* ident = FindingHelper(name, Identifier::IdentType::obj);
+    Identifier* ident = FindingHelper(name, Identifier::IdentType::member);
     return ident ? ident->ToMember() : nullptr;
 }
 
@@ -82,12 +83,13 @@ CustomedType* Scope::AddCustomed(const std::string& name, const CType* ty)
 }
 
 Member* Scope::AddMember(
-    const std::string& name, const CType* ty)
+    const std::string& name, const CType* ty, const IntConst* val)
 {
     auto member = std::make_unique<Member>(name, ty);
-    auto pmem = member.get();
+    auto pmember = member.get();
+    member->Value() = val;
     identmap_.emplace(name, std::move(member));
-    return pmem;
+    return pmember;
 }
 
 

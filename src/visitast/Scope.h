@@ -8,6 +8,7 @@
 #include <vector>
 #include <unordered_map>
 
+class IntConst;
 class Register;
 
 
@@ -32,7 +33,7 @@ public:
     Label* AddLabel(const std::string&);
     Typedef* AddTypedef(const std::string&, const CType*);
     CustomedType* AddCustomed(const std::string&, const CType*);
-    Member* AddMember(const std::string&, const CType*);
+    Member* AddMember(const std::string&, const CType*, const IntConst* = nullptr);
 
 
 private:
