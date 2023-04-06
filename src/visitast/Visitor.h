@@ -18,6 +18,7 @@ class CastExpr;
 class CondExpr;
 class ConstExpr;
 class EnumConst;
+class EnumList;
 class ExprList;
 class IdentExpr;
 class LogicalExpr;

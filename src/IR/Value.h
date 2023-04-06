@@ -1,6 +1,9 @@
 #ifndef _VALUE_H_
 #define _VALUE_H_
 
+#include "IR/MemPool.h"
+#include "IR/IROperand.h"
+#include "IR/IRType.h"
 #include "IR/Instr.h"
 #include <algorithm>
 #include <memory>
@@ -8,7 +11,6 @@
 #include <vector>
 #include <unordered_map>
 
-class IRType;
 class Function;
 class GlobalVar;
 

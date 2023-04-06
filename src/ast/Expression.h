@@ -8,6 +8,8 @@
 #include <memory>
 #include <vector>
 
+class Declaration;
+class Register;
 class Visitor;
 
 
@@ -173,8 +175,6 @@ public:
 
     void Append(std::unique_ptr<EnumConst>);
     auto Count() const { return exprlist_.size(); }
-    auto UnderlyingType() const { return underlying_; }
-    auto& UnderlyingType() { return underlying_; }
 
     auto begin() { return exprlist_.begin(); }
     auto end() { return exprlist_.end(); }
