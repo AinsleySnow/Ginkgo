@@ -11,6 +11,8 @@
 #include <variant>
 
 class Declaration;
+class EnumSpec;
+class StructUnionSpec;
 class IROperand;
 class IRType;
 class Statement;
@@ -108,6 +110,10 @@ private:
         std::list<BrInstr*> ret_{};
         size_t index_{};
     };
+
+
+    std::unique_ptr<CEnumType> EnumHelper(const EnumSpec*);
+    void StructUnionHelper(const StructUnionSpec*);
 
     const Register* AllocaObject(const CType*, const std::string&);
     Function* AllocaFunc(const CFuncType*, const std::string&);

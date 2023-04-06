@@ -89,7 +89,7 @@ RET Evaluator::Calc(Tag op, NUM num)
 #define to_int(op) static_cast<const IntConst*>(op)
 #define to_float(op) static_cast<const FloatConst*>(op)
 
-const IROperand* Evaluator::EvalBinary(BasicBlock* bb, Tag op, const IROperand* lhs, const IROperand* rhs)
+const IROperand* Evaluator::EvalBinary(MemPool<IROperand>* pool, Tag op, const IROperand* lhs, const IROperand* rhs)
 {
     if (lhs->IsFloatConst() && rhs->IsFloatConst())
     {
@@ -98,13 +98,13 @@ const IROperand* Evaluator::EvalBinary(BasicBlock* bb, Tag op, const IROperand* 
 
         if (IsLogicalTag(op))
             return IntConst::CreateIntConst(
-                bb,
+                pool,
                 Calc<double, double, double>(op, left, right),
                 IntType::GetInt32(true));
 
         double result = Calc<double, double, double>(op, left, right);
         auto ty = lhs->Type()->operator>(*rhs->Type()) ? lhs->Type() : rhs->Type();
-        return FloatConst::CreateFloatConst(bb, result, ty->ToFloatPoint());
+        return FloatConst::CreateFloatConst(pool, result, ty->ToFloatPoint());
     }
     else if (lhs->IsFloatConst() && rhs->IsIntConst())
     {
@@ -117,8 +117,8 @@ const IROperand* Evaluator::EvalBinary(BasicBlock* bb, Tag op, const IROperand* 
         else result = Calc<double, unsigned long>(op, left, right);
 
         if (IsLogicalTag(op))
-            return IntConst::CreateIntConst(bb, (unsigned long)result, IntType::GetInt32(true));
-        return FloatConst::CreateFloatConst(bb, result, lhs->Type()->ToFloatPoint());
+            return IntConst::CreateIntConst(pool, (unsigned long)result, IntType::GetInt32(true));
+        return FloatConst::CreateFloatConst(pool, result, lhs->Type()->ToFloatPoint());
     }
     else if (lhs->IsIntConst() && rhs->IsFloatConst())
     {
@@ -130,8 +130,8 @@ const IROperand* Evaluator::EvalBinary(BasicBlock* bb, Tag op, const IROperand* 
         else result = Calc<unsigned long, double>(op, left, right);
 
         if (IsLogicalTag(op))
-            return IntConst::CreateIntConst(bb, (unsigned long)result, IntType::GetInt32(true));
-        return FloatConst::CreateFloatConst(bb, result, rhs->Type()->ToFloatPoint());
+            return IntConst::CreateIntConst(pool, (unsigned long)result, IntType::GetInt32(true));
+        return FloatConst::CreateFloatConst(pool, result, rhs->Type()->ToFloatPoint());
     }
     else
     {
@@ -163,11 +163,11 @@ const IROperand* Evaluator::EvalBinary(BasicBlock* bb, Tag op, const IROperand* 
             (left & (1 << (lhs->Type()->Size() * 8 - 1))))
             result |= (unsigned long)(-1ll >> (64 - lhs->Type()->Size() * 8 + right - 1));
 
-        return IntConst::CreateIntConst(bb, result, ty);
+        return IntConst::CreateIntConst(pool, result, ty);
     }
 }
 
-const IROperand* Evaluator::EvalUnary(BasicBlock* bb, Tag op, const IROperand* num)
+const IROperand* Evaluator::EvalUnary(MemPool<IROperand>* pool, Tag op, const IROperand* num)
 {
     if (num->IsIntConst())
     {
@@ -176,14 +176,14 @@ const IROperand* Evaluator::EvalUnary(BasicBlock* bb, Tag op, const IROperand* n
             result = Calc<long, unsigned long>(op, to_int(num)->Val());
         else result = Calc<long, long>(op, to_int(num)->Val());
 
-        return IntConst::CreateIntConst(bb, result, num->Type()->ToInteger());
+        return IntConst::CreateIntConst(pool, result, num->Type()->ToInteger());
     }
     else
     {
         double result = Calc<double, double>(op, to_float(num)->Val());
         if (op == Tag::exclamation)
-            return IntConst::CreateIntConst(bb, result, IntType::GetInt32(true));
-        else return FloatConst::CreateFloatConst(bb, result, num->Type()->ToFloatPoint());
+            return IntConst::CreateIntConst(pool, result, IntType::GetInt32(true));
+        else return FloatConst::CreateFloatConst(pool, result, num->Type()->ToFloatPoint());
     }
 }
 

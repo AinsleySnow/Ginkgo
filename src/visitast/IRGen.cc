@@ -158,54 +158,65 @@ void IRGen::VisitArrayDef(ArrayDef* def)
 }
 
 
+std::unique_ptr<CEnumType> IRGen::EnumHelper(const EnumSpec* spec)
+{
+    // empty; the enum must have been defined somewhere
+    if (!spec->EnumeratorList())
+    {
+        auto enumty = scopestack_.SearchCustomed(spec->Name());
+        auto enumcty = enumty->GetCType();
+        return std::make_unique<CEnumType>(
+            *static_cast<const CEnumType*>(enumcty));
+    }
+
+    // not empty; we're declaring a new enum
+    std::shared_ptr<CType> underlying = nullptr;
+    if (spec->EnumeratorType())
+    {
+        spec->EnumeratorType()->Accept(this);
+        underlying = std::move(spec->EnumeratorType()->Type());
+    }
+    // if no underlying type is specified, postpone the
+    // decision until all enum constants have been seen
+
+    // the underlying type will be placed in type_ 
+    // field inherited from Expr class
+    spec->EnumeratorList()->Accept(this);
+    if (!underlying)
+        underlying = std::move(spec->EnumeratorList()->Type());
+
+    auto ty = std::make_unique<CEnumType>(spec->Name(), underlying);
+    ty->Reserve(spec->EnumeratorList()->Count());
+
+    for (auto& mem : *spec->EnumeratorList())
+    {        
+        auto pmem = scopestack_.Top().AddMember(mem->Name(), ty.get(),
+            static_cast<const IntConst*>(mem->Val()));        
+        ty->AddMember(pmem);
+    }
+
+    return std::move(ty);
+}
+
 void IRGen::VisitDeclSpec(DeclSpec* spec)
 {
     auto tag = spec->GetTypeTag();
+
     if (tag == TypeTag::_void)
-    {
         spec->Type() = std::make_unique<CVoidType>();
-        return;
-    }
-    else if (tag != TypeTag::customed)
+    else if (int(tag) & int(TypeTag::scalar))
     {
         spec->Type() = std::make_unique<CArithmType>(tag);
         spec->Type()->Qual() = spec->Qual();
         spec->Type()->Storage() = spec->Storage();
-        return;
     }
-
-    if (tag == TypeTag::_enum)
+    else if (tag == TypeTag::_enum)
     {
-        auto enumdef = spec->GetEnumSpec();
-
-        auto enumty = scopestack_.SearchCustomed(enumdef->Name());
-        auto enumcty = enumty->GetCType();
-        if (enumcty)
-        {
-            spec->Type() = std::make_unique<CEnumType>(
-                *static_cast<const CEnumType*>(enumcty));
-            return;
-        }
-
-        std::shared_ptr<CType> underlying = nullptr;
-        if (enumdef->EnumeratorType())
-        {
-            enumdef->EnumeratorType()->Accept(this);
-            underlying = std::move(enumdef->EnumeratorType()->Type());
-        }
-        else
-            underlying = std::make_shared<CArithmType>(TypeTag::int32);
-
-        auto ty = std::make_unique<CEnumType>(
-            enumdef->Name(), std::move(underlying));
+        auto ty = EnumHelper(spec->GetEnumSpec());
         ty->Qual() = spec->Qual();
         ty->Storage() = spec->Storage();
 
         scopestack_.Top().AddCustomed(ty->Name(), ty.get());
-
-        ty->Reserve(enumdef->EnumeratorList()->Count());
-        enumdef->EnumeratorList()->Accept(this);
-
         spec->Type() = std::move(ty);
     }
 }
@@ -436,8 +447,11 @@ void IRGen::VisitBinaryExpr(BinaryExpr* bin)
 
     if (bin->left_->IsConstant() && bin->right_->IsConstant())
     {
+        MemPool<IROperand>* container = nullptr;
+        if (ibud_.Container()) container = ibud_.Container();
+        else    container = transunit_.get();
         bin->Val() = Evaluator::EvalBinary(
-            ibud_.Container(), bin->op_, bin->left_->Val(), bin->right_->Val());
+            container, bin->op_, bin->left_->Val(), bin->right_->Val());
         return;
     }
 
@@ -633,13 +647,17 @@ void IRGen::VisitCondExpr(CondExpr* cond)
 void IRGen::VisitConstant(ConstExpr* constant)
 {
     auto ctype = constant->RawType();
+    MemPool<IROperand>* container = nullptr;
+    if (ibud_.Container()) container = ibud_.Container();
+    else container = transunit_.get();
+
     if (ctype->IsInteger())
         constant->Val() = IntConst::CreateIntConst(
-            ibud_.Container(), constant->GetInt(),
+            container, constant->GetInt(),
             ctype->ToIRType(transunit_.get())->ToInteger());
     else
         constant->Val() = FloatConst::CreateFloatConst(
-            ibud_.Container(), constant->GetFloat(),
+            container, constant->GetFloat(),
             ctype->ToIRType(transunit_.get())->ToFloatPoint());
 }
 
@@ -657,12 +675,23 @@ void IRGen::VisitEnumConst(EnumConst* enumconst)
 
 void IRGen::VisitEnumList(EnumList* list)
 {
+    // TODO: auto enum type deduction
+    list->Type() = std::make_unique<CArithmType>(TypeTag::int32);
+
+    // open up a temporary scope and place the
+    // enum member in it, before we deduce the
+    // underlying type of the enum.
+    scopestack_.PushNewScope(Scope::ScopeType::block);
+
     auto first = list->front();
     if (first->ValueExpr())
     {
         first->ValueExpr()->Accept(this);
         first->Val() = first->ValueExpr()->Val();
     }
+    else
+        first->Val() = IntConst::CreateIntConst(
+            transunit_.get(), 0);
 
     for (auto i = list->begin() + 1; i != list->end(); ++i)
     {
@@ -676,16 +705,17 @@ void IRGen::VisitEnumList(EnumList* list)
             auto pconst = static_cast<const IntConst*>(
                 (*(i - 1))->Val());
             (*i)->Val() = IntConst::CreateIntConst(
-                ibud_.Container(),
-                pconst->Val(),
-                list->UnderlyingType()->ToIRType(
-                    ibud_.Container())->ToInteger());
+                transunit_.get(), pconst->Val() + 1);
         }
 
-        auto mem = scopestack_.Top().AddMember(
-            (*i)->Name(), list->UnderlyingType())->Value();
-        mem = static_cast<const IntConst*>((*i)->Val());
+        scopestack_.Top().AddMember((*i)->Name(), nullptr,
+            static_cast<const IntConst*>((*i)->Val()));
     }
+
+    // TODO: deduce the underlying type and assign it
+    // to list->Type()
+
+    scopestack_.PopScope();
 }
 
 
