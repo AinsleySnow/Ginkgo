@@ -31,18 +31,11 @@ WS  [ \t\v\n\f]
 #include "ast/Tag.h"
 #include "yacc.hh"
 
-
 #undef YY_DECL
-#define YY_DECL int yylex(yy::parser::value_type* yylval)
-
-extern int sym_type(const char*);  /* returns type from symbol table */
-
+#define YY_DECL int yylex(yy::parser::value_type* yylval, CheckType& checktype)
 #define YYTOKEN yy::parser::token
-#define sym_type(identifier) YYTOKEN::IDENTIFIER /* with no symbol table, fake it */
-
 
 static void comment(void);
-static int check_type(void);
 %}
 
 %%
@@ -59,7 +52,6 @@ static int check_type(void);
 "do"					{ yylval->emplace<Tag>() = Tag::_do; return YYTOKEN::DO; }
 "double"				{ yylval->emplace<Tag>() = Tag::_double; return YYTOKEN::DOUBLE; }
 "else"					{ yylval->emplace<Tag>() = Tag::_else; return YYTOKEN::ELSE; }
-"enum"					{ return YYTOKEN::ENUM; }
 "extern"				{ return YYTOKEN::EXTERN; }
 "float"					{ yylval->emplace<Tag>() = Tag::_float; return YYTOKEN::FLOAT; }
 "for"					{ yylval->emplace<Tag>() = Tag::_for; return YYTOKEN::FOR; }
@@ -75,10 +67,8 @@ static int check_type(void);
 "signed"				{ yylval->emplace<Tag>() = Tag::_signed; return YYTOKEN::SIGNED; }
 "sizeof"				{ return YYTOKEN::SIZEOF; }
 "static"				{ return YYTOKEN::STATIC; }
-"struct"				{ return YYTOKEN::STRUCT; }
 "switch"				{ return YYTOKEN::SWITCH; }
 "typedef"				{ return YYTOKEN::TYPEDEF; }
-"union"					{ return YYTOKEN::UNION; }
 "unsigned"				{ yylval->emplace<Tag>() = Tag::_unsigned; return YYTOKEN::UNSIGNED; }
 "void"					{ yylval->emplace<Tag>() = Tag::_void; return YYTOKEN::VOID; }
 "volatile"				{ yylval->emplace<Tag>() = Tag::_volatile; return YYTOKEN::VOLATILE; }
@@ -95,13 +85,34 @@ static int check_type(void);
 "_Thread_local"         { return YYTOKEN::THREAD_LOCAL; }
 "__func__"              { return YYTOKEN::FUNC_NAME; }
 
-{L}{A}*					{ 
-    int type = check_type(); 
-    if (type == YYTOKEN::IDENTIFIER)
-    {
-        yylval->emplace<std::string>() = yytext;
-        return YYTOKEN::IDENTIFIER;
-    }  
+"enum"					{
+    checktype.InEnum() = true;
+    checktype.WithinScope() = true;
+    yylval->emplace<Tag>() = Tag::_enum;
+    return YYTOKEN::ENUM;
+}
+
+"struct"				{
+    checktype.WithinScope() = true;
+    yylval->emplace<Tag>() = Tag::_struct;
+    return YYTOKEN::STRUCT;
+}
+
+"union"					{
+    checktype.WithinScope() = true;
+    yylval->emplace<Tag>() = Tag::_union;
+    return YYTOKEN::UNION;
+}
+
+
+{L}{A}*					{
+    yylval->emplace<std::string>() = yytext;
+
+    int ty = checktype(yytext);
+    if (ty == -1)
+        ty = YYTOKEN::IDENTIFIER;
+
+    return ty;
 }
 
 {HP}{H}+{IS}?				  { yylval->emplace<std::string>() = yytext; return YYTOKEN::I_CONSTANT; }
@@ -140,12 +151,7 @@ static int check_type(void);
 ">="					{ yylval->emplace<Tag>() = Tag::greatequal; return YYTOKEN::GE_OP; }
 "=="					{ yylval->emplace<Tag>() = Tag::equal; return YYTOKEN::EQ_OP; }
 "!="					{ yylval->emplace<Tag>() = Tag::notequal; return YYTOKEN::NE_OP; }
-";"					    { return ';'; }
-("{"|"<%")				{ return '{'; }
-("}"|"%>")				{ return '}'; }
 ","					    { return ','; }
-":"					    { return ':'; }
-"="					    { return '='; }
 "("					    { return '('; }
 ")"					    { return ')'; }
 ("["|"<:")				{ return '['; }
@@ -164,6 +170,43 @@ static int check_type(void);
 "^"					    { return '^'; }
 "|"					    { return '|'; }
 "?"					    { return '?'; }
+
+":"					    {
+    if (checktype.InEnum())
+        checktype.WithinScope() = false;
+    return ':';
+}
+
+";"					    {
+    checktype.InEnum() = false;
+    checktype.WithinScope() = false;
+    checktype.ClearParen();
+    return ';';
+}
+
+("{"|"<%")				{
+    checktype.DumpParen();
+    if (checktype.InEnum())
+        checktype.WithinScope() = true;
+    checktype.EnterScope();
+    return '{';
+}
+
+("}"|"%>")				{
+    // thanks to the fact that enums cannot nest
+    checktype.InEnum() = false;
+    checktype.WithinScope() = false;
+    checktype.LeaveScope();
+    return '}';
+}
+
+"="					    {
+    // we're ready to evaluate an expression,
+    // or something else.
+    checktype.WithinScope() = false;
+    return '=';
+}
+
 
 {WS}+					{ /* whitespace separates tokens */ }
 .					    { /* discard bad characters */ }
@@ -194,17 +237,4 @@ static void comment(void)
         }
     }
     exit(1);
-}
-
-static int check_type(void)
-{
-    switch (sym_type(yytext))
-    {
-    case YYTOKEN::TYPEDEF_NAME:                /* previously defined */
-        return YYTOKEN::TYPEDEF_NAME;
-    case YYTOKEN::ENUMERATION_CONSTANT:        /* previously defined */
-        return YYTOKEN::ENUMERATION_CONSTANT;
-    default:                          /* includes undefined */
-        return YYTOKEN::IDENTIFIER;
-    }
 }

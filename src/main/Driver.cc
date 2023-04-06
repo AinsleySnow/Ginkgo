@@ -9,7 +9,7 @@ extern FILE* yyin;
 void Driver::Parse()
 {
     yyin = fopen(inputname_.c_str(), "r");
-    yy::parser parser(transunit_);
+    yy::parser parser(transunit_, CheckType());
     parser.parse();
 }
 

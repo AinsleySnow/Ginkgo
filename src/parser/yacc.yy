@@ -1,23 +1,59 @@
 %{
 #include "yacc.hh"
-int yylex(yy::parser::value_type* yylval);
+int yylex(yy::parser::value_type* yylval, CheckType& checktype);
 %}
 
 
 %code requires
 {
-    #include <cstdio>
-    #include <cctype>
-    #include <memory>
-    #include <string>
-    #include <vector>
+#include <cstdio>
+#include <cctype>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
-    #include "ast/CType.h"
-    #include "ast/Declaration.h"
-    #include "ast/Expression.h"
-    #include "ast/Statement.h"
-    #include "ast/Tag.h"
-    #include "messages/Error.h"
+#include "ast/CType.h"
+#include "ast/Declaration.h"
+#include "ast/Expression.h"
+#include "ast/Statement.h"
+#include "ast/Tag.h"
+#include "messages/Error.h"
+
+
+class CheckType
+{
+public:
+    CheckType() { EnterScope(); }
+    ~CheckType() { LeaveScope(); }
+
+    bool& WithinScope() { return within_; }
+    bool WithinScope() const { return within_; }
+
+    bool& InEnum() { return inenum_; }
+    bool InEnum() const { return inenum_; }
+
+    void LeftParen()  { paren_++; }
+    void RightParen() { paren_--; }
+    bool WithinParen() const { return paren_; }
+    void DumpParen();
+    void ClearParen();
+
+    void EnterScope();
+    void LeaveScope();
+    void AddIdentifier(const std::string& str, int type);
+    int operator()(const std::string&);
+
+private:
+    bool within_{};
+    bool inenum_{};
+    bool instruct_{};
+    int paren_{};
+    std::vector<std::string> thingsinparen_{};
+    std::vector<std::unordered_map<std::string, int>> scopes_{};
+};
+
+
 }
 
 %require "3.2"
@@ -28,6 +64,10 @@ int yylex(yy::parser::value_type* yylval);
 %define parse.trace
 
 %parse-param { TransUnit& transunit }
+// don't want to inherit from yy::parser.
+// just create CheckType in the Driver.
+%parse-param { CheckType checktype }
+%lex-param { CheckType& checktype }
 
 %token	<std::string> IDENTIFIER I_CONSTANT F_CONSTANT
 STRING_LITERAL FUNC_NAME SIZEOF TYPEDEF_NAME ENUMERATION_CONSTANT
@@ -67,11 +107,12 @@ constant initializer initializer_list
 %type <std::string> enumeration_constant string
 %type <Tag> type_qualifier storage_class_specifier function_specifier
 %type <QualType> type_qualifier_list
-%type <std::unique_ptr<TypeSpec>> type_specifier
+%type <std::unique_ptr<TypeSpec>> type_specifier enum_specifier struct_or_union_specifier
 %type <std::unique_ptr<DeclSpec>> declaration_specifiers
 %type <std::unique_ptr<PtrDef>> pointer
-%type <std::unique_ptr<Declaration>> declarator direct_declarator
-function_definition parameter_declaration type_name specifier_qualifier_list
+%type <std::unique_ptr<Declaration>> declarator
+direct_declarator function_definition parameter_declaration
+type_name specifier_qualifier_list enum_type_specifier
 %type <std::unique_ptr<TransUnit>> translation_unit
 
 %type <std::unique_ptr<DeclStmt>> declaration external_declaration
@@ -81,24 +122,14 @@ function_definition parameter_declaration type_name specifier_qualifier_list
 selection_statement iteration_statement jump_statement labeled_statement
 
 
-// much more precedence are added, in order to avoid
+// much more precedences are added, in order to avoid
 // shift/reduce conflicts caused by new enum grammar
 // introduced in C23.
-// In most cases, doing shift, as it is the default behavior
-// of Bison, is enough. But when it comes to things like
-// enum enum foo { ... }, it makes more sense to reduce,
-// that is, to reduce "enum foo" to enum_type_specifier.
-// This sort of things, however, are illegal in C23(6.7.2.2[5]),
-// but handling them properly does good to error prompting.
-// I'm not that sure if the precedences below lead to
-// desired behavior, or if there're better ways to resolve
-// the conflicts. Just let me know if you have any suggestion.
+// According to C23(6.7.2.2[5]), doing shift when conflict
+// is the right choice.
 %precedence IDENTIFIER
-// Bison warns that the rules in the parser are invalid because of
-// conflicts, if you flip the precedence of IDENTIFIER and '{'.
-// I don't think make precedence of '{' higher than that of IDENTIFIER
-// will lead to reduce in the case of 'enum enum foo { ... }' -- it
-// will just shift. I hope I'm wrong, or there's a better way to do this.
+%precedence ':'
+
 %precedence '{'
 %precedence LOWER_THAN_SPEC
 %precedence VOID %precedence BOOL %precedence CHAR
@@ -154,6 +185,11 @@ constant
 
 enumeration_constant		/* before it has been defined as such */
 	: IDENTIFIER
+    {
+        checktype.AddIdentifier(
+            $1, yy::parser::token::ENUMERATION_CONSTANT);
+        $$ = $1;
+    }
 	;
 
 string
@@ -201,7 +237,7 @@ argument_expression_list
     }
 	| argument_expression_list ',' assignment_expression
     {
-        dynamic_cast<ExprList*>($1.get())->Append(std::move($3));
+        $1->Append(std::move($3));
         $$ = std::move($1);
     }
 	;
@@ -390,7 +426,8 @@ constant_expression
 	;
 
 declaration
-	: declaration_specifiers ';' { $$ = nullptr; }
+	: declaration_specifiers ';'
+    { $$ = std::make_unique<DeclStmt>(std::move($1)); }
 	| declaration_specifiers init_declarator_list ';'
     {
         std::shared_ptr<DeclSpec> ds = std::move($1);
@@ -486,22 +523,86 @@ storage_class_specifier
 	;
 
 type_specifier
-	: VOID                      { $$ = std::make_unique<TypeSpec>(Tag::_void); }
-	| CHAR                      { $$ = std::make_unique<TypeSpec>(Tag::_char); }
-	| SHORT                     { $$ = std::make_unique<TypeSpec>(Tag::_short); }
-	| INT                       { $$ = std::make_unique<TypeSpec>(Tag::_int); }
-	| LONG                      { $$ = std::make_unique<TypeSpec>(Tag::_long); }
-	| FLOAT                     { $$ = std::make_unique<TypeSpec>(Tag::_float); }
-	| DOUBLE                    { $$ = std::make_unique<TypeSpec>(Tag::_double); }
-	| SIGNED                    { $$ = std::make_unique<TypeSpec>(Tag::_signed); }
-	| UNSIGNED                  { $$ = std::make_unique<TypeSpec>(Tag::_unsigned); }
-	| BOOL                      { $$ = std::make_unique<TypeSpec>(Tag::_bool); }
-	| COMPLEX                   { $$ = std::make_unique<TypeSpec>(Tag::_complex); }
-	| IMAGINARY                 { $$ = std::make_unique<TypeSpec>(Tag::_imaginary); }
-	| atomic_type_specifier     { $$ = std::make_unique<TypeSpec>(Tag::atomictype); }
-	| struct_or_union_specifier { $$ = std::make_unique<TypeSpec>(Tag::customedtype); }
-	| enum_specifier            { $$ = std::make_unique<TypeSpec>(Tag::enumtype); }
-	| TYPEDEF_NAME              { $$ = std::make_unique<TypeSpec>(Tag::typedefedtype); }
+	: VOID
+    {
+        checktype.WithinScope() = true;
+        $$ = std::make_unique<TypeSpec>(Tag::_void);
+    }
+	| CHAR
+    {
+        checktype.WithinScope() = true;
+        $$ = std::make_unique<TypeSpec>(Tag::_char);
+    }
+	| SHORT
+    {
+        checktype.WithinScope() = true;
+        $$ = std::make_unique<TypeSpec>(Tag::_short);
+    }
+	| INT
+    {
+        checktype.WithinScope() = true;
+        $$ = std::make_unique<TypeSpec>(Tag::_int);
+    }
+	| LONG
+    {
+        checktype.WithinScope() = true;
+        $$ = std::make_unique<TypeSpec>(Tag::_long);
+    }
+	| FLOAT
+    {
+        checktype.WithinScope() = true;
+        $$ = std::make_unique<TypeSpec>(Tag::_float);
+    }
+	| DOUBLE
+    {
+        checktype.WithinScope() = true;
+        $$ = std::make_unique<TypeSpec>(Tag::_double);
+    }
+	| SIGNED
+    {
+        checktype.WithinScope() = true;
+        $$ = std::make_unique<TypeSpec>(Tag::_signed);
+    }
+	| UNSIGNED
+    {
+        checktype.WithinScope() = true;
+        $$ = std::make_unique<TypeSpec>(Tag::_unsigned);
+    }
+	| BOOL
+    {
+        checktype.WithinScope() = true;
+        $$ = std::make_unique<TypeSpec>(Tag::_bool);
+    }
+	| COMPLEX
+    {
+        checktype.WithinScope() = true;
+        $$ = std::make_unique<TypeSpec>(Tag::_complex);
+    }
+	| IMAGINARY
+    {
+        checktype.WithinScope() = true;
+        $$ = std::make_unique<TypeSpec>(Tag::_imaginary);
+    }
+	| atomic_type_specifier
+    {
+        checktype.WithinScope() = true;
+        $$ = std::make_unique<TypeSpec>(Tag::_atomic);
+    }
+	| struct_or_union_specifier
+    {
+        checktype.WithinScope() = true;
+        $$ = std::move($1);
+    }
+	| enum_specifier
+    {
+        checktype.WithinScope() = true;
+        $$ = std::move($1);
+    }
+	| TYPEDEF_NAME
+    {
+        checktype.WithinScope() = true;
+        $$ = std::make_unique<TypeSpec>(Tag::_typedef);
+    }
 	;
 
 struct_or_union_specifier
@@ -575,20 +676,26 @@ enumerator_list
     }
 	| enumerator_list ',' enumerator
     {
-        $1->Append($3);
+        $1->Append(std::move($3));
         $$ = std::move($1);
     }
 	;
 
 enumerator	/* identifiers must be flagged as ENUMERATION_CONSTANT */
 	: enumeration_constant '=' constant_expression
-    { $$ = std::make_unique<EnumConst>(std::move($1), std::move($3)); }
+    {
+        checktype.WithinScope() = true;
+        $$ = std::make_unique<EnumConst>(std::move($1), std::move($3));
+    }
 	| enumeration_constant
-    { $$ = std::make_unqiue<EnumConst>(std::move($1)); }
+    {
+        checktype.WithinScope() = true;
+        $$ = std::make_unique<EnumConst>(std::move($1));
+    }
 	;
 
 enum_type_specifier
-    : specifier_qualifier_list
+    : ':' specifier_qualifier_list { $$ = std::move($2); }
     ;
 
 atomic_type_specifier
@@ -751,8 +858,8 @@ parameter_declaration
 	;
 
 type_name
-	: specifier_qualifier_list abstract_declarator
-	| specifier_qualifier_list
+	: specifier_qualifier_list abstract_declarator  { $$ = nullptr; }
+	| specifier_qualifier_list                      { $$ = nullptr; }
 	;
 
 abstract_declarator
@@ -825,8 +932,14 @@ statement
 	| jump_statement        { $$ = std::move($1); }
 	;
 
+// Workaround to get desired behavior.
+// Otherwise, complex mechanism will be added to CheckType class.
 labeled_statement
 	: IDENTIFIER ':' statement
+    { $$ = std::make_unique<LabelStmt>($1, std::move($3)); }
+    | TYPEDEF_NAME ':' statement
+    { $$ = std::make_unique<LabelStmt>($1, std::move($3)); }
+    | ENUMERATION_CONSTANT ':' statement
     { $$ = std::make_unique<LabelStmt>($1, std::move($3)); }
 	| CASE constant_expression ':' statement
     { $$ = std::make_unique<CaseStmt>(std::move($2), std::move($4)); }
@@ -888,8 +1001,13 @@ iteration_statement
 	{ $$ = std::make_unique<ForStmt>(std::move($3), std::move($4), std::move($5), std::move($7)); }
     ;
 
+// Workaround, as above
 jump_statement
 	: GOTO IDENTIFIER ';'
+    { $$ = std::make_unique<GotoStmt>($2); }
+    | GOTO TYPEDEF_NAME ';'
+    { $$ = std::make_unique<GotoStmt>($2); }
+    | GOTO ENUMERATION_CONSTANT ';'
     { $$ = std::make_unique<GotoStmt>($2); }
 	| CONTINUE ';'
     { $$ = std::make_unique<ContinueStmt>(); }
@@ -929,4 +1047,83 @@ void yy::parser::error(const std::string& msg)
 {
 	fflush(stdout);
 	fprintf(stderr, "*** %s\n", msg.c_str());
+}
+
+
+void CheckType::EnterScope()
+{
+    scopes_.push_back({});
+}
+
+void CheckType::LeaveScope()
+{
+    scopes_.pop_back();
+}
+
+void CheckType::DumpParen()
+{
+    if (thingsinparen_.empty())
+        return;
+    for (auto& s : thingsinparen_)
+        scopes_.back().emplace(s, yy::parser::token::IDENTIFIER);
+    thingsinparen_.clear();
+}
+
+void CheckType::ClearParen()
+{
+    if (!thingsinparen_.empty())
+        thingsinparen_.clear();
+}
+
+void CheckType::AddIdentifier(const std::string& name, int type)
+{
+    // don't add enum const to current scope, since when
+    // a enum const is to be added, the topmost scope is
+    // brought by the pair of braces of the enum declaration,
+    // and it'll be soon popped out.
+    if (type == yy::parser::token::ENUMERATION_CONSTANT)
+        (scopes_.end() - 2)->emplace(name, type);
+    else
+        scopes_.back().emplace(name, type);
+}
+
+int CheckType::operator()(const std::string& name)
+{
+    // creating new variables in parens
+    // must be identifiers
+    if (WithinParen() && within_)
+    {
+        thingsinparen_.push_back(name);
+        within_ = false;
+        return yy::parser::token::IDENTIFIER;
+    }
+
+    if (within_)
+    {
+        auto result = scopes_.back().find(name);
+
+        int ty = 0;
+        if (result != scopes_.back().end())
+            ty = result->second;
+        else
+        {
+            if (!InEnum())
+                scopes_.back().emplace(name, yy::parser::token::IDENTIFIER);
+            ty = yy::parser::token::IDENTIFIER;
+        }
+        within_ = false;
+        return ty;
+    }
+
+    // pick up the type of the first identifier with the given name
+    for (auto it = scopes_.rbegin(); it != scopes_.rend(); ++it)
+    {
+        auto result = it->find(name);
+        if (result != it->end())
+            return result->second;
+    }
+
+    // return IDENTIFIER if not found
+    // No one cares what it really is.
+    return yy::parser::token::IDENTIFIER;
 }
