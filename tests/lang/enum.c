@@ -32,6 +32,7 @@ void t1()
     int a = E_A + E_B + E_C;
     int b = F_A + F_B + F_C + F_D;
     unsigned long c = G_A + G_B + G_C;
+    int d = H_A + H_B + H_C;
 }
 
 void t2()
