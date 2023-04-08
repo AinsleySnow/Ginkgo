@@ -5,7 +5,7 @@ class BasicBlock;
 class Instr;
 class BrInstr;
 class Declaration;
-class Visitor;
+class ASTVisitor;
 
 #include "ast/Expr.h"
 #include <list>
@@ -19,7 +19,7 @@ class Statement
 public:
     virtual ~Statement() {}
 
-    virtual void Accept(Visitor*) {}
+    virtual void Accept(ASTVisitor*) {}
 
     const auto& NextList() const { return nextlist_; }
     auto& NextList() { return nextlist_; }
@@ -34,7 +34,7 @@ class IterStmt : public Statement
 {
 protected:
     friend class IRGen;
-    virtual void Accept(Visitor*) {}
+    virtual void Accept(ASTVisitor*) {}
 
     BasicBlock* continuepoint_{};
 };
@@ -43,7 +43,7 @@ protected:
 class BreakStmt : public Statement
 {
 public:
-    void Accept(Visitor*) override;
+    void Accept(ASTVisitor*) override;
 };
 
 
@@ -54,7 +54,7 @@ public:
         const_(std::move(c)), stmt_(std::move(s)) {}
     CaseStmt(std::unique_ptr<Statement> s) : stmt_(std::move(s)) {}
 
-    void Accept(Visitor* v) override;
+    void Accept(ASTVisitor* v) override;
 
 private:
     friend class IRGen;
@@ -66,7 +66,7 @@ private:
 class CompoundStmt : public Statement
 {
 public:
-    void Accept(Visitor* v) override;
+    void Accept(ASTVisitor* v) override;
     void Append(std::unique_ptr<Statement> stmt);
 
 private:
@@ -78,7 +78,7 @@ private:
 class ContinueStmt : public Statement
 {
 public:
-    void Accept(Visitor* v) override;
+    void Accept(ASTVisitor* v) override;
 };
 
 
@@ -87,7 +87,7 @@ class DeclStmt : public Statement
 public:
     DeclStmt(std::unique_ptr<Declaration> d) :
         decl_(std::move(d)) {}
-    void Accept(Visitor* v) override;
+    void Accept(ASTVisitor* v) override;
 
 private:
     friend class IRGen;
@@ -100,7 +100,7 @@ class DoWhileStmt : public IterStmt
 public:
     DoWhileStmt(std::unique_ptr<Expr> e, std::unique_ptr<Statement> s) :
         expr_(std::move(e)), stmt_(std::move(s)) {}
-    void Accept(Visitor* v) override;
+    void Accept(ASTVisitor* v) override;
 
 private:
     friend class IRGen;
@@ -113,7 +113,7 @@ class ExprStmt : public Statement
 {
 public:
     ExprStmt(std::unique_ptr<Expr> e) : expr_(std::move(e)) {}
-    void Accept(Visitor* v) override;
+    void Accept(ASTVisitor* v) override;
 
     bool Empty() const { return expr_ == nullptr; }
 
@@ -134,7 +134,7 @@ public:
             init_(std::move(init)), condition_(std::move(cond)),
             increment_(std::move(inc)), body_(std::move(s)) {}
 
-    void Accept(Visitor* v) override;
+    void Accept(ASTVisitor* v) override;
 
 private:
     friend class IRGen;
@@ -149,7 +149,7 @@ class GotoStmt : public Statement
 {
 public:
     GotoStmt(const std::string& i) : ident_(i) {}
-    void Accept(Visitor* v) override;
+    void Accept(ASTVisitor* v) override;
 
 private:
     friend class IRGen;
@@ -166,7 +166,7 @@ public:
         std::unique_ptr<Statement> f) :
         expr_(std::move(e)), true_(std::move(t)), false_(std::move(f)) {}
 
-    void Accept(Visitor* v) override;
+    void Accept(ASTVisitor* v) override;
 
 private:
     friend class IRGen;
@@ -181,7 +181,7 @@ class LabelStmt : public Statement
 public:
     LabelStmt(const std::string& l, std::unique_ptr<Statement> s) :
         label_(l), stmt_(std::move(s)) {}
-    void Accept(Visitor* v) override;
+    void Accept(ASTVisitor* v) override;
 
 private:
     friend class IRGen;
@@ -196,7 +196,7 @@ public:
     RetStmt() {}
     RetStmt(std::unique_ptr<Expr> e) :
         retvalue_(std::move(e)) {}
-    void Accept(Visitor* v);
+    void Accept(ASTVisitor* v);
 
 private:
     friend class IRGen;
@@ -209,7 +209,7 @@ class SwitchStmt : public Statement
 public:
     SwitchStmt(std::unique_ptr<Expr> e, std::unique_ptr<Statement> s) :
         expr_(std::move(e)), stmt_(std::move(s)) {}
-    void Accept(Visitor* v);
+    void Accept(ASTVisitor* v);
 
 private:
     friend class IRGen;
@@ -222,7 +222,7 @@ class TransUnit : public Statement
 {
 public:
     void AddDecl(std::unique_ptr<DeclStmt>);
-    void Accept(Visitor*);
+    void Accept(ASTVisitor*);
 
 private:
     friend class IRGen;
@@ -235,7 +235,7 @@ class WhileStmt : public IterStmt
 public:
     WhileStmt(std::unique_ptr<Expr> e, std::unique_ptr<Statement> s) :
         expr_(std::move(e)), stmt_(std::move(s)) {}
-    void Accept(Visitor* v) override;
+    void Accept(ASTVisitor* v) override;
 
 private:
     friend class IRGen;

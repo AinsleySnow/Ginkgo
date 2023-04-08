@@ -14,13 +14,13 @@ class DeclSpec;
 class ObjDef;
 class FuncDef;
 class Register;
-class Visitor;
+class ASTVisitor;
 
 
 class Declaration
 {
 public:
-    virtual void Accept(Visitor*) {}
+    virtual void Accept(ASTVisitor*) {}
 
     auto& Type() { return type_; }
     const CType* RawType() const { return type_.get(); }
@@ -99,7 +99,7 @@ class TypedefSpec : public TypeSpec
 class DeclSpec : public Declaration
 {
 public:
-    void Accept(Visitor* v) override;
+    void Accept(ASTVisitor* v) override;
 
     bool IsDeclSpec() const override { return true; }
     DeclSpec* ToDeclSpec() override { return this; }
@@ -133,7 +133,7 @@ private:
 class ParamList : public Declaration
 {
 public:
-    void Accept(Visitor* v) override;
+    void Accept(ASTVisitor* v) override;
 
     bool& Variadic() { return variadic_; }
     bool Variadic() const { return variadic_; }
@@ -162,7 +162,7 @@ struct InitDecl
 class DeclList : public Declaration
 {
 public:
-    void Accept(Visitor* v) override;
+    void Accept(ASTVisitor* v) override;
     void Append(std::unique_ptr<InitDecl> decl);
 
     auto begin() { return decllist_.begin(); }
@@ -179,7 +179,7 @@ public:
     ObjDef() {}
     ObjDef(const std::string& n) : name_(n) {}
 
-    void Accept(Visitor* v);
+    void Accept(ASTVisitor* v);
 
     bool IsObjDef() const override { return true; }
     ObjDef* ToObjDef() override { return this; }
@@ -204,7 +204,7 @@ public:
     PtrDef(QualType q) : qual_(q) {}
     PtrDef(std::shared_ptr<Declaration> p) { child_ = p; }
 
-    void Accept(Visitor*) override;
+    void Accept(ASTVisitor*) override;
 
 private:
     friend class IRGen;
@@ -219,7 +219,7 @@ public:
     ArrayDef(std::unique_ptr<Expr> size) :
         size_(std::move(size)) {}
 
-    void Accept(Visitor*);
+    void Accept(ASTVisitor*);
 
     bool Variable() const { return variable_; }
     bool& Variable() { return variable_; }
@@ -245,7 +245,7 @@ public:
     FuncDef() : paramlist_(std::make_unique<ParamList>()) {}
     FuncDef(std::unique_ptr<ParamList> p) : paramlist_(std::move(p)) {}
 
-    void Accept(Visitor* v);
+    void Accept(ASTVisitor* v);
 
     bool IsFuncDef() const override { return true; }
     FuncDef* ToFuncDef() override { return this; }

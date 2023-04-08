@@ -4,7 +4,7 @@
 #include "IR/IRBuilder.h"
 #include "IR/Value.h"
 #include "visitast/Scope.h"
-#include "visitast/Visitor.h"
+#include "visitast/ASTVisitor.h"
 #include <list>
 #include <memory>
 #include <stack>
@@ -18,7 +18,7 @@ class IRType;
 class Statement;
 
 
-class IRGen : public Visitor
+class IRGen : public ASTVisitor
 {
 public:
     IRGen() {}

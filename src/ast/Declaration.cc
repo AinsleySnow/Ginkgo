@@ -1,5 +1,5 @@
 #include "ast/Declaration.h"
-#include "visitast/Visitor.h"
+#include "visitast/ASTVisitor.h"
 
 
 Declaration* Declaration::InnerMost()
@@ -10,7 +10,7 @@ Declaration* Declaration::InnerMost()
 }
 
 
-void DeclSpec::Accept(Visitor* v)
+void DeclSpec::Accept(ASTVisitor* v)
 {
     v->VisitDeclSpec(this);
 }
@@ -151,7 +151,7 @@ bool DeclSpec::SetRawSpec(Tag t)
 }
 
 
-void ParamList::Accept(Visitor* v)
+void ParamList::Accept(ASTVisitor* v)
 {
     v->VisitParamList(this);
 }
@@ -167,7 +167,7 @@ void ParamList::AppendType(const CType* ty)
 }
 
 
-void DeclList::Accept(Visitor* v)
+void DeclList::Accept(ASTVisitor* v)
 {
     v->VisitDeclList(this);
 }
@@ -177,22 +177,22 @@ void DeclList::Append(std::unique_ptr<InitDecl> decl)
     decllist_.push_back(std::move(decl));
 }
 
-void ObjDef::Accept(Visitor* v)
+void ObjDef::Accept(ASTVisitor* v)
 {
     v->VisitObjDef(this);
 }
 
-void PtrDef::Accept(Visitor* v)
+void PtrDef::Accept(ASTVisitor* v)
 {
     v->VisitPtrDef(this);
 }
 
-void ArrayDef::Accept(Visitor* v)
+void ArrayDef::Accept(ASTVisitor* v)
 {
     v->VisitArrayDef(this);
 }
 
-void FuncDef::Accept(Visitor* v)
+void FuncDef::Accept(ASTVisitor* v)
 {
     v->VisitFuncDef(this);
 }

@@ -10,7 +10,7 @@
 
 class Declaration;
 class Register;
-class Visitor;
+class ASTVisitor;
 
 
 class ArrayExpr : public Expr
@@ -19,7 +19,7 @@ public:
     ArrayExpr(std::unique_ptr<Expr> ident, std::unique_ptr<Expr> index) :
         identifier_(std::move(ident)), index_(std::move(index)) {}
 
-    void Accept(Visitor* v) override;
+    void Accept(ASTVisitor* v) override;
 
     bool IsSubscript() const override { return true; }
     ArrayExpr* ToSubscript() override { return this; }
@@ -42,7 +42,7 @@ public:
     AssignExpr(std::unique_ptr<Expr> l, Tag t, std::unique_ptr<Expr> r) :
         left_(std::move(l)), op_(t), right_(std::move(r)) {}
 
-    void Accept(Visitor* v) override;
+    void Accept(ASTVisitor* v) override;
 
 private:
     friend class IRGen;
@@ -59,7 +59,7 @@ public:
     BinaryExpr(std::unique_ptr<Expr> l, Tag t, std::unique_ptr<Expr> r) :
         left_(std::move(l)), op_(t), right_(std::move(r)) {}
 
-    void Accept(Visitor* v) override;
+    void Accept(ASTVisitor* v) override;
     bool IsConstant() const override;
 
 private:
@@ -79,7 +79,7 @@ public:
     CallExpr(std::unique_ptr<Expr> e, std::unique_ptr<ExprList> el) :
         postfix_(std::move(e)), argvlist_(std::move(el)) {}
 
-    void Accept(Visitor* v) override;
+    void Accept(ASTVisitor* v) override;
 
 private:
     friend class IRGen;
@@ -94,7 +94,7 @@ public:
     CastExpr(std::unique_ptr<Declaration> tn, std::unique_ptr<Expr> e) :
         typename_(std::move(tn)), expr_(std::move(e)) {}
 
-    void Accept(Visitor* v) override;
+    void Accept(ASTVisitor* v) override;
 
 private:
     friend class IRGen;
@@ -109,7 +109,7 @@ public:
     CondExpr(std::unique_ptr<Expr> c, std::unique_ptr<Expr> t,
         std::unique_ptr<Expr> f) : cond_(std::move(c)), true_(std::move(t)), false_(std::move(f)) {}
     
-    void Accept(Visitor* v) override;
+    void Accept(ASTVisitor* v) override;
 
 private:
     friend class IRGen;
@@ -138,7 +138,7 @@ public:
     ConstExpr* ToConstant() override { return this; }
     const ConstExpr* ToConstant() const override { return this; }
 
-    void Accept(Visitor* v) override;
+    void Accept(ASTVisitor* v) override;
 
 private:
     union
@@ -156,7 +156,7 @@ public:
     EnumConst(const std::string& n, std::unique_ptr<Expr> e) :
         name_(n), expr_(std::move(e)) {}
 
-    void Accept(Visitor*) override;
+    void Accept(ASTVisitor*) override;
     bool IsConstant() const override { return true; }
 
     const auto& Name() const { return name_; }
@@ -171,7 +171,7 @@ private:
 class EnumList : public Expr
 {
 public:
-    void Accept(Visitor* v) override;
+    void Accept(ASTVisitor* v) override;
 
     void Append(std::unique_ptr<EnumConst>);
     auto Count() const { return exprlist_.size(); }
@@ -190,7 +190,7 @@ private:
 class ExprList : public Expr
 {
 public:
-    void Accept(Visitor* v) override;
+    void Accept(ASTVisitor* v) override;
 
     void Append(std::unique_ptr<Expr> expr);
     auto begin() { return exprlist_.begin(); }
@@ -207,7 +207,7 @@ class IdentExpr : public Expr
 public:
     IdentExpr(const std::string& n) : name_(n) {}
 
-    void Accept(Visitor*) override;
+    void Accept(ASTVisitor*) override;
     bool IsLVal() const override { return true; }
 
     bool IsIdentifier() const override { return true; }
@@ -230,7 +230,7 @@ public:
     LogicalExpr(std::unique_ptr<Expr> l, Tag t, std::unique_ptr<Expr> r) :
         left_(std::move(l)), op_(t), right_(std::move(r)) {}
 
-    void Accept(Visitor* v);
+    void Accept(ASTVisitor* v);
 
 private:
     friend class IRGen;
@@ -246,7 +246,7 @@ class StrExpr : public Expr
 public:
     StrExpr(const std::string& s) : content_(s) {}
 
-    void Accept(Visitor* v) override;
+    void Accept(ASTVisitor* v) override;
 
 private:
     std::string content_{};
@@ -259,7 +259,7 @@ public:
     UnaryExpr(Tag t, std::unique_ptr<Expr> c) :
         op_(t), content_(std::move(c)) {}
 
-    void Accept(Visitor* v) override;
+    void Accept(ASTVisitor* v) override;
     bool IsConstant() const override;
 
 private:

@@ -2,10 +2,10 @@
 #define _CODE_CHECK_H_
 
 #include "visitast/Scope.h"
-#include "visitast/Visitor.h"
+#include "visitast/ASTVisitor.h"
 
 
-class CodeChk : public Visitor
+class CodeChk : public ASTVisitor
 {
 public:
     void VisitAssignExpr(AssignExpr*) override;

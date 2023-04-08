@@ -2,23 +2,23 @@
 #include "ast/Expression.h"
 #include "IR/IROperand.h"
 #include "messages/Error.h"
-#include "visitast/Visitor.h"
+#include "visitast/ASTVisitor.h"
 #include <algorithm>
 #include <climits>
 #include <cfloat>
 
 
-void ArrayExpr::Accept(Visitor* v)
+void ArrayExpr::Accept(ASTVisitor* v)
 {
     v->VisitArrayExpr(this);
 }
 
-void AssignExpr::Accept(Visitor* v)
+void AssignExpr::Accept(ASTVisitor* v)
 {
     v->VisitAssignExpr(this);
 }
 
-void BinaryExpr::Accept(Visitor* v)
+void BinaryExpr::Accept(ASTVisitor* v)
 {
     v->VisitBinaryExpr(this);
 }
@@ -28,27 +28,27 @@ bool BinaryExpr::IsConstant() const
     return Val()->IsConstant();
 }
 
-void CallExpr::Accept(Visitor* v)
+void CallExpr::Accept(ASTVisitor* v)
 {
     v->VisitCallExpr(this);
 }
 
-void CastExpr::Accept(Visitor* v)
+void CastExpr::Accept(ASTVisitor* v)
 {
     v->VisitCastExpr(this);
 }
 
-void CondExpr::Accept(Visitor* v)
+void CondExpr::Accept(ASTVisitor* v)
 {
     v->VisitCondExpr(this);
 }
 
-void ConstExpr::Accept(Visitor* v)
+void ConstExpr::Accept(ASTVisitor* v)
 {
     v->VisitConstant(this);
 }
 
-void EnumConst::Accept(Visitor* v)
+void EnumConst::Accept(ASTVisitor* v)
 {
     v->VisitEnumConst(this);
 }
@@ -138,7 +138,7 @@ ConstExpr::ConstExpr(double d, char suffix)
 }
 
 
-void EnumList::Accept(Visitor* v)
+void EnumList::Accept(ASTVisitor* v)
 {
     v->VisitEnumList(this);
 }
@@ -148,7 +148,7 @@ void EnumList::Append(std::unique_ptr<EnumConst> expr)
     exprlist_.push_back(std::move(expr));
 }
 
-void ExprList::Accept(Visitor* v)
+void ExprList::Accept(ASTVisitor* v)
 {
     v->VisitExprList(this);
 }
@@ -158,22 +158,22 @@ void ExprList::Append(std::unique_ptr<Expr> expr)
     exprlist_.push_back(std::move(expr));
 }
 
-void IdentExpr::Accept(Visitor* v)
+void IdentExpr::Accept(ASTVisitor* v)
 {
     v->VisitIdentExpr(this);
 }
 
-void LogicalExpr::Accept(Visitor* v)
+void LogicalExpr::Accept(ASTVisitor* v)
 {
     v->VisitLogicalExpr(this);
 }
 
-void StrExpr::Accept(Visitor* v)
+void StrExpr::Accept(ASTVisitor* v)
 {
     v->VisitStrExpr(this);
 }
 
-void UnaryExpr::Accept(Visitor* v)
+void UnaryExpr::Accept(ASTVisitor* v)
 {
     v->VisitUnaryExpr(this);
 }

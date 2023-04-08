@@ -1,5 +1,5 @@
-#ifndef _VISITOR_H_
-#define _VISITOR_H_
+#ifndef _AST_VISITOR_H_
+#define _AST_VISITOR_H_
 
 class ArrayDef;
 class Declaration;
@@ -42,10 +42,10 @@ class TransUnit;
 class WhileStmt;
 
 
-class Visitor
+class ASTVisitor
 {
 public:
-    virtual ~Visitor() {}
+    virtual ~ASTVisitor() {}
 
     virtual void VisitArrayDef(ArrayDef*) {}
     virtual void VisitDeclList(DeclList*) {}
@@ -87,4 +87,4 @@ public:
     virtual void VisitWhileStmt(WhileStmt*) {}
 };
 
-#endif // _VISITOR_H_
+#endif // _AST_VISITOR_H_

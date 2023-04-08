@@ -8,7 +8,7 @@ class ArrayExpr;
 class ConstExpr;
 class IdentExpr;
 class IROperand;
-class Visitor;
+class ASTVisitor;
 
 
 class Expr
@@ -16,7 +16,7 @@ class Expr
 public:
     virtual ~Expr() {}
 
-    virtual void Accept(Visitor*) {}
+    virtual void Accept(ASTVisitor*) {}
     virtual bool IsLVal() const { return false; }
     virtual bool IsConstant() const { return false; }
     virtual bool IsIdentifier() const { return false; }

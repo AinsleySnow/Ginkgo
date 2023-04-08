@@ -15,7 +15,7 @@ target_precompile_headers(
     PRIVATE Identifier.h
     PRIVATE IRGen.h
     PRIVATE Scope.h
-    PRIVATE Visitor.h
+    PRIVATE ASTVisitor.h
 )
 
 

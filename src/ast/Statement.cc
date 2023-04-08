@@ -1,6 +1,6 @@
 #include "ast/Statement.h"
 #include "IR/Instr.h"
-#include "visitast/Visitor.h"
+#include "visitast/ASTVisitor.h"
 
 
 void Statement::PushBrInstr(Instr* i)
@@ -9,17 +9,17 @@ void Statement::PushBrInstr(Instr* i)
 }
 
 
-void BreakStmt::Accept(Visitor* v)
+void BreakStmt::Accept(ASTVisitor* v)
 {
     v->VisitBreakStmt(this);
 }
 
-void CaseStmt::Accept(Visitor* v)
+void CaseStmt::Accept(ASTVisitor* v)
 {
     v->VisitCaseStmt(this);
 }
 
-void CompoundStmt::Accept(Visitor* v)
+void CompoundStmt::Accept(ASTVisitor* v)
 {
     v->VisitCompoundStmt(this);
 }
@@ -29,57 +29,57 @@ void CompoundStmt::Append(std::unique_ptr<Statement> stmt)
     stmtlist_.push_back(std::move(stmt));
 }
 
-void ContinueStmt::Accept(Visitor* v)
+void ContinueStmt::Accept(ASTVisitor* v)
 {
     v->VisitContinueStmt(this);
 }
 
-void DeclStmt::Accept(Visitor* v)
+void DeclStmt::Accept(ASTVisitor* v)
 {
     v->VisitDeclStmt(this);
 }
 
-void DoWhileStmt::Accept(Visitor* v)
+void DoWhileStmt::Accept(ASTVisitor* v)
 {
     v->VisitDoWhileStmt(this);
 }
 
-void ExprStmt::Accept(Visitor* v)
+void ExprStmt::Accept(ASTVisitor* v)
 {
     v->VisitExprStmt(this);
 }
 
-void ForStmt::Accept(Visitor* v)
+void ForStmt::Accept(ASTVisitor* v)
 {
     v->VisitForStmt(this);
 }
 
-void GotoStmt::Accept(Visitor* v)
+void GotoStmt::Accept(ASTVisitor* v)
 {
     v->VisitGotoStmt(this);
 }
 
-void IfStmt::Accept(Visitor* v)
+void IfStmt::Accept(ASTVisitor* v)
 {
     v->VisitIfStmt(this);
 }
 
-void LabelStmt::Accept(Visitor* v)
+void LabelStmt::Accept(ASTVisitor* v)
 {
     v->VisitLabelStmt(this);
 }
 
-void RetStmt::Accept(Visitor* v)
+void RetStmt::Accept(ASTVisitor* v)
 {
     v->VisitRetStmt(this);
 }
 
-void SwitchStmt::Accept(Visitor* v)
+void SwitchStmt::Accept(ASTVisitor* v)
 {
     v->VisitSwitchStmt(this);
 }
 
-void TransUnit::Accept(Visitor* v)
+void TransUnit::Accept(ASTVisitor* v)
 {
     v->VisitTransUnit(this);
 }
@@ -89,7 +89,7 @@ void TransUnit::AddDecl(std::unique_ptr<DeclStmt> decl)
     declist_.push_back(std::move(decl));
 }
 
-void WhileStmt::Accept(Visitor* v)
+void WhileStmt::Accept(ASTVisitor* v)
 {
     v->VisitWhileStmt(this);
 }
