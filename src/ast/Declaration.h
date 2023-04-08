@@ -208,6 +208,7 @@ public:
 
 private:
     friend class IRGen;
+    friend class TypeBuilder;
     QualType qual_{};
 };
 
@@ -256,6 +257,7 @@ public:
 
 private:
     friend class IRGen;
+    friend class TypeBuilder;
     std::unique_ptr<ParamList> paramlist_{};
 };
 

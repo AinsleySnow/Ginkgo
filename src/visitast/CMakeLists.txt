@@ -5,6 +5,7 @@ add_library(
     IRGen.cc
     Scope.cc
     Evaluator.cc
+    TypeBuilder.cc
 )
 
 
@@ -16,6 +17,7 @@ target_precompile_headers(
     PRIVATE IRGen.h
     PRIVATE Scope.h
     PRIVATE ASTVisitor.h
+    PRIVATE TypeBuilder.h
 )
 
 

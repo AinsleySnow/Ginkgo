@@ -5,6 +5,7 @@
 #include "IR/Value.h"
 #include "visitast/Scope.h"
 #include "visitast/ASTVisitor.h"
+#include "visitast/TypeBuilder.h"
 #include <list>
 #include <memory>
 #include <stack>
@@ -112,9 +113,6 @@ private:
     };
 
 
-    std::unique_ptr<CEnumType> EnumHelper(const EnumSpec*);
-    void StructUnionHelper(const StructUnionSpec*);
-
     const Register* AllocaObject(const CType*, const std::string&);
     Function* AllocaFunc(const CFuncType*, const std::string&);
 
@@ -126,6 +124,7 @@ private:
     static void Merge(const std::list<BrInstr*>&, std::list<BrInstr*>&);
 
     ScopeStack scopestack_{};
+    TypeBuilder tbud_{ *this, scopestack_ };
     InstrBuilder ibud_{};
     BlockBuilder bbud_{};
     CurrentEnv env_{};
