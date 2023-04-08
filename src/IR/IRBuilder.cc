@@ -441,7 +441,7 @@ const Register* InstrBuilder::InsertFextInstr(
 const Register* InstrBuilder::InsertFtouInstr(
     const std::string& result, const IntType* ty, const Register* val)
 {
-    auto pftou = std::make_unique<FtouInstr>(result, ty, val);
+    auto pftou = std::make_unique<FtoUInstr>(result, ty, val);
     Insert(std::move(pftou));
     return Register::CreateRegister(Container(), result, ty);
 }
@@ -449,7 +449,7 @@ const Register* InstrBuilder::InsertFtouInstr(
 const Register* InstrBuilder::InsertFtosInstr(
     const std::string& result, const IntType* ty, const Register* val)
 {
-    auto pftos = std::make_unique<FtosInstr>(result, ty, val);
+    auto pftos = std::make_unique<FtoSInstr>(result, ty, val);
     Insert(std::move(pftos));
     return Register::CreateRegister(Container(), result, ty);
 }
@@ -457,7 +457,7 @@ const Register* InstrBuilder::InsertFtosInstr(
 const Register* InstrBuilder::InsertUtofInstr(
     const std::string& result, const FloatType* ty, const Register* val)
 {
-    auto putof = std::make_unique<UtofInstr>(result, ty, val);
+    auto putof = std::make_unique<UtoFInstr>(result, ty, val);
     Insert(std::move(putof));
     return Register::CreateRegister(Container(), result, ty);
 }
@@ -465,7 +465,7 @@ const Register* InstrBuilder::InsertUtofInstr(
 const Register* InstrBuilder::InsertStofInstr(
     const std::string& result, const FloatType* ty, const Register* val)
 {
-    auto pstof = std::make_unique<StofInstr>(result, ty, val);
+    auto pstof = std::make_unique<StoFInstr>(result, ty, val);
     Insert(std::move(pstof));
     return Register::CreateRegister(Container(), result, ty);
 }
@@ -473,7 +473,7 @@ const Register* InstrBuilder::InsertStofInstr(
 const Register* InstrBuilder::InsertPtrtoiInstr(
     const std::string& result, const IntType* ty, const Register* val)
 {
-    auto pptrtoi = std::make_unique<PtrtoiInstr>(result, ty, val);
+    auto pptrtoi = std::make_unique<PtrtoIInstr>(result, ty, val);
     Insert(std::move(pptrtoi));
     return Register::CreateRegister(Container(), result, ty);
 }
@@ -481,7 +481,7 @@ const Register* InstrBuilder::InsertPtrtoiInstr(
 const Register* InstrBuilder::InsertItoptrInstr(
     const std::string& result, const PtrType* ty, const Register* val)
 {
-    auto pitoptr = std::make_unique<ItoptrInstr>(result, ty, val);
+    auto pitoptr = std::make_unique<ItoPtrInstr>(result, ty, val);
     Insert(std::move(pitoptr));
     return Register::CreateRegister(Container(), result, ty);
 }

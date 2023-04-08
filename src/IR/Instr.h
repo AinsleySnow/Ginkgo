@@ -536,10 +536,10 @@ private:
 };
 
 
-class FtouInstr : public Instr
+class FtoUInstr : public Instr
 {
 public:
-    FtouInstr(
+    FtoUInstr(
         const std::string& r, const IntType* t, const Register* v
     ) : Instr(InstrType::ftou), result_(r), type_(t), value_(v) {}
 
@@ -552,10 +552,10 @@ private:
 };
 
 
-class FtosInstr : public Instr
+class FtoSInstr : public Instr
 {
 public:
-    FtosInstr(
+    FtoSInstr(
         const std::string& r, const IntType* t, const Register* v
     ) : Instr(InstrType::ftos), result_(r), type_(t), value_(v) {}
 
@@ -568,10 +568,10 @@ private:
 };
 
 
-class UtofInstr : public Instr
+class UtoFInstr : public Instr
 {
 public:
-    UtofInstr(
+    UtoFInstr(
         const std::string& r, const FloatType* t1, const Register* v
     ) : Instr(InstrType::utof), result_(r), type_(t1), value_(v) {}
 
@@ -584,10 +584,10 @@ private:
 };
 
 
-class StofInstr : public Instr
+class StoFInstr : public Instr
 {
 public:
-    StofInstr(
+    StoFInstr(
         const std::string& r, const FloatType* t, const Register* v
     ) : Instr(InstrType::stof), result_(r), type_(t), value_(v) {}
 
@@ -600,10 +600,10 @@ private:
 };
 
 
-class PtrtoiInstr : public Instr
+class PtrtoIInstr : public Instr
 {
 public:
-    PtrtoiInstr(
+    PtrtoIInstr(
         const std::string& r, const IntType* t, const Register* v
     ) : Instr(InstrType::ptrtoi), result_(r), type_(t), value_(v) {}
 
@@ -616,10 +616,10 @@ private:
 };
 
 
-class ItoptrInstr : public Instr
+class ItoPtrInstr : public Instr
 {
 public:
-    ItoptrInstr(
+    ItoPtrInstr(
         const std::string& r, const PtrType* t, const Register* v
     ) : Instr(InstrType::itoptr), result_(r), type_(t), value_(v) {}
 

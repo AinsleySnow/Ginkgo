@@ -150,32 +150,32 @@ std::string FextInstr::ToString() const
     return result_ + " = fext " + value_->ToString() +
         " to " + type_->ToString();
 }
-std::string FtouInstr::ToString() const
+std::string FtoUInstr::ToString() const
 {
     return result_ + " = ftou " + value_->ToString() +
         " to " + type_->ToString();
 }
-std::string FtosInstr::ToString() const
+std::string FtoSInstr::ToString() const
 {
     return result_ + " = ftos " + value_->ToString() +
         " to " + type_->ToString();
 }
-std::string UtofInstr::ToString() const
+std::string UtoFInstr::ToString() const
 {
     return result_ + " = utof " + value_->ToString() +
         " to " + type_->ToString();
 }
-std::string StofInstr::ToString() const
+std::string StoFInstr::ToString() const
 {
     return result_ + " = stof " + value_->ToString() +
         " to " + type_->ToString();
 }
-std::string PtrtoiInstr::ToString() const
+std::string PtrtoIInstr::ToString() const
 {
     return result_ + " = ptrtoi " + value_->ToString() +
         " to " + type_->ToString();
 }
-std::string ItoptrInstr::ToString() const
+std::string ItoPtrInstr::ToString() const
 {
     return result_ + " = itoptr " + value_->ToString() +
         " to " + type_->ToString();
