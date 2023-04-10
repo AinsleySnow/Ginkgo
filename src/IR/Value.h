@@ -1,10 +1,12 @@
 #ifndef _VALUE_H_
 #define _VALUE_H_
 
-#include "IR/MemPool.h"
 #include "IR/IROperand.h"
 #include "IR/IRType.h"
 #include "IR/Instr.h"
+#include "utils/Container.h"
+#include "utils/DynCast.h"
+#include "utils/Pool.h"
 #include <algorithm>
 #include <memory>
 #include <string>
@@ -30,7 +32,7 @@ protected:
 };
 
 
-class Module : public Value, public MemPool<IRType>, public MemPool<IROperand>
+class Module : public Value, public Pool<IRType>, public Pool<IROperand>
 {
 public:
     Module(const std::string& n) : Value(n) {}
@@ -119,7 +121,7 @@ private:
 
 
 class BasicBlock : public Value, public Container<Instr>,
-                   public MemPool<IROperand>, public MemPool<IRType>
+                   public Pool<IROperand>, public Pool<IRType>
 {
 public:
     static BasicBlock* CreateBasicBlock(Function*, const std::string&);

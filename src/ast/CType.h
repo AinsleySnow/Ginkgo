@@ -92,7 +92,7 @@ enum class TypeTag
 class CType
 {
 public:
-    virtual const IRType* ToIRType(MemPool<IRType>*) const = 0;
+    virtual const IRType* ToIRType(Pool<IRType>*) const = 0;
     virtual std::string ToString() const = 0;
 
     virtual bool Compatible(const CType* other) const = 0;
@@ -124,7 +124,7 @@ private:
 class ErrorType : public CType
 {
 public:
-    const IRType* ToIRType(MemPool<IRType>*) const override { return nullptr; };
+    const IRType* ToIRType(Pool<IRType>*) const override { return nullptr; };
     std::string ToString() const override { return "<error-type>"; }
 
     bool Compatible(const CType* other) { return false; };
@@ -136,7 +136,7 @@ class CArithmType : public CType
 public:
     CArithmType(TypeTag);
 
-    const IRType* ToIRType(MemPool<IRType>*) const override;
+    const IRType* ToIRType(Pool<IRType>*) const override;
     std::string ToString() const override;
 
     bool Compatible(const CType*) const override;
@@ -166,7 +166,7 @@ public:
         return_(std::move(ret)) { paramlist_.reserve(paramcount); }
 
     std::string ToString() const override { return ""; }
-    const FuncType* ToIRType(MemPool<IRType>*) const override;
+    const FuncType* ToIRType(Pool<IRType>*) const override;
 
     bool IsFunc() const override { return true; }
     bool Compatible(const CType*) const override { return false; }
@@ -205,7 +205,7 @@ public:
     CPtrType(std::unique_ptr<CType> p) : point2_(std::move(p)) {}
 
     std::string ToString() const override;
-    const PtrType* ToIRType(MemPool<IRType>*) const override;
+    const PtrType* ToIRType(Pool<IRType>*) const override;
     bool Compatible(const CType*) const { return false; }
 
     size_t Size() { return 8; }
@@ -232,7 +232,7 @@ public:
         arrayof_(std::move(ty)), count_(c) {}
 
     std::string ToString() const;
-    const ArrayType* ToIRType(MemPool<IRType>*) const override;
+    const ArrayType* ToIRType(Pool<IRType>*) const override;
     bool Compatible(const CType*) const { return false; }
 
     bool IsArray() const override { return true; }
@@ -263,7 +263,7 @@ public:
     std::string ToString() const override;
     bool Compatible(const CType*) const override { return false; }
 
-    const IntType* ToIRType(MemPool<IRType>*) const override;
+    const IntType* ToIRType(Pool<IRType>*) const override;
 
     void Reserve(size_t size) { members_.reserve(size); }
     void AddMember(const Member* m) { members_[index_++] = m; }
@@ -282,7 +282,7 @@ private:
 class CVoidType : public CType
 {
 public:
-    const VoidType* ToIRType(MemPool<IRType>*) const override;
+    const VoidType* ToIRType(Pool<IRType>*) const override;
     std::string ToString() const override { return "void"; }
 
     bool IsVoid() const override { return true; }

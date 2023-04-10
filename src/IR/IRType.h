@@ -1,7 +1,7 @@
 #ifndef _IR_TYPE_H_
 #define _IR_TYPE_H_
 
-#include "IR/MemPool.h"
+#include "utils/Pool.h"
 #include <memory>
 #include <string>
 #include <vector>
@@ -103,7 +103,7 @@ public:
 class ArrayType : public IRType
 {
 public:
-    static ArrayType* GetArrayType(MemPool<IRType>*, size_t, const IRType*);
+    static ArrayType* GetArrayType(Pool<IRType>*, size_t, const IRType*);
     ArrayType(size_t, const IRType*);
 
     std::string ToString() const override;
@@ -131,7 +131,7 @@ private:
 class PtrType : public IntType
 {
 public:
-    static PtrType* GetPtrType(MemPool<IRType>*, const IRType*);
+    static PtrType* GetPtrType(Pool<IRType>*, const IRType*);
     PtrType(const IRType* t) :
         IntType(8, false), type_(t) {}
 
@@ -152,7 +152,7 @@ private:
 class FuncType : public IRType
 {
 public:
-    static FuncType* GetFuncType(MemPool<IRType>*, const IRType*, bool);
+    static FuncType* GetFuncType(Pool<IRType>*, const IRType*, bool);
     FuncType(const IRType* ret, bool v) : 
         retype_(std::move(ret)), variadic_(v) { size_ = -1; }
 
@@ -177,7 +177,7 @@ private:
 class StructType : public IRType
 {
 public:
-    static StructType* GetStructType(MemPool<IRType>*, const std::vector<const IRType*>&);
+    static StructType* GetStructType(Pool<IRType>*, const std::vector<const IRType*>&);
     StructType(const std::vector<const IRType*>& f) : fields_(f) {}
 
     std::string ToString() const override;
@@ -192,7 +192,7 @@ private:
 class UnionType : public IRType
 {
 public:
-    static UnionType* GetUnionType(MemPool<IRType>*, const std::vector<const IRType*>&);
+    static UnionType* GetUnionType(Pool<IRType>*, const std::vector<const IRType*>&);
     UnionType(const std::vector<const IRType*>& f) : fields_(f) {}
 
     std::string ToString() const override;

@@ -74,7 +74,7 @@ CArithmType::CArithmType(TypeTag tt) : type_(tt)
     }
 }
 
-const IRType* CArithmType::ToIRType(MemPool<IRType>*) const
+const IRType* CArithmType::ToIRType(Pool<IRType>*) const
 {
     switch (type_)
     {
@@ -156,7 +156,7 @@ void CFuncType::AddParam(const CType* t)
     paramlist_[index_++] = std::move(t);
 }
 
-const FuncType* CFuncType::ToIRType(MemPool<IRType>* pool) const
+const FuncType* CFuncType::ToIRType(Pool<IRType>* pool) const
 {
     auto functy = FuncType::GetFuncType(
         pool, ReturnType()->ToIRType(pool), Variadic());
@@ -172,14 +172,14 @@ std::string CPtrType::ToString() const
     return "";
 }
 
-const PtrType* CPtrType::ToIRType(MemPool<IRType>* pool) const
+const PtrType* CPtrType::ToIRType(Pool<IRType>* pool) const
 {
     auto point2 = point2_->ToIRType(pool);
     return PtrType::GetPtrType(pool, point2);
 }
 
 
-const ArrayType* CArrayType::ToIRType(MemPool<IRType>* pool) const
+const ArrayType* CArrayType::ToIRType(Pool<IRType>* pool) const
 {
     auto arrayof = arrayof_->ToIRType(pool);
     auto array = ArrayType::GetArrayType(pool, count_, arrayof);
@@ -199,13 +199,13 @@ std::string CEnumType::ToString() const
     return "";
 }
 
-const IntType* CEnumType::ToIRType(MemPool<IRType>* pool) const
+const IntType* CEnumType::ToIRType(Pool<IRType>* pool) const
 {
     return static_cast<const IntType*>(underlying_->ToIRType(pool));
 }
 
 
-const VoidType* CVoidType::ToIRType(MemPool<IRType>*) const
+const VoidType* CVoidType::ToIRType(Pool<IRType>*) const
 {
     return VoidType::GetVoidType();
 }

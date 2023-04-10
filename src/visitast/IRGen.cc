@@ -342,7 +342,7 @@ void IRGen::VisitBinaryExpr(BinaryExpr* bin)
 
     if (bin->left_->IsConstant() && bin->right_->IsConstant())
     {
-        MemPool<IROperand>* container = nullptr;
+        Pool<IROperand>* container = nullptr;
         if (ibud_.Container()) container = ibud_.Container();
         else    container = transunit_.get();
         bin->Val() = Evaluator::EvalBinary(
@@ -542,7 +542,7 @@ void IRGen::VisitCondExpr(CondExpr* cond)
 void IRGen::VisitConstant(ConstExpr* constant)
 {
     auto ctype = constant->RawType();
-    MemPool<IROperand>* container = nullptr;
+    Pool<IROperand>* container = nullptr;
     if (ibud_.Container()) container = ibud_.Container();
     else container = transunit_.get();
 
@@ -720,7 +720,7 @@ void IRGen::VisitUnaryExpr(UnaryExpr* unary)
 
     if (unary->content_->IsConstant())
     {
-        MemPool<IROperand>* container = nullptr;
+        Pool<IROperand>* container = nullptr;
         if (!ibud_.Container()) container = transunit_.get();
         else    container = ibud_.Container();
 

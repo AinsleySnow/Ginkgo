@@ -166,6 +166,6 @@ std::string BasicBlock::ToString() const
 
 void BasicBlock::MergePools(BasicBlock* bb)
 {
-    MemPool<IRType>::Merge(bb);
-    MemPool<IROperand>::Merge(bb);
+    Pool<IRType>::Merge(bb);
+    Pool<IROperand>::Merge(bb);
 }

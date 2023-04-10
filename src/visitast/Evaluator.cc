@@ -89,7 +89,7 @@ RET Evaluator::Calc(Tag op, NUM num)
 #define to_int(op) static_cast<const IntConst*>(op)
 #define to_float(op) static_cast<const FloatConst*>(op)
 
-const IROperand* Evaluator::EvalBinary(MemPool<IROperand>* pool, Tag op, const IROperand* lhs, const IROperand* rhs)
+const IROperand* Evaluator::EvalBinary(Pool<IROperand>* pool, Tag op, const IROperand* lhs, const IROperand* rhs)
 {
     if (lhs->IsFloatConst() && rhs->IsFloatConst())
     {
@@ -167,7 +167,7 @@ const IROperand* Evaluator::EvalBinary(MemPool<IROperand>* pool, Tag op, const I
     }
 }
 
-const IROperand* Evaluator::EvalUnary(MemPool<IROperand>* pool, Tag op, const IROperand* num)
+const IROperand* Evaluator::EvalUnary(Pool<IROperand>* pool, Tag op, const IROperand* num)
 {
     if (num->IsIntConst())
     {

@@ -2,15 +2,15 @@
 #define _EVALUATOR_H_
 
 #include "ast/Tag.h"
-#include "IR/MemPool.h"
 #include "IR/IROperand.h"
+#include "utils/Pool.h"
 
 
 class Evaluator
 {
 public:
-    static const IROperand* EvalBinary(MemPool<IROperand>*, Tag, const IROperand*, const IROperand*);
-    static const IROperand* EvalUnary(MemPool<IROperand>*, Tag, const IROperand*);
+    static const IROperand* EvalBinary(Pool<IROperand>*, Tag, const IROperand*, const IROperand*);
+    static const IROperand* EvalUnary(Pool<IROperand>*, Tag, const IROperand*);
 
 private:
     template <typename RET, typename LHS, typename RHS>
