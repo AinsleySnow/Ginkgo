@@ -74,7 +74,13 @@ public:
     bool Empty() const { return elements_.empty(); }
     auto Size() const { return elements_.size(); }
 
+    ELE* Front() { return elements_.front().get(); }
+    const ELE* Front() const { return Front(); }
+    ELE* Back() { return elements_.back().get(); }
+    const ELE* Back() const { return Back(); }
     ELE* At(int i) { return elements_[i].get(); }
+    const ELE* At(int i) const { return At(i); }
+
     int IndexOf(const ELE* ptr) const
     {
         auto begin = std::make_move_iterator(elements_.begin());
