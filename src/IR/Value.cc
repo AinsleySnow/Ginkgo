@@ -1,10 +1,11 @@
 #include "IR/Value.h"
+#include "visitir/IRVisitor.h"
 
 
 std::string Module::ToString() const
 {
     std::string mod = "module " + Name() + ":\n";
-    for (const auto& psym : globalsym_)
+    for (auto psym : *this)
         mod += psym->ToString() + "\n\n";
     return mod;
 }
@@ -12,8 +13,8 @@ std::string Module::ToString() const
 Function* Module::AddFunc(std::unique_ptr<Function> func)
 {
     auto pfunc = func.get();
-    globalsym_.push_back(std::move(func));
-    symindex_.emplace(pfunc->Name(), globalsym_.size() - 1);
+    Append(std::move(func));
+    symindex_.emplace(pfunc->Name(), Size() - 1);
     return pfunc;
 }
 
@@ -25,8 +26,8 @@ Function* Module::AddFunc(const std::string& name, const FuncType* functy)
 GlobalVar* Module::AddGlobalVar(std::unique_ptr<GlobalVar> var)
 {
     auto pvar = var.get();
-    globalsym_.push_back(std::move(var));
-    symindex_.emplace(pvar->Name(), globalsym_.size() - 1);
+    Append(std::move(var));
+    symindex_.emplace(pvar->Name(), Size() - 1);
     return pvar;
 }
 
@@ -38,13 +39,13 @@ GlobalVar* Module::AddGlobalVar(const std::string& name, const IRType* ptype)
 Function* Module::GetFunction(const std::string& name)
 {
     int index = symindex_.at(name);
-    return static_cast<Function*>(globalsym_[index].get());
+    return At(index)->As<Function>();
 }
 
 GlobalVar* Module::GetGlobalVar(const std::string& name)
 {
     int index = symindex_.at(name);
-    return static_cast<GlobalVar*>(globalsym_[index].get());
+    return At(index)->As<GlobalVar>();
 }
 
 
@@ -128,7 +129,7 @@ GlobalVar* GlobalVar::CreateGlobalVar(Module* mod, const std::string& name, cons
 
 std::string GlobalVar::ToString() const
 {
-    auto var = type_->ToString() + ' ' + name_ + ":\n";
+    auto var = type_->ToString() + ' ' + Name() + ":\n";
     var += blk_->ToString();
     return var;
 }

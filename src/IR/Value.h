@@ -15,29 +15,47 @@
 
 class Function;
 class GlobalVar;
+class IRVisitor;
 
 
 class Value
 {
+protected:
+    enum class ValueId { value, module, function, globalvar, basicblock };
+    static bool ClassOf(const Value const*) { return true; }
+    ValueId id_ = ValueId::value;
+
 public:
+    ENABLE_IS;
+    ENABLE_AS;
+
     Value(const std::string& n) : name_(n) {}
 
     virtual ~Value() {}
     virtual std::string ToString() const { return ""; }
+    virtual void Accept(IRVisitor*) {}
 
+    ValueId ID() const { return id_; }
     std::string Name() const { return name_; }
 
-protected:
+
+private:
     std::string name_{};
 };
 
 
-class Module : public Value, public Pool<IRType>, public Pool<IROperand>
+class Module : public Value, public Container<Value>,
+               public Pool<IRType>, public Pool<IROperand>
 {
+protected:
+    static bool ClassOf(const Module const*) { return true; }
+    static bool ClassOf(const Value const* v) { return v->ID() == ValueId::module; }
+
 public:
-    Module(const std::string& n) : Value(n) {}
+    Module(const std::string& n) : Value(n) { id_ = ValueId::module; }
 
     std::string ToString() const override;
+    void Accept(IRVisitor*) override;
 
     Function* AddFunc(std::unique_ptr<Function>);
     Function* AddFunc(const std::string&, const FuncType*);
@@ -48,19 +66,23 @@ public:
 
 
 private:
-    std::vector<std::unique_ptr<Value>> globalsym_{};
     std::unordered_map<std::string, int> symindex_{};
 };
 
 
 class Function : public Value, public Container<BasicBlock>
 {
+protected:
+    static bool ClassOf(const Function const*) { return true; }
+    static bool ClassOf(const Value const* v) { return v->ID() == ValueId::function; }
+
 public:
     static Function* CreateFunction(Module*, const FuncType*);
     Function(const std::string& n, const FuncType* f) :
-        Value(n), functype_(f) {}
+        Value(n), functype_(f) { id_ = ValueId::function; }
 
     std::string ToString() const override;
+    void Accept(IRVisitor*) override;
 
     auto& Addr() { return addr_; }
     const auto Addr() const { return addr_; }
@@ -99,12 +121,17 @@ private:
 
 class GlobalVar : public Value
 {
+protected:
+    static bool ClassOf(const Module const*) { return true; }
+    static bool ClassOf(const Value const* v) { return v->ID() == ValueId::globalvar; }
+
 public:
     static GlobalVar* CreateGlobalVar(Module*, const std::string&, const IRType*);
     GlobalVar(const std::string& n, const IRType* t) :
-        Value(n), type_(t) {}
+        Value(n), type_(t) { id_ = ValueId::globalvar; }
 
     std::string ToString() const override;
+    void Accept(IRVisitor*) override;
 
     auto& Addr() { return addr_; }
     const auto Addr() const { return addr_; }
@@ -123,12 +150,17 @@ private:
 class BasicBlock : public Value, public Container<Instr>,
                    public Pool<IROperand>, public Pool<IRType>
 {
+protected:
+    static bool ClassOf(const BasicBlock const*) { return true; }
+    static bool ClassOf(const Value const* v) { return v->ID() == ValueId::basicblock; }
+
 public:
     static BasicBlock* CreateBasicBlock(Function*, const std::string&);
     static BasicBlock* CreateBasicBlock(GlobalVar*, const std::string&);
-    BasicBlock(const std::string& n) : Value(n) {}
+    BasicBlock(const std::string& n) : Value(n) { id_ = ValueId::basicblock; }
 
     std::string ToString() const override;
+    void Accept(IRVisitor*) override;
 
     Instr* LastInstr() { return *std::prev(end()); }
     const Instr* LastInstr() const { return LastInstr(); }
