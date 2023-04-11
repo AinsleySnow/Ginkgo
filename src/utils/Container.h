@@ -10,44 +10,54 @@ template <class ELE>
 class Container
 {
 public:
-    class Iterator: public std::iterator<
-        std::random_access_iterator_tag, ELE*, ptrdiff_t,
-        std::unique_ptr<ELE>*,
-        std::unique_ptr<ELE>&>
+    template <typename T, typename V>
+    class Iterator
     {
-        using ptr = std::unique_ptr<ELE>;
+        using ptr = T;
 
     public:
+        using difference_type = ptrdiff_t;
+        using value_type = V;
+        using pointer = ptr*;
+        using reference = ptr&;
+        using iterator_category = std::random_access_iterator_tag;
+
         Iterator(ptr* p, size_t i = 0) : start_(p), index_(i) {}
 
-        Iterator& operator++() { index_++; return *this; }
-        Iterator operator++(int) { Iterator retval = *this; ++(*this); return retval; }
-        Iterator& operator--() { index_--; return *this; }
-        Iterator operator--(int) { Iterator retval = *this; --(*this); return retval; }
+        auto& operator++() { index_++; return *this; }
+        auto operator++(int) { auto retval = *this; ++(*this); return retval; }
+        auto& operator--() { index_--; return *this; }
+        auto operator--(int) { auto retval = *this; --(*this); return retval; }
 
-        Iterator& operator+=(size_t off) { index_ += off; return *this; }
-        Iterator& operator-=(size_t off) { index_ -= off; return *this; }
-        Iterator operator+(size_t off) const { Iterator retval = *this; return retval += off; }
-        Iterator operator-(size_t off) const { Iterator retval = *this; return retval -= off; }
-        size_t operator+(Iterator other) const { return index_ + other.index_; }
-        size_t operator-(Iterator other) const { return index_ - other.index_; }
+        auto& operator+=(size_t off) { index_ += off; return *this; }
+        auto& operator-=(size_t off) { index_ -= off; return *this; }
+        auto operator+(size_t off) const { auto retval = *this; return retval += off; }
+        auto operator-(size_t off) const { auto retval = *this; return retval -= off; }
+        size_t operator+(Iterator<T, V> other) const { return index_ + other.index_; }
+        size_t operator-(Iterator<T, V> other) const { return index_ - other.index_; }
 
-        bool operator==(Iterator other) const
+        bool operator==(Iterator<T, V> other) const
         {
             return start_ == other.start_ &&
                 index_ == other.index_;
         }
-        bool operator!=(Iterator other) const { return !(*this == other); }
+        bool operator!=(Iterator<T, V> other) const { return !(*this == other); }
 
-        ELE* operator*() const { return start_[index_].get(); }
+        V* operator*() { return start_[index_].get(); }
+        V* operator*() const { return start_[index_].get(); }
 
     private:
         ptr* start_{};
         size_t index_{};
     };
 
-    auto begin() { return Iterator(elements_.data()); }
-    auto end() { return Iterator(elements_.data(), elements_.size()); }
+    using IterType = Iterator<std::unique_ptr<ELE>, ELE>;
+    using ConstIterType = Iterator<const std::unique_ptr<ELE>, const ELE>;
+
+    auto begin() { return IterType(elements_.data()); }
+    auto end() { return IterType(elements_.data(), elements_.size()); }
+    const auto begin() const { return ConstIterType(elements_.data()); }
+    const auto end() const { return ConstIterType(elements_.data(), elements_.size()); }
 
     void Append(std::unique_ptr<ELE> ele)
     {

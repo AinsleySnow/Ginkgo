@@ -37,7 +37,7 @@ public:
     }
     // Set the insert point to a certain position.
     // Suppose insertpoint_.container_ is already set.
-    void SetInsertPoint(typename CNT::Iterator iter)
+    void SetInsertPoint(typename CNT::IterType iter)
     {
         insertmode_ = InsertMode::front;
         insertpoint_.index_ = std::distance(insertpoint_.container_->begin(), iter);
