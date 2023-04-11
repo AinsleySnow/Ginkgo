@@ -152,306 +152,248 @@ private:
 };
 
 
-class AddInstr : public Instr
+class BinaryInstr : public Instr
+{
+public:
+    BinaryInstr(InstrId id, const Register* r,
+        const IROperand* o1, const IROperand* o2) :
+        Instr(id), result_(r), lhs_(o1), rhs_(o2) {}
+
+    auto& Lhs() { return lhs_; }
+    auto Lhs() const { return lhs_; }
+    auto& Rhs() { return rhs_; }
+    auto Rhs() const { return rhs_; }
+    auto& Result() { return result_; }
+    auto Result() const { return result_; }
+
+private:
+    const Register* result_{};
+    const IROperand *lhs_{}, *rhs_{};
+};
+
+
+class AddInstr : public BinaryInstr
 {
 protected:
     static bool ClassOf(const AddInstr const*) { return true; }
     static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::add; }
 
 public:
-    AddInstr(const std::string& r,
-        const IROperand* o1, const IROperand* o2) :
-        Instr(InstrId::add), result_(r), lhs_(o1), rhs_(o2) {}
+    AddInstr(const Register* r, const IROperand* o1, const IROperand* o2) :
+        BinaryInstr(InstrId::add, r, o1, o2) {}
 
     std::string ToString() const override;
     void Accept(IRVisitor*) override;
-
-private:
-    std::string result_{};
-    const IROperand *lhs_{}, *rhs_{};
 };
 
 
-class FaddInstr : public Instr
+class FaddInstr : public BinaryInstr
 {
 protected:
     static bool ClassOf(const FaddInstr const*) { return true; }
     static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::fadd; }
 
 public:
-    FaddInstr(const std::string& r,
-        const IROperand* o1, const IROperand* o2) :
-        Instr(InstrId::fadd), result_(r), lhs_(o1), rhs_(o2) {}
+    FaddInstr(const Register* r, const IROperand* o1, const IROperand* o2) :
+        BinaryInstr(InstrId::fadd, r, o1, o2) {}
 
     std::string ToString() const override;
     void Accept(IRVisitor*) override;
-
-private:
-    std::string result_{};
-    const IROperand *lhs_{}, *rhs_{};
 };
 
 
-class SubInstr : public Instr
+class SubInstr : public BinaryInstr
 {
 protected:
     static bool ClassOf(const SubInstr const*) { return true; }
     static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::sub; }
 
 public:
-    SubInstr(const std::string& r, 
-        const IROperand* o1, const IROperand* o2) :
-        Instr(InstrId::sub), result_(r), lhs_(o1), rhs_(o2) {}
+    SubInstr(const Register* r, const IROperand* o1, const IROperand* o2) :
+        BinaryInstr(InstrId::sub, r, o1, o2) {}
 
     std::string ToString() const override;
     void Accept(IRVisitor*) override;
-
-private:
-    std::string result_{};
-    const IROperand *lhs_{}, *rhs_{};
 };
 
 
-class FsubInstr : public Instr
+class FsubInstr : public BinaryInstr
 {
 protected:
     static bool ClassOf(const FsubInstr const*) { return true; }
     static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::fsub; }
 
 public:
-    FsubInstr(const std::string& r,
-        const IROperand* o1, const IROperand* o2) :
-        Instr(InstrId::fsub), result_(r), lhs_(o1), rhs_(o2) {}
+    FsubInstr(const Register* r, const IROperand* o1, const IROperand* o2) :
+        BinaryInstr(InstrId::fsub, r, o1, o2) {}
 
     std::string ToString() const override;
     void Accept(IRVisitor*) override;
-
-private:
-    std::string result_{};
-    const IROperand *lhs_{}, *rhs_{};
 };
 
 
-class MulInstr : public Instr
+class MulInstr : public BinaryInstr
 {
 protected:
     static bool ClassOf(const MulInstr const*) { return true; }
     static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::mul; }
 
 public:
-    MulInstr(const std::string& r,
-        const IROperand* o1, const IROperand* o2) :
-        Instr(InstrId::mul), result_(r), lhs_(o1), rhs_(o2) {}
+    MulInstr(const Register* r, const IROperand* o1, const IROperand* o2) :
+        BinaryInstr(InstrId::mul, r, o1, o2) {}
 
     std::string ToString() const override;
     void Accept(IRVisitor*) override;
-
-private:
-    std::string result_{};
-    const IROperand *lhs_{}, *rhs_{};
 };
 
 
-class FmulInstr : public Instr
+class FmulInstr : public BinaryInstr
 {
 protected:
     static bool ClassOf(const FmulInstr const*) { return true; }
     static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::fmul; }
 
 public:
-    FmulInstr(const std::string& r,
-        const IROperand* o1, const IROperand* o2) :
-        Instr(InstrId::fmul), result_(r), lhs_(o1), rhs_(o2) {}
+    FmulInstr(const Register* r, const IROperand* o1, const IROperand* o2) :
+        BinaryInstr(InstrId::fmul, r, o1, o2) {}
 
     std::string ToString() const override;
     void Accept(IRVisitor*) override;
-
-private:
-    std::string result_{};
-    const IROperand *lhs_{}, *rhs_{};
 };
 
 
-class DivInstr : public Instr
+class DivInstr : public BinaryInstr
 {
 protected:
     static bool ClassOf(const DivInstr const*) { return true; }
     static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::div; }
 
 public:
-    DivInstr(const std::string& r,
-        const IROperand* o1, const IROperand* o2) :
-        Instr(InstrId::div), result_(r), lhs_(o1), rhs_(o2) {}
+    DivInstr(const Register* r, const IROperand* o1, const IROperand* o2) :
+        BinaryInstr(InstrId::div, r, o1, o2) {}
 
     std::string ToString() const override;
     void Accept(IRVisitor*) override;
-
-private:
-    std::string result_{};
-    const IROperand *lhs_{}, *rhs_{};
 };
 
 
-class FdivInstr : public Instr
+class FdivInstr : public BinaryInstr
 {
 protected:
     static bool ClassOf(const FdivInstr const*) { return true; }
     static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::fdiv; }
 
 public:
-    FdivInstr(const std::string& r,
-        const IROperand* o1, const IROperand* o2) :
-        Instr(InstrId::fdiv), result_(r), lhs_(o1), rhs_(o2) {}
+    FdivInstr(const Register* r, const IROperand* o1, const IROperand* o2) :
+        BinaryInstr(InstrId::fdiv, r, o1, o2) {}
 
     std::string ToString() const override;
     void Accept(IRVisitor*) override;
-
-private:
-    std::string result_{};
-    const IROperand *lhs_{}, *rhs_{};
 };
 
 
-class ModInstr : public Instr
+class ModInstr : public BinaryInstr
 {
 protected:
     static bool ClassOf(const ModInstr const*) { return true; }
     static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::mod; }
 
 public:
-    ModInstr(const std::string& r,
-        const IROperand* o1, const IROperand* o2) :
-        Instr(InstrId::mod), result_(r), lhs_(o1), rhs_(o2) {}
+    ModInstr(const Register* r, const IROperand* o1, const IROperand* o2) :
+        BinaryInstr(InstrId::mod, r, o1, o2) {}
 
     std::string ToString() const override;
     void Accept(IRVisitor*) override;
-
-private:
-    std::string result_{};
-    const IROperand *lhs_{}, *rhs_{};
 };
 
 
-class ShlInstr : public Instr
+class ShlInstr : public BinaryInstr
 {
 protected:
     static bool ClassOf(const ShlInstr const*) { return true; }
     static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::shl; }
 
 public:
-    ShlInstr(const std::string& r,
-        const IROperand* o1, const IROperand* o2) :
-        Instr(InstrId::shl), result_(r), lhs_(o1), rhs_(o2) {}
+    ShlInstr(const Register* r, const IROperand* o1, const IROperand* o2) :
+        BinaryInstr(InstrId::shl, r, o1, o2) {}
 
     std::string ToString() const override;
     void Accept(IRVisitor*) override;
-
-private:
-    std::string result_{};
-    const IROperand *lhs_{}, *rhs_{};
 };
 
 
-class LshrInstr : public Instr
+class LshrInstr : public BinaryInstr
 {
 protected:
     static bool ClassOf(const LshrInstr const*) { return true; }
     static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::lshr; }
 
 public:
-    LshrInstr(const std::string& r,
-        const IROperand* o1, const IROperand* o2) :
-        Instr(InstrId::lshr), result_(r), lhs_(o1), rhs_(o2) {}
+    LshrInstr(const Register* r, const IROperand* o1, const IROperand* o2) :
+        BinaryInstr(InstrId::lshr, r, o1, o2) {}
 
     std::string ToString() const override;
     void Accept(IRVisitor*) override;
-
-private:
-    std::string result_{};
-    const IROperand *lhs_{}, *rhs_{};
 };
 
 
-class AshrInstr : public Instr
+class AshrInstr : public BinaryInstr
 {
 protected:
     static bool ClassOf(const AshrInstr const*) { return true; }
     static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::ashr; }
 
 public:
-    AshrInstr(const std::string& r,
-        const IROperand* o1, const IROperand* o2) :
-        Instr(InstrId::ashr), result_(r), lhs_(o1), rhs_(o2) {}
+    AshrInstr(const Register* r, const IROperand* o1, const IROperand* o2) :
+        BinaryInstr(InstrId::ashr, r, o1, o2) {}
 
     std::string ToString() const override;
     void Accept(IRVisitor*) override;
-
-private:
-    std::string result_{};
-    const IROperand *lhs_{}, *rhs_{};
 };
 
 
-class AndInstr : public Instr
+class AndInstr : public BinaryInstr
 {
 protected:
     static bool ClassOf(const AndInstr const*) { return true; }
     static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::btand; }
 
 public:
-    AndInstr(const std::string& r,
-        const IROperand* o1, const IROperand* o2) :
-        Instr(InstrId::btand), result_(r), lhs_(o1), rhs_(o2) {}
+    AndInstr(const Register* r, const IROperand* o1, const IROperand* o2) :
+        BinaryInstr(InstrId::btand, r, o1, o2) {}
 
     std::string ToString() const override;
     void Accept(IRVisitor*) override;
-
-private:
-    std::string result_{};
-    const IntType* type_{};
-    const IROperand *lhs_{}, *rhs_{};
 };
 
 
-class OrInstr : public Instr
+class OrInstr : public BinaryInstr
 {
 protected:
     static bool ClassOf(const OrInstr const*) { return true; }
     static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::btor; }
 
 public:
-    OrInstr(const std::string& r,
-        const IROperand* o1, const IROperand* o2) :
-        Instr(InstrId::btor), result_(r), lhs_(o1), rhs_(o2) {}
+    OrInstr(const Register* r, const IROperand* o1, const IROperand* o2) :
+        BinaryInstr(InstrId::btor, r, o1, o2) {}
 
     std::string ToString() const override;
     void Accept(IRVisitor*) override;
-
-private:
-    std::string result_{};
-    const IntType* type_{};
-    const IROperand *lhs_{}, *rhs_{};
 };
 
 
-class XorInstr : public Instr
+class XorInstr : public BinaryInstr
 {
 protected:
     static bool ClassOf(const XorInstr const*) { return true; }
     static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::btxor; }
 
 public:
-    XorInstr(const std::string& r,
-        const IROperand* o1, const IROperand* o2) :
-        Instr(InstrId::btxor), result_(r), lhs_(o1), rhs_(o2) {}
+    XorInstr(const Register* r, const IROperand* o1, const IROperand* o2) :
+        BinaryInstr(InstrId::btxor, r, o1, o2) {}
 
     std::string ToString() const override;
     void Accept(IRVisitor*) override;
-
-private:
-    std::string result_{};
-    const IntType* type_{};
-    const IROperand *lhs_{}, *rhs_{};
 };
 
 

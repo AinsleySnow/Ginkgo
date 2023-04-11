@@ -49,49 +49,49 @@ std::string CallInstr::ToString() const
 
 
 std::string AddInstr::ToString() const
-{ return result_ + " = add " + lhs_->ToString() + ", " + rhs_->ToString(); }
+{ return Result()->Name() + " = add " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
 void AddInstr::Accept(IRVisitor* v) { v->VisitAddInstr(this); }
 std::string FaddInstr::ToString() const
-{ return result_ + " = fadd " + lhs_->ToString() + ", " + rhs_->ToString(); }
+{ return Result()->Name() + " = fadd " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
 void FaddInstr::Accept(IRVisitor* v) { v->VisitFaddInstr(this); }
 std::string SubInstr::ToString() const
-{ return result_ + " = sub " + lhs_->ToString() + ", " + rhs_->ToString(); }
+{ return Result()->Name() + " = sub " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
 void SubInstr::Accept(IRVisitor* v) { v->VisitSubInstr(this); }
 std::string FsubInstr::ToString() const
-{ return result_ + " = fsub " + lhs_->ToString() + ", " + rhs_->ToString(); }
+{ return Result()->Name() + " = fsub " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
 void FsubInstr::Accept(IRVisitor* v) { v->VisitFsubInstr(this); }
 std::string MulInstr::ToString() const
-{ return result_ + " = mul " + lhs_->ToString() + ", " + rhs_->ToString(); }
+{ return Result()->Name() + " = mul " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
 void MulInstr::Accept(IRVisitor* v) { v->VisitMulInstr(this); }
 std::string FmulInstr::ToString() const
-{ return result_ + " = fmul " + lhs_->ToString() + ", " + rhs_->ToString(); }
+{ return Result()->Name() + " = fmul " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
 void FmulInstr::Accept(IRVisitor* v) { v->VisitFmulInstr(this); }
 std::string DivInstr::ToString() const
-{ return result_ + " = div " + lhs_->ToString() + ", " + rhs_->ToString(); }
+{ return Result()->Name() + " = div " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
 void DivInstr::Accept(IRVisitor* v) { v->VisitDivInstr(this); }
 std::string FdivInstr::ToString() const
-{ return result_ + " = fdiv " + lhs_->ToString() + ", " + rhs_->ToString(); }
+{ return Result()->Name() + " = fdiv " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
 void FdivInstr::Accept(IRVisitor* v) { v->VisitFdivInstr(this); }
 std::string ModInstr::ToString() const
-{ return result_ + " = mod " + lhs_->ToString() + ", " + rhs_->ToString(); }
+{ return Result()->Name() + " = mod " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
 void ModInstr::Accept(IRVisitor* v) { v->VisitModInstr(this); }
 std::string ShlInstr::ToString() const
-{ return result_ + " = shl " + lhs_->ToString() + ", " + rhs_->ToString(); }
+{ return Result()->Name() + " = shl " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
 void ShlInstr::Accept(IRVisitor* v) { v->VisitShlInstr(this); }
 std::string LshrInstr::ToString() const
-{ return result_ + " = lshr " + lhs_->ToString() + ", " + rhs_->ToString(); }
+{ return Result()->Name() + " = lshr " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
 void LshrInstr::Accept(IRVisitor* v) { v->VisitLshrInstr(this); }
 std::string AshrInstr::ToString() const
-{ return result_ + " = ashr " + lhs_->ToString() + ", " + rhs_->ToString(); }
+{ return Result()->Name() + " = ashr " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
 void AshrInstr::Accept(IRVisitor* v) { v->VisitAshrInstr(this); }
 std::string AndInstr::ToString() const
-{ return result_ + " = and " + lhs_->ToString() + ", " + rhs_->ToString(); }
+{ return Result()->Name() + " = and " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
 void AndInstr::Accept(IRVisitor* v) { v->VisitAndInstr(this); }
 std::string OrInstr::ToString() const
-{ return result_ + " = or " + lhs_->ToString() + ", " + rhs_->ToString(); }
+{ return Result()->Name() + " = or " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
 void OrInstr::Accept(IRVisitor* v) { v->VisitOrInstr(this); }
 std::string XorInstr::ToString() const
-{ return result_ + " = xor " + lhs_->ToString() + ", " + rhs_->ToString(); }
+{ return Result()->Name() + " = xor " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
 void XorInstr::Accept(IRVisitor* v) { v->VisitXorInstr(this); }
 
 

@@ -171,139 +171,101 @@ const Register* InstrBuilder::InsertCallInstr(
 }
 
 
+#define INSERT_BINARY_INSTR(name)                                       \
+MatchArithmType(lhs, rhs);                                              \
+auto ans = Register::CreateRegister(Container(), result, lhs->Type());  \
+Insert(std::make_unique<name##Instr>(ans, lhs, rhs));                   \
+return ans;
+
+
 const Register* InstrBuilder::InsertAddInstr(
     const std::string& result, const IROperand* lhs, const IROperand* rhs)
 {
-    MatchArithmType(lhs, rhs);
-    auto padd = std::make_unique<AddInstr>(result, lhs, rhs);
-    Insert(std::move(padd));
-    return Register::CreateRegister(Container(), result, lhs->Type());
+    INSERT_BINARY_INSTR(Add);
 }
 
 const Register* InstrBuilder::InsertFaddInstr(
     const std::string& result, const IROperand* lhs, const IROperand* rhs)
 {
-    MatchArithmType(lhs, rhs);
-    auto pfadd = std::make_unique<FaddInstr>(result, lhs, rhs);
-    Insert(std::move(pfadd));
-    return Register::CreateRegister(Container(), result, lhs->Type());
+    INSERT_BINARY_INSTR(Fadd);
 }
 
 const Register* InstrBuilder::InsertSubInstr(
     const std::string& result, const IROperand* lhs, const IROperand* rhs)
 {
-    MatchArithmType(lhs, rhs);
-    auto psub = std::make_unique<SubInstr>(result, lhs, rhs);
-    Insert(std::move(psub));
-    return Register::CreateRegister(Container(), result, lhs->Type());
+    INSERT_BINARY_INSTR(Sub);
 }
 
 const Register* InstrBuilder::InsertFsubInstr(
     const std::string& result, const IROperand* lhs, const IROperand* rhs)
 {
-    MatchArithmType(lhs, rhs);
-    auto pfsub = std::make_unique<FsubInstr>(result, lhs, rhs);
-    Insert(std::move(pfsub));
-    return Register::CreateRegister(Container(), result, lhs->Type());
+    INSERT_BINARY_INSTR(Fsub);
 }
 
 const Register* InstrBuilder::InsertMulInstr(
     const std::string& result, const IROperand* lhs, const IROperand* rhs)
 {
-    MatchArithmType(lhs, rhs);
-    auto pmul = std::make_unique<MulInstr>(result, lhs, rhs);
-    Insert(std::move(pmul));
-    return Register::CreateRegister(Container(), result, lhs->Type());
+    INSERT_BINARY_INSTR(Mul);
 }
 
 const Register* InstrBuilder::InsertFmulInstr(
     const std::string& result, const IROperand* lhs, const IROperand* rhs)
 {
-    MatchArithmType(lhs, rhs);
-    auto pfmul = std::make_unique<FmulInstr>(result, lhs, rhs);
-    Insert(std::move(pfmul));
-    return Register::CreateRegister(Container(), result, lhs->Type());
+    INSERT_BINARY_INSTR(Fmul);
 }
 
 const Register* InstrBuilder::InsertDivInstr(
     const std::string& result, const IROperand* lhs, const IROperand* rhs)
 {
-    MatchArithmType(lhs, rhs);
-    auto pdiv = std::make_unique<DivInstr>(result, lhs, rhs);
-    Insert(std::move(pdiv));
-    return Register::CreateRegister(Container(), result, lhs->Type());
+    INSERT_BINARY_INSTR(Div);
 }
 
 const Register* InstrBuilder::InsertFdivInstr(
     const std::string& result, const IROperand* lhs, const IROperand* rhs)
 {
-    MatchArithmType(lhs, rhs);
-    auto pfdiv = std::make_unique<FdivInstr>(result, lhs, rhs);
-    Insert(std::move(pfdiv));
-    return Register::CreateRegister(Container(), result, lhs->Type());
+    INSERT_BINARY_INSTR(Fdiv);
 }
 
 const Register* InstrBuilder::InsertModInstr(
     const std::string& result, const IROperand* lhs, const IROperand* rhs)
 {
-    MatchArithmType(lhs, rhs);
-    auto pmod = std::make_unique<ModInstr>(result, lhs, rhs);
-    Insert(std::move(pmod));
-    return Register::CreateRegister(Container(), result, lhs->Type());
+    INSERT_BINARY_INSTR(Mod);
 }
 
 const Register* InstrBuilder::InsertShlInstr(
     const std::string& result, const IROperand* lhs, const IROperand* rhs)
 {
-    MatchArithmType(lhs->Type(), rhs);
-    auto pshl = std::make_unique<ShlInstr>(result, lhs, rhs);
-    Insert(std::move(pshl));
-    return Register::CreateRegister(Container(), result, lhs->Type());
+    INSERT_BINARY_INSTR(Shl);
 }
 
 const Register* InstrBuilder::InsertLshrInstr(
     const std::string& result, const IROperand* lhs, const IROperand* rhs)
 {
-    MatchArithmType(lhs->Type(), rhs);
-    auto plshr = std::make_unique<LshrInstr>(result, lhs, rhs);
-    Insert(std::move(plshr));
-    return Register::CreateRegister(Container(), result, lhs->Type());
+    INSERT_BINARY_INSTR(Lshr);
 }
 
 const Register* InstrBuilder::InsertAshrInstr(
     const std::string& result, const IROperand* lhs, const IROperand* rhs)
 {
-    MatchArithmType(lhs->Type(), rhs);
-    auto pashr = std::make_unique<AshrInstr>(result, lhs, rhs);
-    Insert(std::move(pashr));
-    return Register::CreateRegister(Container(), result, lhs->Type());
+    INSERT_BINARY_INSTR(Ashr);
 }
 
 const Register* InstrBuilder::InsertAndInstr(
     const std::string& result, const IROperand* lhs, const IROperand* rhs)
 {
-    MatchArithmType(lhs, rhs);
-    auto pand = std::make_unique<AndInstr>(result, lhs, rhs);
-    Insert(std::move(pand));
-    return Register::CreateRegister(Container(), result, lhs->Type());
+    INSERT_BINARY_INSTR(And);
 }
 
 const Register* InstrBuilder::InsertOrInstr(
     const std::string& result, const IROperand* lhs, const IROperand* rhs)
 {
-    MatchArithmType(lhs, rhs);
-    auto por = std::make_unique<OrInstr>(result, lhs, rhs);
-    Insert(std::move(por));
-    return Register::CreateRegister(Container(), result, lhs->Type());
+    INSERT_BINARY_INSTR(Or);
 }
 
 const Register* InstrBuilder::InsertXorInstr(
     const std::string& result, const IROperand* lhs, const IROperand* rhs)
 {
-    MatchArithmType(lhs, rhs);
-    auto pxor = std::make_unique<XorInstr>(result, lhs, rhs);
-    Insert(std::move(pxor));
-    return Register::CreateRegister(Container(), result, lhs->Type());
+    INSERT_BINARY_INSTR(Xor);
 }
 
 
