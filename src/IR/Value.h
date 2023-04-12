@@ -133,6 +133,7 @@ public:
     std::string ToString() const override;
     void Accept(IRVisitor*) override;
 
+    auto Type() const { return type_; }
     auto& Addr() { return addr_; }
     const auto Addr() const { return addr_; }
 
