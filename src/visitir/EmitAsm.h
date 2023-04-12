@@ -16,6 +16,7 @@ public:
     std::string AsmName() const { return filename_; }
 
     void EmitLabel(const std::string&);
+    void EmitPseudoInstr(const std::string&);
     void EmitPseudoInstr(
         const std::string&, std::initializer_list<std::string>);
 

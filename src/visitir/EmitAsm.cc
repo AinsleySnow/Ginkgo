@@ -32,17 +32,16 @@ void EmitAsm::EmitLabel(const std::string& label)
     fprintf(file_, "%s:\n", label.c_str());
 }
 
+
+void EmitAsm::EmitPseudoInstr(const std::string& instr)
+{
+    fprintf(file_, INDENT "%s\n", instr.c_str());
+}
+
 void EmitAsm::EmitPseudoInstr(
     const std::string& instr, std::initializer_list<std::string> args)
 {
     fprintf(file_, INDENT "%s ", instr.c_str());
-
-    if (args.size() == 0)
-    {
-        fprintf(file_, "\n");
-        return;
-    }
-
     for (auto i = args.begin(); i < args.end() - 1; ++i)
         fprintf(file_, "%s, ", i->c_str());
     fprintf(file_, "%s\n", (args.end() - 1)->c_str());
@@ -154,13 +153,13 @@ void EmitAsm::EmitRet()
 void EmitAsm::EmitJmp(const std::string& condition, const std::string& label)
 {
     fprintf(file_, INDENT "j%s %s\n",
-        condition.empty() ? "mp" : condition, label.c_str());
+        condition.empty() ? "mp" : condition.c_str(), label.c_str());
 }
 
 void EmitAsm::EmitCMov(
     const std::string& condition, const std::string& op1, const std::string& op2)
 {
-    fprintf(file_, INDENT "cmov%s %s, %s\n", condition, op1.c_str(), op2.c_str());
+    fprintf(file_, INDENT "cmov%s %s, %s\n", condition.c_str(), op1.c_str(), op2.c_str());
 }
 
 
