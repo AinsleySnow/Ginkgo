@@ -177,146 +177,88 @@ auto ans = Register::CreateRegister(Container(), result, lhs->Type());  \
 Insert(std::make_unique<name##Instr>(ans, lhs, rhs));                   \
 return ans;
 
+const Register* InstrBuilder::InsertAddInstr(const std::string& result,
+    const IROperand* lhs, const IROperand* rhs) { INSERT_BINARY_INSTR(Add); }
+const Register* InstrBuilder::InsertFaddInstr(const std::string& result,
+    const IROperand* lhs, const IROperand* rhs) { INSERT_BINARY_INSTR(Fadd); }
+const Register* InstrBuilder::InsertSubInstr(const std::string& result,
+    const IROperand* lhs, const IROperand* rhs) { INSERT_BINARY_INSTR(Sub); }
+const Register* InstrBuilder::InsertFsubInstr(const std::string& result,
+    const IROperand* lhs, const IROperand* rhs) { INSERT_BINARY_INSTR(Fsub); }
+const Register* InstrBuilder::InsertMulInstr(const std::string& result,
+    const IROperand* lhs, const IROperand* rhs) { INSERT_BINARY_INSTR(Mul); }
+const Register* InstrBuilder::InsertFmulInstr(const std::string& result,
+    const IROperand* lhs, const IROperand* rhs) { INSERT_BINARY_INSTR(Fmul); }
+const Register* InstrBuilder::InsertDivInstr(const std::string& result,
+    const IROperand* lhs, const IROperand* rhs) { INSERT_BINARY_INSTR(Div); }
+const Register* InstrBuilder::InsertFdivInstr(const std::string& result,
+    const IROperand* lhs, const IROperand* rhs) { INSERT_BINARY_INSTR(Fdiv); }
+const Register* InstrBuilder::InsertModInstr(const std::string& result,
+    const IROperand* lhs, const IROperand* rhs) { INSERT_BINARY_INSTR(Mod); }
+const Register* InstrBuilder::InsertShlInstr(const std::string& result,
+    const IROperand* lhs, const IROperand* rhs) { INSERT_BINARY_INSTR(Shl); }
+const Register* InstrBuilder::InsertLshrInstr(const std::string& result,
+    const IROperand* lhs, const IROperand* rhs) { INSERT_BINARY_INSTR(Lshr); }
+const Register* InstrBuilder::InsertAshrInstr(const std::string& result,
+    const IROperand* lhs, const IROperand* rhs) { INSERT_BINARY_INSTR(Ashr); }
+const Register* InstrBuilder::InsertAndInstr(const std::string& result,
+    const IROperand* lhs, const IROperand* rhs) { INSERT_BINARY_INSTR(And); }
+const Register* InstrBuilder::InsertOrInstr(const std::string& result,
+    const IROperand* lhs, const IROperand* rhs) { INSERT_BINARY_INSTR(Or); }
+const Register* InstrBuilder::InsertXorInstr(const std::string& result,
+    const IROperand* lhs, const IROperand* rhs) { INSERT_BINARY_INSTR(Xor); }
 
-const Register* InstrBuilder::InsertAddInstr(
-    const std::string& result, const IROperand* lhs, const IROperand* rhs)
-{
-    INSERT_BINARY_INSTR(Add);
-}
-
-const Register* InstrBuilder::InsertFaddInstr(
-    const std::string& result, const IROperand* lhs, const IROperand* rhs)
-{
-    INSERT_BINARY_INSTR(Fadd);
-}
-
-const Register* InstrBuilder::InsertSubInstr(
-    const std::string& result, const IROperand* lhs, const IROperand* rhs)
-{
-    INSERT_BINARY_INSTR(Sub);
-}
-
-const Register* InstrBuilder::InsertFsubInstr(
-    const std::string& result, const IROperand* lhs, const IROperand* rhs)
-{
-    INSERT_BINARY_INSTR(Fsub);
-}
-
-const Register* InstrBuilder::InsertMulInstr(
-    const std::string& result, const IROperand* lhs, const IROperand* rhs)
-{
-    INSERT_BINARY_INSTR(Mul);
-}
-
-const Register* InstrBuilder::InsertFmulInstr(
-    const std::string& result, const IROperand* lhs, const IROperand* rhs)
-{
-    INSERT_BINARY_INSTR(Fmul);
-}
-
-const Register* InstrBuilder::InsertDivInstr(
-    const std::string& result, const IROperand* lhs, const IROperand* rhs)
-{
-    INSERT_BINARY_INSTR(Div);
-}
-
-const Register* InstrBuilder::InsertFdivInstr(
-    const std::string& result, const IROperand* lhs, const IROperand* rhs)
-{
-    INSERT_BINARY_INSTR(Fdiv);
-}
-
-const Register* InstrBuilder::InsertModInstr(
-    const std::string& result, const IROperand* lhs, const IROperand* rhs)
-{
-    INSERT_BINARY_INSTR(Mod);
-}
-
-const Register* InstrBuilder::InsertShlInstr(
-    const std::string& result, const IROperand* lhs, const IROperand* rhs)
-{
-    INSERT_BINARY_INSTR(Shl);
-}
-
-const Register* InstrBuilder::InsertLshrInstr(
-    const std::string& result, const IROperand* lhs, const IROperand* rhs)
-{
-    INSERT_BINARY_INSTR(Lshr);
-}
-
-const Register* InstrBuilder::InsertAshrInstr(
-    const std::string& result, const IROperand* lhs, const IROperand* rhs)
-{
-    INSERT_BINARY_INSTR(Ashr);
-}
-
-const Register* InstrBuilder::InsertAndInstr(
-    const std::string& result, const IROperand* lhs, const IROperand* rhs)
-{
-    INSERT_BINARY_INSTR(And);
-}
-
-const Register* InstrBuilder::InsertOrInstr(
-    const std::string& result, const IROperand* lhs, const IROperand* rhs)
-{
-    INSERT_BINARY_INSTR(Or);
-}
-
-const Register* InstrBuilder::InsertXorInstr(
-    const std::string& result, const IROperand* lhs, const IROperand* rhs)
-{
-    INSERT_BINARY_INSTR(Xor);
-}
+#undef INSERT_BINARY_INSTR
 
 
 const Register* InstrBuilder::InsertAllocaInstr(const std::string& result, const IRType* ty)
 {
-    auto palloca = std::make_unique<AllocaInstr>(result, ty);
-    Insert(std::move(palloca));
     auto ptrty = PtrType::GetPtrType(Container(), ty);
-    return Register::CreateRegister(Container(), result, ptrty);
+    auto ans = Register::CreateRegister(Container(), result, ptrty);
+    Insert(std::make_unique<AllocaInstr>(ans, ty));
+    return ans;
 }
 
 const Register* InstrBuilder::InsertAllocaInstr(
     const std::string& result, const IRType* ty, size_t num)
 {
-    auto palloca = std::make_unique<AllocaInstr>(result, ty, num);
-    Insert(std::move(palloca));
     auto ptrty = PtrType::GetPtrType(Container(), ty);
-    return Register::CreateRegister(Container(), result, ptrty);
+    auto ans = Register::CreateRegister(Container(), result, ptrty);
+    Insert(std::make_unique<AllocaInstr>(ans, ty, num));
+    return ans;
 }
 
 const Register* InstrBuilder::InsertAllocaInstr(
     const std::string& result, const IRType* ty, size_t num, size_t align)
 {
-    auto palloca = std::make_unique<AllocaInstr>(result, ty, num, align);
-    Insert(std::move(palloca));
     auto ptrty = PtrType::GetPtrType(Container(), ty);
-    return Register::CreateRegister(Container(), result, ptrty);
+    auto ans = Register::CreateRegister(Container(), result, ptrty);
+    Insert(std::make_unique<AllocaInstr>(ans, ty, num, align));
+    return ans;
 }
 
 
 const Register* InstrBuilder::InsertLoadInstr(const std::string& result, const Register* ptr)
 {
-    auto pload = std::make_unique<LoadInstr>(result, ptr);
-    Insert(std::move(pload));
-    return Register::CreateRegister(Container(), result, ptr->Type()->ToPointer()->Point2());
+    auto ans = Register::CreateRegister(Container(), result, ptr->Type()->ToPointer()->Point2());
+    Insert(std::make_unique<LoadInstr>(ans, ptr));
+    return ans;
 }
 
 const Register* InstrBuilder::InsertLoadInstr(
     const std::string& result, const Register* ptr, size_t align)
 {
-    auto pload = std::make_unique<LoadInstr>(result, ptr, align);
-    Insert(std::move(pload));
-    return Register::CreateRegister(Container(), result, ptr->Type()->ToPointer()->Point2());
+    auto ans = Register::CreateRegister(Container(), result, ptr->Type()->ToPointer()->Point2());
+    Insert(std::make_unique<LoadInstr>(ans, ptr, align));
+    return ans;
 }
 
 const Register* InstrBuilder::InsertLoadInstr(
     const std::string& result, const Register* ptr, size_t align, bool vol)
 {
-    auto pload = std::make_unique<LoadInstr>(result, ptr, align, vol);
-    Insert(std::move(pload));
-    return Register::CreateRegister(Container(), result, ptr->Type()->ToPointer()->Point2());
+    auto ans = Register::CreateRegister(Container(), result, ptr->Type()->ToPointer()->Point2());
+    Insert(std::make_unique<LoadInstr>(result, ptr, align, vol));
+    return ans;
 }
 
 

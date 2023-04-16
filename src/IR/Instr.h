@@ -154,6 +154,14 @@ private:
 
 class BinaryInstr : public Instr
 {
+protected:
+    static bool ClassOf(const BinaryInstr const*) { return true; }
+    static bool ClassOf(const Instr const* i)
+    {
+        return int(i->ID()) >= int(InstrId::add) &&
+            int(i->ID()) <= int(InstrId::btxor); 
+    }
+
 public:
     BinaryInstr(InstrId id, const Register* r,
         const IROperand* o1, const IROperand* o2) :
@@ -165,10 +173,14 @@ public:
     auto Rhs() const { return rhs_; }
     auto& Result() { return result_; }
     auto Result() const { return result_; }
+    auto& AsmSuffix() { return asmsuffix_; }
+    auto AsmSuffix() const { return asmsuffix_; }
 
 private:
-    const Register* result_{};
+    const IROperand* result_{};
     const IROperand *lhs_{}, *rhs_{};
+
+    std::string asmsuffix_{};
 };
 
 
@@ -274,6 +286,18 @@ public:
 
     std::string ToString() const override;
     void Accept(IRVisitor*) override;
+
+    char& From() { return from_; }
+    char From() const { return from_; }
+    char& To() { return to_; }
+    char To() const { return to_; }
+    bool& Signed() { return signed_; }
+    bool Signed() const { return signed_; }
+
+private:
+    char from_{};
+    char to_{};
+    bool signed_{};
 };
 
 
@@ -304,6 +328,18 @@ public:
 
     std::string ToString() const override;
     void Accept(IRVisitor*) override;
+
+    char& From() { return from_; }
+    char From() const { return from_; }
+    char& To() { return to_; }
+    char To() const { return to_; }
+    bool& Signed() { return signed_; }
+    bool Signed() const { return signed_; }
+
+private:
+    char from_{};
+    char to_{};
+    bool signed_{};
 };
 
 
@@ -404,20 +440,26 @@ protected:
     static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::alloca; }
 
 public:
-    AllocaInstr(const std::string& r, const IRType* t) :
+    AllocaInstr(const Register* r, const IRType* t) :
         Instr(InstrId::alloca), result_(r), type_(t) {}
-    AllocaInstr(const std::string& r, const IRType* t, size_t n) :
+    AllocaInstr(const Register* r, const IRType* t, size_t n) :
         Instr(InstrId::alloca), result_(r), type_(t), num_(n) {}
-    AllocaInstr(const std::string& r, const IRType* t, size_t n, size_t a) :
+    AllocaInstr(const Register* r, const IRType* t, size_t n, size_t a) :
         Instr(InstrId::alloca), result_(r), type_(t), num_(n), align_(a) {}
 
     std::string ToString() const override;
 
+    auto& Result() { return result_; }
+    auto Result() const { return result_; }
+    auto Type() const { return type_; }
+    auto Num() const { return num_; }
+    auto Align() const { return align_; }
+
 private:
-    std::string result_{};
+    const Register* result_{};
     const IRType* type_{};
     size_t num_{ 1 };
-    size_t align_{ 1 };
+    size_t align_{ type_->Size() };
 };
 
 
@@ -428,21 +470,28 @@ protected:
     static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::load; }
 
 public:
-    LoadInstr(const std::string& r, const Register* p) :
+    LoadInstr(const Register* r, const Register* p) :
         Instr(InstrId::load), result_(r), pointer_(p) {}
-    LoadInstr(const std::string& r, const Register* p, size_t a) :
+    LoadInstr(const Register* r, const Register* p, size_t a) :
         Instr(InstrId::load), result_(r), pointer_(p),
         align_(a) {}
-    LoadInstr(const std::string& r, const Register* p, size_t a, bool vol) :
+    LoadInstr(const Register* r, const Register* p, size_t a, bool vol) :
         Instr(InstrId::load), result_(r), pointer_(p),
         align_(a), volatile_(vol) {}
 
     std::string ToString() const override;
 
+    auto& Result() { return result_; }
+    auto Result() const { return result_; }
+    auto& Pointer() { return pointer_; }
+    auto Pointer() const { return pointer_; }
+    auto Align() const { return align_; }
+    auto Volatile() const { return volatile_; }
+
 private:
-    std::string result_{};
+    const IROperand* result_{};
     const IROperand* pointer_{};
-    size_t align_{ 1 };
+    size_t align_{ result_->Type()->Size() };
     bool volatile_{};
 };
 
@@ -459,9 +508,14 @@ public:
 
     std::string ToString() const override;
 
+    auto& Value() { return value_; }
+    auto Value() const { return value_; }
+    auto& Dest() { return pointer_; }
+    auto Dest() const { return pointer_; }
+
 private:
     const IROperand* value_{};
-    const Register* pointer_{};
+    const IROperand* pointer_{};
     bool volatile_{};
 };
 
@@ -523,7 +577,28 @@ private:
 };
 
 
-class TruncInstr : public Instr
+class ConvertInstr : public Instr
+{
+public:
+    ConvertInstr(
+        InstrId id, const Register* r, const IRType* t, const Register* v
+    ) : Instr(id), result_(r), type_(t), value_(v) {}
+
+    auto& Dest() { return result_; }
+    auto Dest() const { return result_; }
+    auto& Type() { return type_; }
+    auto Type() const { return type_; }
+    auto& Value() { return value_; }
+    auto Value() const { return value_; }
+
+private:
+    const IROperand* result_{};
+    const IRType* type_{};
+    const IROperand* value_{};
+};
+
+
+class TruncInstr : public ConvertInstr
 {
 protected:
     static bool ClassOf(const TruncInstr const*) { return true; }
@@ -531,19 +606,23 @@ protected:
 
 public:
     TruncInstr(
-        const std::string& r, const IntType* t, const Register* v
-    ) : Instr(InstrId::trunc), result_(r), type_(t), value_(v) {}
+        const Register* r, const IntType* t, const Register* v
+    ) : ConvertInstr(InstrId::trunc, r, t, v) {}
 
     std::string ToString() const override;
 
+    char& From() { return from_; }
+    char From() const { return from_; }
+    char& To() { return to_; }
+    char To() const { return to_; }
+
 private:
-    std::string result_{};
-    const IntType* type_{};
-    const Register* value_{};
+    char from_{};
+    char to_{};
 };
 
 
-class FtruncInstr : public Instr
+class FtruncInstr : public ConvertInstr
 {
 protected:
     static bool ClassOf(const FtruncInstr const*) { return true; }
@@ -551,19 +630,23 @@ protected:
 
 public:
     FtruncInstr(
-        const std::string& r, const FloatType* t, const Register* v
-    ) : Instr(InstrId::ftrunc), result_(r), type_(t), value_(v) {}
+        const Register* r, const FloatType* t, const Register* v
+    ) : ConvertInstr(InstrId::ftrunc, r, t, v) {}
 
     std::string ToString() const override;
 
+    std::string From() const { return from_; }
+    std::string To() const { return to_; }
+    std::string& From() { return from_; }
+    std::string& To() { return to_; }
+
 private:
-    std::string result_{};
-    const FloatType* type_{};
-    const Register* value_{};
+    std::string from_{};
+    std::string to_{};
 };
 
 
-class ZextInstr : public Instr
+class ZextInstr : public ConvertInstr
 {
 protected:
     static bool ClassOf(const ZextInstr const*) { return true; }
@@ -571,19 +654,23 @@ protected:
 
 public:
     ZextInstr(
-        const std::string& r, const IntType* t, const Register* v
-    ) : Instr(InstrId::zext), result_(r), type_(t), value_(v) {}
+        const Register* r, const IntType* t, const Register* v
+    ) : ConvertInstr(InstrId::zext, r, t, v) {}
 
     std::string ToString() const override;
 
+    char& From() { return from_; }
+    char From() const { return from_; }
+    char& To() { return to_; }
+    char To() const { return to_; }
+
 private:
-    std::string result_{};
-    const IntType* type_{};
-    const Register* value_{};
+    char from_{};
+    char to_{};
 };
 
 
-class SextInstr : public Instr
+class SextInstr : public ConvertInstr
 {
 protected:
     static bool ClassOf(const SextInstr const*) { return true; }
@@ -591,19 +678,23 @@ protected:
 
 public:
     SextInstr(
-        const std::string& r, const IntType* t, const Register* v
-    ) : Instr(InstrId::sext), result_(r), type_(t), value_(v) {}
+        const Register* r, const IntType* t, const Register* v
+    ) : ConvertInstr(InstrId::sext, r, t, v) {}
 
     std::string ToString() const override;
 
+    char& From() { return from_; }
+    char From() const { return from_; }
+    char& To() { return to_; }
+    char To() const { return to_; }
+
 private:
-    std::string result_{};
-    const IntType* type_{};
-    const Register* value_{};
+    char from_{};
+    char to_{};
 };
 
 
-class FextInstr : public Instr
+class FextInstr : public ConvertInstr
 {
 protected:
     static bool ClassOf(const FextInstr const*) { return true; }
@@ -611,19 +702,23 @@ protected:
 
 public:
     FextInstr(
-        const std::string& r, const FloatType* t, const Register* v
-    ) : Instr(InstrId::fext), result_(r), type_(t), value_(v) {}
+        const Register* r, const FloatType* t, const Register* v
+    ) : ConvertInstr(InstrId::fext, r, t, v) {}
 
     std::string ToString() const override;
 
+    std::string& From() { return from_; }
+    std::string From() const { return from_; }
+    std::string& To() { return to_; }
+    std::string To() const { return to_; }
+
 private:
-    std::string result_{};
-    const FloatType* type_{};
-    const Register* value_{};
+    std::string from_{};
+    std::string to_{};
 };
 
 
-class FtoUInstr : public Instr
+class FtoUInstr : public ConvertInstr
 {
 protected:
     static bool ClassOf(const FtoUInstr const*) { return true; }
@@ -631,19 +726,23 @@ protected:
 
 public:
     FtoUInstr(
-        const std::string& r, const IntType* t, const Register* v
-    ) : Instr(InstrId::ftou), result_(r), type_(t), value_(v) {}
+        const Register* r, const IntType* t, const Register* v
+    ) : ConvertInstr(InstrId::ftou, r, t, v) {}
 
     std::string ToString() const override;
 
+    std::string& From() { return from_; }
+    std::string From() const { return from_; }
+    std::string& To() { return to_; }
+    std::string To() const { return to_; }
+
 private:
-    std::string result_{};
-    const IntType* type_{};
-    const Register* value_{};
+    std::string from_{};
+    std::string to_{};
 };
 
 
-class FtoSInstr : public Instr
+class FtoSInstr : public ConvertInstr
 {
 protected:
     static bool ClassOf(const FtoSInstr const*) { return true; }
@@ -651,19 +750,23 @@ protected:
 
 public:
     FtoSInstr(
-        const std::string& r, const IntType* t, const Register* v
-    ) : Instr(InstrId::ftos), result_(r), type_(t), value_(v) {}
+        const Register* r, const IntType* t, const Register* v
+    ) : ConvertInstr(InstrId::ftos, r, t, v) {}
 
     std::string ToString() const override;
 
+    std::string& From() { return from_; }
+    std::string From() const { return from_; }
+    std::string& To() { return to_; }
+    std::string To() const { return to_; }
+
 private:
-    std::string result_{};
-    const IntType* type_{};
-    const Register* value_{};
+    std::string from_{};
+    std::string to_{};
 };
 
 
-class UtoFInstr : public Instr
+class UtoFInstr : public ConvertInstr
 {
 protected:
     static bool ClassOf(const UtoFInstr const*) { return true; }
@@ -671,19 +774,23 @@ protected:
 
 public:
     UtoFInstr(
-        const std::string& r, const FloatType* t1, const Register* v
-    ) : Instr(InstrId::utof), result_(r), type_(t1), value_(v) {}
+        const Register* r, const FloatType* t, const Register* v
+    ) : ConvertInstr(InstrId::utof, r, t, v) {}
 
     std::string ToString() const override;
 
+    std::string& From() { return from_; }
+    std::string From() const { return from_; }
+    std::string& To() { return to_; }
+    std::string To() const { return to_; }
+
 private:
-    std::string result_{};
-    const FloatType* type_{};
-    const Register* value_{};
+    std::string from_{};
+    std::string to_{};
 };
 
 
-class StoFInstr : public Instr
+class StoFInstr : public ConvertInstr
 {
 protected:
     static bool ClassOf(const StoFInstr const*) { return true; }
@@ -691,19 +798,23 @@ protected:
 
 public:
     StoFInstr(
-        const std::string& r, const FloatType* t, const Register* v
-    ) : Instr(InstrId::stof), result_(r), type_(t), value_(v) {}
+        const Register* r, const FloatType* t, const Register* v
+    ) : ConvertInstr(InstrId::stof, r, t, v) {}
 
     std::string ToString() const override;
 
+    std::string& From() { return from_; }
+    std::string From() const { return from_; }
+    std::string& To() { return to_; }
+    std::string To() const { return to_; }
+
 private:
-    std::string result_{};
-    const FloatType* type_{};
-    const Register* value_{};
+    std::string from_{};
+    std::string to_{};
 };
 
 
-class PtrtoIInstr : public Instr
+class PtrtoIInstr : public ConvertInstr
 {
 protected:
     static bool ClassOf(const PtrtoIInstr const*) { return true; }
@@ -711,19 +822,14 @@ protected:
 
 public:
     PtrtoIInstr(
-        const std::string& r, const IntType* t, const Register* v
-    ) : Instr(InstrId::ptrtoi), result_(r), type_(t), value_(v) {}
+        const Register* r, const IntType* t, const Register* v
+    ) : ConvertInstr(InstrId::ptrtoi, r, t, v) {}
 
     std::string ToString() const override;
-
-private:
-    std::string result_{};
-    const IntType* type_{};
-    const Register* value_{};
 };
 
 
-class ItoPtrInstr : public Instr
+class ItoPtrInstr : public ConvertInstr
 {
 protected:
     static bool ClassOf(const ItoPtrInstr const*) { return true; }
@@ -731,19 +837,14 @@ protected:
 
 public:
     ItoPtrInstr(
-        const std::string& r, const PtrType* t, const Register* v
-    ) : Instr(InstrId::itoptr), result_(r), type_(t), value_(v) {}
+        const Register* r, const PtrType* t, const Register* v
+    ) : ConvertInstr(InstrId::itoptr, r, t, v) {}
 
     std::string ToString() const override;
-
-private:
-    std::string result_{};
-    const PtrType* type_{};
-    const Register* value_{};
 };
 
 
-class BitcastInstr : public Instr
+class BitcastInstr : public ConvertInstr
 {
 protected:
     static bool ClassOf(const BitcastInstr const*) { return true; }
@@ -751,15 +852,10 @@ protected:
 
 public:
     BitcastInstr(
-        const std::string& r, const IRType* t, const Register* v
-    ) : Instr(InstrId::bitcast), result_(r), type_(t), value_(v) {}
+        const Register* r, const IRType* t, const Register* v
+    ) : ConvertInstr(InstrId::bitcast, r, t, v) {}
 
     std::string ToString() const override;
-
-private:
-    std::string result_{};
-    const IRType* type_{};
-    const Register* value_{};
 };
 
 
@@ -857,42 +953,6 @@ private:
     std::string result_{};
     const IRType* type_{};
     BlockValPairList labels_{};
-};
-
-
-class SpillInstr : public Instr
-{
-protected:
-    static bool ClassOf(const SpillInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::spill; }
-
-public:
-    SpillInstr(const std::string& r, const Register* v) :
-        Instr(InstrId::spill), result_(r), value_(v) {}
-
-    std::string ToString() const override;
-
-private:
-    std::string result_{};
-    const Register* value_{};
-};
-
-
-class RestoreInstr : public Instr
-{
-protected:
-    static bool ClassOf(const RestoreInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::restore; }
-
-public:
-    RestoreInstr(const std::string& r, const Register* v) :
-        Instr(InstrId::restore), result_(r), value_(v) {}
-
-    std::string ToString() const override;
-
-private:
-    std::string result_{};
-    const Register* value_{};
 };
 
 
