@@ -81,6 +81,7 @@ string to_string(RegTag rt)
 {
     switch (rt)
     {
+    case RegTag::rip:   return "%rip";
     case RegTag::rax:   return "%rax";      case RegTag::rbx:   return "%rbx";
     case RegTag::rcx:   return "%rcx";      case RegTag::rdx:   return "%rdx";
     case RegTag::rsi:   return "%rsi";      case RegTag::rdi:   return "%rdi";
@@ -135,12 +136,26 @@ x64Reg* x64Reg::CreateX64Reg(Pool<IROperand>* pool, RegTag reg)
     return raw;
 }
 
+bool x64Reg::PartOf(x64Reg& reg) const
+{
+    return PartOf(reg.reg_);
+}
+
+bool x64Reg::PartOf(RegTag tag) const
+{
+    int cur = static_cast<int>(reg_);
+    int t = static_cast<int>(tag);
+    if (cur <= int(RegTag::rip) || t >= int(RegTag::r15b))
+        return false;
+    return (cur - t) % 8 == 0;
+}
+
 std::string x64Reg::ToString() const
 {
     return std::to_string(reg_);
 }
 
-x64Mem* x64Mem::CreateX64Mem(Pool<IROperand>* pool, size_t offset,
+x64Mem* x64Mem::CreateX64Mem(Pool<IROperand>* pool, long offset,
     const x64Reg* base, const x64Reg* index, size_t scale)
 {
     auto mem = std::make_unique<x64Mem>(offset, base, index, scale);
@@ -151,6 +166,9 @@ x64Mem* x64Mem::CreateX64Mem(Pool<IROperand>* pool, size_t offset,
 
 std::string x64Mem::ToString() const
 {
+    if (!label_.empty())
+        return label_ + "(%rip)";
+
     std::string loc = "";
 
     if (offset_ != 0)

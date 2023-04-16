@@ -5,20 +5,26 @@
 #include <string>
 #include <vector>
 #include "IR/IRType.h"
+#include "utils/DynCast.h"
 #include "utils/Pool.h"
 
 
 class IROperand
 {
+protected:
+    enum class OpId { op, _int, _float, reg, x64reg, x64mem, x64imm };
+    static bool ClassOf(const IROperand const*) { return true; }
+    OpId id_ = OpId::op;
+
 public:
     IROperand(const IRType* t) : type_(t) {}
     virtual ~IROperand() {}
     virtual std::string ToString() const = 0;
 
-    virtual bool IsIntConst() const { return false; }
-    virtual bool IsFloatConst() const { return false; }
-    virtual bool IsConstant() const { return false; }
-    virtual bool IsRegister() const { return false; }
+    OpId ID() const { return id_; }
+
+    ENABLE_IS;
+    ENABLE_AS;
 
     auto Type() const { return type_; }
     auto& Type() { return type_; }
@@ -30,6 +36,11 @@ protected:
 
 class Constant : public IROperand
 {
+protected:
+    static bool ClassOf(const Constant const*) { return true; }
+    static bool ClassOf(const IROperand const* op)
+    { return op->ID() == OpId::_int || op->ID() == OpId::_float; }
+
 public:
     Constant(const IRType* t) : IROperand(t) {}
     virtual bool IsZero() const = 0;
@@ -37,6 +48,10 @@ public:
 
 class IntConst : public Constant
 {
+protected:
+    static bool ClassOf(const IntConst const*) { return true; }
+    static bool ClassOf(const Constant const* c) { return c->ID() == OpId::_int; }
+
 public:
     static IntConst* CreateIntConst(Pool<IROperand>*, unsigned long);
     static IntConst* CreateIntConst(Pool<IROperand>*, unsigned long, const IntType*);
@@ -47,8 +62,6 @@ public:
     unsigned long Val() const { return num_; }
 
     bool IsZero() const override { return num_ == 0; }
-    bool IsConstant() const override { return true; }
-    bool IsIntConst() const override { return true; }
 
 private:
     unsigned long num_{};
@@ -56,6 +69,10 @@ private:
 
 class FloatConst : public Constant
 {
+protected:
+    static bool ClassOf(const FloatConst const*) { return true; }
+    static bool ClassOf(const Constant const* c) { return c->ID() == OpId::_float; }
+
 public:
     static FloatConst* CreateFloatConst(Pool<IROperand>*, double);
     static FloatConst* CreateFloatConst(Pool<IROperand>*, double, const FloatType*);
@@ -66,8 +83,6 @@ public:
     double Val() const { return num_; }
 
     bool IsZero() const override { return num_ == 0; }
-    bool IsConstant() const override { return true; }
-    bool IsFloatConst() const override { return true; }
 
 private:
     double num_{};
@@ -76,6 +91,10 @@ private:
 
 class Register : public IROperand
 {
+protected:
+    static bool ClassOf(const Register const*) { return true; }
+    static bool ClassOf(const IROperand const* op) { return op->ID() == OpId::reg; }
+
 public:
     static Register* CreateRegister(Pool<IROperand>*, const std::string&, const IRType*);
     Register(const std::string& n, const IRType* t) :
@@ -91,14 +110,14 @@ private:
 
 enum class RegTag
 {
-    none,
+    none, rip,
 
     rax, rbx, rcx, rdx, rsi, rdi, rbp, rsp,
     eax, ebx, ecx, edx, esi, edi, ebp, esp,
-    ax, bx, cx, dx, si, di, bp, sp,
-    al, bl, cl, dl, sil, dil, bpl, spl,
+     ax,  bx,  cx,  dx,  si,  di,  bp,  sp,
+     al,  bl,  cl,  dl, sil, dil, bpl, spl,
 
-    r8, r9, r10, r11, r12, r13, r14, r15,
+     r8,  r9,  r10,  r11,  r12,  r13,  r14, r15,
     r8d, r9d, r10d, r11d, r12d, r13d, r14d, r15d,
     r8w, r9w, r10w, r11w, r12w, r13w, r14w, r15w,
     r8b, r9b, r10b, r11b, r12b, r13b, r14b, r15b,
@@ -108,17 +127,35 @@ enum class RegTag
 };
 
 
-class x64Reg : public IROperand
+class x64 : public IROperand
 {
+protected:
+    static bool ClassOf(const x64 const*) { return true; }
+    static bool ClassOf(const IROperand const* i)
+    { return i->ID() == OpId::x64reg || i->ID() == OpId::x64mem; }
+
+public:
+    x64() : IROperand(nullptr) {}
+};
+
+
+class x64Reg : public x64
+{
+protected:
+    static bool ClassOf(const x64Reg const*) { return true; }
+    static bool ClassOf(const IROperand const* i) { return i->ID() == OpId::x64reg; }
+
 public:
     static x64Reg* CreateX64Reg(Pool<IROperand>*, RegTag = RegTag::none);
-    x64Reg() : reg_(RegTag::none), IROperand(nullptr) {}
-    x64Reg(RegTag r) : reg_(r), IROperand(nullptr) {}
+    x64Reg() : reg_(RegTag::none) {}
+    x64Reg(RegTag r) : reg_(r) {}
 
-    bool operator==(x64Reg reg) const { return reg_ == reg.reg_; }
-    bool operator!=(x64Reg reg) const { return reg_ != reg.reg_; }
+    bool operator==(x64Reg& reg) const { return reg_ == reg.reg_; }
+    bool operator!=(x64Reg& reg) const { return reg_ != reg.reg_; }
     bool operator==(RegTag tag) const { return reg_ == tag; }
     bool operator!=(RegTag tag) const { return reg_ != tag; }
+    bool PartOf(x64Reg&) const;
+    bool PartOf(RegTag) const;
 
     std::string ToString() const override;
 
@@ -127,22 +164,47 @@ private:
 };
 
 
-class x64Mem : public IROperand
+class x64Mem : public x64
 {
+protected:
+    static bool ClassOf(const x64Mem const*) { return true; }
+    static bool ClassOf(const IROperand const* i) { return i->ID() == OpId::x64mem; }
+
 public:
-    static x64Mem* CreateX64Mem(Pool<IROperand>*, size_t = 0,
+    static x64Mem* CreateX64Mem(Pool<IROperand>*, const std::string&);
+    static x64Mem* CreateX64Mem(Pool<IROperand>*, long = 0,
         const x64Reg* = nullptr, const x64Reg* = nullptr, size_t = 0);
 
+    x64Mem(const std::string& l) : label_(l) {}
     x64Mem(size_t o, const x64Reg* b, const x64Reg* i, size_t s) :
-        offset_(o), base_(b), index_(i), scale_(s), IROperand(nullptr) {}
+        offset_(o), base_(b), index_(i), scale_(s) {}
 
     std::string ToString() const override;
 
 private:
-    size_t offset_{};
+    std::string label_{};
+
+    long offset_{};
     const x64Reg* base_{};
     const x64Reg* index_{};
     size_t scale_{};
+};
+
+
+class x64Imm : public x64
+{
+protected:
+    static bool ClassOf(const x64Mem const*) { return true; }
+    static bool ClassOf(const IROperand const* i) { return i->ID() == OpId::x64imm; }
+
+public:
+    static x64Imm* CreateX64Imm(Pool<IROperand>*, const Constant*);
+    x64Imm(const Constant* c) : val_(c) {}
+
+    std::string ToString() const override;
+
+private:
+    const Constant* val_{};
 };
 
 #endif // _IROPERAND_H_
