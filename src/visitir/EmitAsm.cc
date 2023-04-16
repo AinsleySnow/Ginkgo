@@ -48,6 +48,11 @@ void EmitAsm::EmitPseudoInstr(
 }
 
 
+void EmitAsm::EmitCxtx(char from, char to)
+{
+    fprintf(file_, INDENT "c%ct%c\n", from, to);
+}
+
 void EmitAsm::EmitLeaq(
     const std::string& addr, const std::string& dest)
 {
@@ -68,18 +73,18 @@ void EmitAsm::EmitBinary(char suffix, const std::string& instr,
 }
 
 
-void EmitAsm::EmitVarithm(const std::string& instr, const std::string& precison,
+void EmitAsm::EmitVarithm(const std::string& instr, const std::string& precision,
     const std::string& op1, const std::string& op2, const std::string& dest)
 {
     if (instr == "sqrt")
         fprintf(file_, INDENT "%s%s %s, %s\n",
-            instr.c_str(), precison.c_str(), op1.c_str(), dest.c_str());
+            instr.c_str(), precision.c_str(), op1.c_str(), dest.c_str());
     else if (instr == "and")
         fprintf(file_, INDENT "%s%s %s, %s, %s\n",
-            instr.c_str(), precison.c_str(), op1.c_str(), op2.c_str(), dest.c_str());
+            instr.c_str(), precision.c_str(), op1.c_str(), op2.c_str(), dest.c_str());
     else
         fprintf(file_, INDENT "v%s%s %s, %s, %s\n",
-            instr.c_str(), precison.c_str(), op1.c_str(), op2.c_str(), dest.c_str());
+            instr.c_str(), precision.c_str(), op1.c_str(), op2.c_str(), dest.c_str());
 }
 
 void EmitAsm::EmitVcvtt(const std::string& from, const std::string& to,
@@ -97,10 +102,10 @@ void EmitAsm::EmitVcvt(const std::string& from, const std::string& to,
 }
 
 void EmitAsm::EmitUcom(
-    const std::string& precison, const std::string& op1, const std::string& op2)
+    const std::string& precision, const std::string& op1, const std::string& op2)
 {
     fprintf(file_, INDENT "vucomi%s %s, %s\n",
-        precison.c_str(), op1.c_str(), op2.c_str());
+        precision.c_str(), op1.c_str(), op2.c_str());
 }
 
 

@@ -20,6 +20,7 @@ public:
     void EmitPseudoInstr(
         const std::string&, std::initializer_list<std::string>);
 
+    void EmitCxtx(char, char);
     void EmitLeaq(const std::string&, const std::string&);
     void EmitUnary(char, const std::string&, const std::string&);
     void EmitBinary(char, const std::string&, const std::string&, const std::string&);
