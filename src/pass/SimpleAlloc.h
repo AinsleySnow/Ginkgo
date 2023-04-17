@@ -21,26 +21,39 @@ public:
     void Execute() override;
 
 private:
-    const x64* IRTox64(const IROperand*);
+    class StackCache
+    {
+    public:
+        StackCache(BasicBlock*& bb) : basicblock_(bb) {}
 
-    int Allocate(BasicBlock*, const Register*);
-    int FAllocate(BasicBlock*, const Register*);
+        RegTag SpareReg() const;
+        RegTag SpareFReg() const;
+        const x64* AccessStack(const Register*) const;
+        const x64* GetPosition(const Register*) const;
+        void Map2Reg(const Register*, RegTag);
+        void Map2Stack(const Register*, long offset);
+
+    private:
+        BasicBlock*& basicblock_;
+
+        // map virtual registers to where? the value can be
+        // either a register or a stack address.
+        std::unordered_map<const Register*, const x64*> regmap_{};
+
+        // the stack cache; implemented as a ring buffer.
+        // the three registers used are rax, rdx, rcx, respectively.
+        mutable int index_{};
+        // for float-points, the three registers used is xmm0, xmm1, xmm2.
+        mutable int findex_{};
+    };
+
+    void Allocate(BasicBlock*, const Register*);
+    long AllocateOnX64Stack(x64Stack&, size_t, size_t);
     inline void BinaryAllocaHelper(BinaryInstr*);
-    inline void FBinaryAllocaHelper(BinaryInstr*);
 
     Function* curfunc_{};
     BasicBlock* curbb_{};
-
-    // map a virtual register to where?
-    std::unordered_map<const Register*, const x64*> addrmap_{};
-
-    // the stack cache; implemented as a ring buffer.
-    // the three registers used are rax, rdx, rcx, respectively.
-    const x64Reg* scache_[3]{};
-    int index_{};
-    // for float-points, the three registers used is xmm0, xmm1, xmm2.
-    const x64Reg* fscache_[3]{};
-    int findex_{};
+    StackCache stackcache_{ curbb_ };
 
 private:
     void VisitFunction(Function*) override;

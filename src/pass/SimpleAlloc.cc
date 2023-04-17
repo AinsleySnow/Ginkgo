@@ -2,78 +2,113 @@
 #include "IR/Value.h"
 
 
-const x64* SimpleAlloc::IRTox64(const IROperand* op)
+RegTag SimpleAlloc::StackCache::SpareReg() const
 {
-    if (op->Is<Constant>())
-        return x64Imm::CreateX64Imm(curbb_, op->As<Constant>());
+    auto ret = RegTag::none;
+    if (index_ >= 3) return ret;
+    if (index_ == 0) ret = RegTag::rax;
+    if (index_ == 1) ret = RegTag::rdx;
+    if (index_ == 2) ret = RegTag::rcx;
+    index_ += 1;
+    return ret;
+}
 
-    auto reg = op->As<Register>();
-    if (reg->Name()[0] == '@')
-        return x64Mem::CreateX64Mem(curbb_, reg->Name().substr(1));
+RegTag SimpleAlloc::StackCache::SpareFReg() const
+{
+    auto ret = RegTag::none;
+    if (findex_ >= 3) return ret;
+    if (findex_ == 0) ret = RegTag::xmm0;
+    if (findex_ == 1) ret = RegTag::xmm1;
+    if (findex_ == 2) ret = RegTag::xmm2;
+    findex_ += 1;
+    return ret;
+}
 
-    if (addrmap_.find(reg) != addrmap_.end())
-        return addrmap_[reg];
-    return nullptr;
+const x64* SimpleAlloc::StackCache::AccessStack(const Register* reg) const
+{
+    auto it = regmap_.find(reg);
+    if (it == regmap_.end()) return nullptr;
+
+    auto mempos = it->second;
+    if (mempos->Is<x64Reg>()) index_ -= 1;
+    return it->second;
+}
+
+const x64* SimpleAlloc::StackCache::GetPosition(const Register* reg) const
+{
+    auto it = regmap_.find(reg);
+    if (it == regmap_.end()) return nullptr;
+    return it->second;
+}
+
+void SimpleAlloc::StackCache::Map2Reg(const Register* reg, RegTag tag)
+{
+    regmap_[reg] = x64Reg::CreateX64Reg(basicblock_, tag);
+}
+
+void SimpleAlloc::StackCache::Map2Stack(const Register* reg, long offset)
+{
+    regmap_[reg] = x64Mem::CreateX64Mem(
+        basicblock_, offset, x64Reg::CreateX64Reg(basicblock_, RegTag::rsp));
 }
 
 
-int SimpleAlloc::Allocate(BasicBlock* bb, const Register* reg)
+void SimpleAlloc::Allocate(BasicBlock* bb, const Register* reg)
 {
-    auto index = index_ % 3;
+    auto tag = reg->Type()->IsFloat() ?
+        stackcache_.SpareFReg() : stackcache_.SpareReg();
 
-    RegTag tag = RegTag::none;
-    if (index == 0) tag = RegTag::rax;
-    else if (index == 1) tag = RegTag::rdx;
-    else if (index == 2) tag = RegTag::rcx;
-
-    scache_[index] = x64Reg::CreateX64Reg(bb, tag);
-    addrmap_[reg] = scache_[index];
-
-    index_++;
-    return index;
+    if (tag != RegTag::none)
+        stackcache_.Map2Reg(reg, tag);
+    else
+    {
+        auto info = InfoAt(curfunc_);
+        auto offset = AllocateOnX64Stack(
+            info, reg->Type()->Size(), reg->Type()->Size());
+        stackcache_.Map2Stack(reg, offset);
+    }
 }
 
-int SimpleAlloc::FAllocate(BasicBlock* bb, const Register* reg)
+
+long SimpleAlloc::AllocateOnX64Stack(x64Stack& info, size_t size, size_t align)
 {
-    auto index = index_ % 3;
+    long base = 0;
 
-    RegTag tag = RegTag::none;
-    if (index == 0) tag = RegTag::xmm0;
-    else if (index == 1) tag = RegTag::xmm1;
-    else if (index == 2) tag = RegTag::xmm2;
+    // not a leaf; just use allocated_ as the offset.
+    if (!info.leaf_ || info.allocated_ + size > 128)
+    {
+        info.allocated_ = MakeAlign(info.allocated_, align);
+        base = info.allocated_;
+        info.allocated_ += size;
+    }
+    // leaf; use both red zone and zone above rsp.
+    else if (info.belowrsp_ + size <= 128)
+    {
+        // meet strict alignment requirements.
+        info.belowrsp_ = MakeAlign(info.belowrsp_, align);
+        base = -info.belowrsp_;
+        info.belowrsp_ += size;
+    }
 
-    fscache_[index] = x64Reg::CreateX64Reg(bb, tag);
-    addrmap_[reg] = fscache_[index];
-
-    index_++;
-    return index;
+    return base;
 }
 
 
 void SimpleAlloc::BinaryAllocaHelper(BinaryInstr* instr)
 {
-    auto lhs = IRTox64(instr->Lhs());
-    if (!lhs) lhs = scache_[Allocate(curbb_, instr->Lhs()->As<Register>())];
-    auto rhs = IRTox64(instr->Rhs());
-    if (!rhs) rhs = scache_[Allocate(curbb_, instr->Rhs()->As<Register>())];
+    auto lhs = MapConstAndGlobalVar(curbb_, instr->Lhs());
+    auto rhs = MapConstAndGlobalVar(curbb_, instr->Rhs());
 
-    index_ -= 2;
-    instr->Lhs() = lhs;
-    instr->Rhs() = rhs;
-    instr->Result() = scache_[Allocate(curbb_, instr->Result()->As<Register>())];
-}
+    auto lreg = instr->Lhs()->As<Register>();
+    auto rreg = instr->Rhs()->As<Register>();
+    if (!lhs) Allocate(curbb_, lreg);
+    if (!rhs) Allocate(curbb_, rreg);
+    if (!lhs) lhs = stackcache_.AccessStack(lreg);
+    if (!rhs) rhs = stackcache_.AccessStack(rreg);
 
-void SimpleAlloc::FBinaryAllocaHelper(BinaryInstr* instr)
-{
-    auto lhs = IRTox64(instr->Lhs());
-    if (!lhs) lhs = fscache_[FAllocate(curbb_, instr->Lhs()->As<Register>())];
-    auto rhs = IRTox64(instr->Rhs());
-    if (!rhs) rhs = fscache_[FAllocate(curbb_, instr->Rhs()->As<Register>())];
-
-    index_ -= 2;
-    instr->Lhs() = lhs;
-    instr->Rhs() = rhs;
-    instr->Result() = fscache_[FAllocate(curbb_, instr->Result()->As<Register>())];
+    auto ansreg = instr->Result()->As<Register>();
+    Allocate(curbb_, ansreg);
+    instr->Result() = stackcache_.AccessStack(ansreg);
 }
 
 
@@ -116,13 +151,13 @@ void SimpleAlloc::VisitBasicBlock(BasicBlock* bb)
 
 
 void SimpleAlloc::VisitAddInstr(AddInstr* instr) { BinaryAllocaHelper(instr); }
-void SimpleAlloc::VisitFaddInstr(FaddInstr* instr) { FBinaryAllocaHelper(instr); }
+void SimpleAlloc::VisitFaddInstr(FaddInstr* instr) { BinaryAllocaHelper(instr); }
 void SimpleAlloc::VisitSubInstr(SubInstr* instr) { BinaryAllocaHelper(instr); }
-void SimpleAlloc::VisitFsubInstr(FsubInstr* instr) { FBinaryAllocaHelper(instr); }
+void SimpleAlloc::VisitFsubInstr(FsubInstr* instr) { BinaryAllocaHelper(instr); }
 void SimpleAlloc::VisitMulInstr(MulInstr* instr) { BinaryAllocaHelper(instr); }
-void SimpleAlloc::VisitFmulInstr(FmulInstr* instr) { FBinaryAllocaHelper(instr); }
+void SimpleAlloc::VisitFmulInstr(FmulInstr* instr) { BinaryAllocaHelper(instr); }
 void SimpleAlloc::VisitDivInstr(DivInstr* instr) { BinaryAllocaHelper(instr); }
-void SimpleAlloc::VisitFdivInstr(FdivInstr* instr) { FBinaryAllocaHelper(instr); }
+void SimpleAlloc::VisitFdivInstr(FdivInstr* instr) { BinaryAllocaHelper(instr); }
 void SimpleAlloc::VisitModInstr(ModInstr* instr) { BinaryAllocaHelper(instr); }
 void SimpleAlloc::VisitShlInstr(ShlInstr* instr) { BinaryAllocaHelper(instr); }
 void SimpleAlloc::VisitLshrInstr(LshrInstr* instr) { BinaryAllocaHelper(instr); }
@@ -136,51 +171,34 @@ void SimpleAlloc::VisitAllocaInstr(AllocaInstr* instr)
 {
     auto size = instr->Type()->Size();
     auto align = instr->Type()->Align();
+
     auto& info = InfoAt(curfunc_);
-
-    // not a leaf; just use allocated_ as the offset.
-    if (!info.leaf_)
-    {
-        info.allocated_ = MakeAlign(info.allocated_, align);
-        info.offset_[instr->Result()] = info.allocated_;
-        return;
-    }
-
-    // leaf; use both red zone and zone above rsp.
-    if (info.belowrsp_ + size <= 128)
-    {
-        // meet strict alignment requirements.
-        info.belowrsp_ = MakeAlign(info.belowrsp_, align);
-        info.offset_[instr->Result()] = -info.belowrsp_;
-        info.belowrsp_ += size;
-    }
-    else
-    {
-        info.offset_[instr->Result()] = info.allocated_;
-        info.allocated_ += size;
-    }
+    auto offset = AllocateOnX64Stack(info, size, align);
+    stackcache_.Map2Stack(instr->Result()->As<Register>(), offset);
 }
 
 
 void SimpleAlloc::VisitLoadInstr(LoadInstr* instr)
 {
-    auto loc = IRTox64(instr->Pointer());
-    auto dest = instr->Result()->As<Register>();
-    if (loc)
-    {
-        // must be x64Mem here.
-        addrmap_[dest] = loc->As<x64Mem>();
-        return;
-    }
+    auto ptr = MapConstAndGlobalVar(curbb_, instr->Pointer());
+    auto ptrreg = instr->Pointer()->As<Register>();
+    if (!ptr) instr->Pointer() = stackcache_.AccessStack(ptrreg);
 
-    auto offset = InfoAt(curfunc_).offset_[instr->Pointer()->As<Register>()];
-    auto rsp = x64Reg::CreateX64Reg(curbb_, RegTag::rsp);
-    addrmap_[dest] = x64Mem::CreateX64Mem(curbb_, offset, rsp);
+    Allocate(curbb_, ptrreg);
+    instr->Result() = stackcache_.GetPosition(ptrreg);
 }
 
 
 void SimpleAlloc::VisitStoreInstr(StoreInstr* instr)
 {
-    instr->Value() = IRTox64(instr->Value());
-    instr->Dest() = IRTox64(instr->Dest());
+    auto value = MapConstAndGlobalVar(curbb_, instr->Value());
+    auto dest = MapConstAndGlobalVar(curbb_, instr->Dest());
+
+    auto valreg = instr->Value()->As<Register>();
+    auto destreg = instr->Dest()->As<Register>();
+    if (!dest) Allocate(curbb_, destreg);
+    if (!value) Allocate(curbb_, valreg);
+
+    instr->Value() = stackcache_.GetPosition(valreg);
+    instr->Dest() = stackcache_.GetPosition(destreg);
 }

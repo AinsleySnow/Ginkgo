@@ -33,8 +33,6 @@ enum class x64Phys
 
 struct x64Stack
 {
-    // the offset of each allocaed register, relative to %rsp.
-    std::unordered_map<const Register*, long> offset_{};
     // the offset of rsp itself.
     long rspoffset_{};
     // for leaf functions; how many bytes are used below rsp?
@@ -76,6 +74,18 @@ class x64Alloc : protected RegAlloc<x64Phys, x64Stack>
 protected:
     inline size_t MakeAlign(size_t base, size_t align) const
     { return (base + 16) % align == 0 ? base : (base + 16) + align - (base + 16) % align; }
+
+    const x64* MapConstAndGlobalVar(BasicBlock* bb, const IROperand* op)
+    {
+        if (op->Is<Constant>())
+            return x64Imm::CreateX64Imm(bb, op->As<Constant>());
+
+        auto reg = op->As<Register>();
+        if (reg->Name()[0] == '@')
+            return x64Mem::CreateX64Mem(bb, reg->Name().substr(1));
+
+        return nullptr;
+    }
 };
 
 #endif // _REG_ALLOC_H_
