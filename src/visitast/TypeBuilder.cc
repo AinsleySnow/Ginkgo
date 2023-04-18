@@ -67,8 +67,8 @@ std::unique_ptr<CEnumType> TypeBuilder::EnumHelper(const EnumSpec* spec)
 
     for (auto& mem : *spec->EnumeratorList())
     {        
-        auto pmem = scopestack_.Top().AddMember(mem->Name(), ty.get(),
-            static_cast<const IntConst*>(mem->Val()));        
+        auto pmem = scopestack_.Top().AddMember(
+            mem->Name(), ty.get(), mem->Val()->As<IntConst>());        
         ty->AddMember(pmem);
     }
 

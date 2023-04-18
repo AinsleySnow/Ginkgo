@@ -101,7 +101,7 @@ const Register* IRGen::LoadAddr(Expr* expr)
         return expr->ToIdentifier()->Addr();
     else if (expr->IsSubscript())
         return expr->ToSubscript()->Addr();
-    return static_cast<const Register*>(expr->Val());
+    return expr->Val()->As<Register>();
 }
 
 
@@ -436,7 +436,7 @@ void IRGen::VisitCallExpr(CallExpr* call)
     {
 pointercall:
         call->postfix_->Accept(this);
-        const Register* pfunc = static_cast<const Register*>(LoadVal(call->postfix_.get()));
+        auto pfunc = LoadVal(call->postfix_.get())->As<Register>();
         bool isvoid = pfunc->Type()->ToPointer()->Point2()->ToFunction()->ReturnType()->IsVoid();
         call->Val() = ibud_.InsertCallInstr(
             isvoid ? "" : env_.GetRegName(), pfunc);
@@ -444,7 +444,7 @@ pointercall:
 
     if (call->argvlist_)
     {
-        auto callinstr = static_cast<CallInstr*>(ibud_.LastInstr());
+        auto callinstr = ibud_.LastInstr()->As<CallInstr>();
         for (auto& argv : *call->argvlist_)
             callinstr->AddArgv(argv->Val());
     }
@@ -479,7 +479,7 @@ void IRGen::VisitCondExpr(CondExpr* cond)
     cond->cond_->Accept(this);
     if (cond->cond_->IsConstant())
     {
-        auto sel = static_cast<const Constant*>(cond->cond_->Val());
+        auto sel = cond->cond_->Val()->As<Constant>();
         if (sel->IsZero())
         {
             cond->false_->Accept(this);
@@ -533,7 +533,7 @@ void IRGen::VisitCondExpr(CondExpr* cond)
 
     cond->Val() = ibud_.InsertPhiInstr(
         env_.GetRegName(), tval->Type());
-    auto phi = static_cast<PhiInstr*>(ibud_.LastInstr());
+    auto phi = ibud_.LastInstr()->As<PhiInstr>();
     phi->AddBlockValPair(trueblk, tval);
     phi->AddBlockValPair(falseblk, fval);
 }
@@ -597,14 +597,13 @@ void IRGen::VisitEnumList(EnumList* list)
         }
         else
         {
-            auto pconst = static_cast<const IntConst*>(
-                (*(i - 1))->Val());
+            auto pconst = (*(i - 1))->Val()->As<IntConst>();
             (*i)->Val() = IntConst::CreateIntConst(
                 transunit_.get(), pconst->Val() + 1);
         }
 
-        scopestack_.Top().AddMember((*i)->Name(), nullptr,
-            static_cast<const IntConst*>((*i)->Val()));
+        scopestack_.Top().AddMember(
+            (*i)->Name(), nullptr, (*i)->Val()->As<IntConst>());
     }
 
     // TODO: deduce the underlying type and assign it
@@ -640,9 +639,9 @@ void IRGen::VisitLogicalExpr(LogicalExpr* logical)
     auto lhs = LoadVal(logical->left_.get());
     const IROperand* rhs = nullptr;
 
-    if (lhs->IsConstant())
+    if (lhs->Is<Constant>())
     {
-        auto lconst = static_cast<const Constant*>(lhs);
+        auto lconst = lhs->As<Constant>();
         if ((lconst->IsZero() && logical->op_ == Tag::logical_and) ||
             (!lconst->IsZero() && logical->op_ == Tag::logical_or))
         {
@@ -653,9 +652,9 @@ void IRGen::VisitLogicalExpr(LogicalExpr* logical)
 
         logical->right_->Accept(this);
         rhs = LoadVal(logical->right_.get());
-        if (rhs->IsConstant())
+        if (rhs->Is<Constant>())
         {
-            auto rconst = static_cast<const Constant*>(rhs);
+            auto rconst = rhs->As<Constant>();
             logical->Val() = Evaluator::EvalBinary(
                 ibud_.Container(), logical->op_, lconst, rconst);
             return;
@@ -698,7 +697,7 @@ void IRGen::VisitLogicalExpr(LogicalExpr* logical)
     {
         logical->Val() = ibud_.InsertPhiInstr(
             result, IntType::GetInt8(true));
-        auto phi = static_cast<PhiInstr*>(ibud_.LastInstr());
+        auto phi = ibud_.LastInstr()->As<PhiInstr>();
         phi->AddBlockValPair(firstblk, zero);
         phi->AddBlockValPair(midblk, cmpans);
     }
@@ -707,7 +706,7 @@ void IRGen::VisitLogicalExpr(LogicalExpr* logical)
         logical->Val() = ibud_.InsertPhiInstr(
             result, IntType::GetInt8(true));
         auto one = IntConst::CreateIntConst(ibud_.Container(), 1);
-        auto phi = static_cast<PhiInstr*>(ibud_.LastInstr());
+        auto phi = ibud_.LastInstr()->As<PhiInstr>();
         phi->AddBlockValPair(firstblk, one);
         phi->AddBlockValPair(midblk, cmpans);
     }
@@ -803,8 +802,7 @@ void IRGen::VisitCaseStmt(CaseStmt* stmt)
             ibud_.SetInsertPoint(bb);
         }
         env_.SwitchStackTop()->AddValueBlkPair(
-            static_cast<const IntConst*>(stmt->const_->Val()),
-            ibud_.Container());
+            stmt->const_->Val()->As<IntConst>(), ibud_.Container());
     }
     else // default
     {
@@ -967,7 +965,7 @@ void IRGen::VisitForStmt(ForStmt* stmt)
 void IRGen::VisitGotoStmt(GotoStmt* stmt)
 {
     ibud_.InsertBrInstr(nullptr);
-    auto br = static_cast<BrInstr*>(ibud_.LastInstr());
+    auto br = ibud_.LastInstr()->As<BrInstr>();
     env_.AddBrLabelPair(br, stmt->ident_);
 }
 
@@ -1046,7 +1044,7 @@ void IRGen::VisitRetStmt(RetStmt* stmt)
     }
 
     ibud_.InsertBrInstr(nullptr);
-    env_.AddBrInstr4Ret(static_cast<BrInstr*>(ibud_.LastInstr()));
+    env_.AddBrInstr4Ret(ibud_.LastInstr()->As<BrInstr>());
 }
 
 
@@ -1056,8 +1054,7 @@ void IRGen::VisitSwitchStmt(SwitchStmt* stmt)
     auto ident = LoadVal(stmt->expr_.get());
 
     ibud_.InsertSwitchInstr(ident);
-    auto switchinstr = static_cast<
-        SwitchInstr*>(ibud_.LastInstr());
+    auto switchinstr = ibud_.LastInstr()->As<SwitchInstr>();
 
     env_.PushSwitch(switchinstr);
     env_.PushStmt(stmt);

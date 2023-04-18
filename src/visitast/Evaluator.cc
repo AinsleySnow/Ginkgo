@@ -86,15 +86,12 @@ RET Evaluator::Calc(Tag op, NUM num)
 }
 
 
-#define to_int(op) static_cast<const IntConst*>(op)
-#define to_float(op) static_cast<const FloatConst*>(op)
-
 const IROperand* Evaluator::EvalBinary(Pool<IROperand>* pool, Tag op, const IROperand* lhs, const IROperand* rhs)
 {
-    if (lhs->IsFloatConst() && rhs->IsFloatConst())
+    if (lhs->Is<FloatConst>() && rhs->Is<FloatConst>())
     {
-        auto left = to_float(lhs)->Val();
-        auto right = to_float(rhs)->Val();
+        auto left = lhs->As<FloatConst>()->Val();
+        auto right = rhs->As<FloatConst>()->Val();
 
         if (IsLogicalTag(op))
             return IntConst::CreateIntConst(
@@ -106,10 +103,10 @@ const IROperand* Evaluator::EvalBinary(Pool<IROperand>* pool, Tag op, const IROp
         auto ty = lhs->Type()->operator>(*rhs->Type()) ? lhs->Type() : rhs->Type();
         return FloatConst::CreateFloatConst(pool, result, ty->ToFloatPoint());
     }
-    else if (lhs->IsFloatConst() && rhs->IsIntConst())
+    else if (lhs->Is<FloatConst>() && rhs->Is<IntConst>())
     {
-        auto left = to_float(lhs)->Val();
-        auto right = to_int(rhs)->Val();
+        auto left = lhs->As<FloatConst>()->Val();
+        auto right = rhs->As<IntConst>()->Val();
 
         double result;
         if (rhs->Type()->ToInteger()->IsSigned())
@@ -120,10 +117,10 @@ const IROperand* Evaluator::EvalBinary(Pool<IROperand>* pool, Tag op, const IROp
             return IntConst::CreateIntConst(pool, (unsigned long)result, IntType::GetInt32(true));
         return FloatConst::CreateFloatConst(pool, result, lhs->Type()->ToFloatPoint());
     }
-    else if (lhs->IsIntConst() && rhs->IsFloatConst())
+    else if (lhs->Is<IntConst>() && rhs->Is<FloatConst>())
     {
-        auto left = to_int(lhs)->Val();
-        auto right = to_float(rhs)->Val();
+        auto left = lhs->As<IntConst>()->Val();
+        auto right = rhs->As<FloatConst>()->Val();
         double result;
         if (lhs->Type()->ToInteger()->IsSigned())
             result = Calc<long, double>(op, (long)left, right);
@@ -135,8 +132,8 @@ const IROperand* Evaluator::EvalBinary(Pool<IROperand>* pool, Tag op, const IROp
     }
     else
     {
-        auto left = to_int(lhs)->Val();
-        auto right = to_int(rhs)->Val();
+        auto left = lhs->As<IntConst>()->Val();
+        auto right = rhs->As<IntConst>()->Val();
 
         if (op == Tag::lshift || op == Tag::rshift)
             right %= lhs->Type()->Size() * 8;
@@ -169,18 +166,18 @@ const IROperand* Evaluator::EvalBinary(Pool<IROperand>* pool, Tag op, const IROp
 
 const IROperand* Evaluator::EvalUnary(Pool<IROperand>* pool, Tag op, const IROperand* num)
 {
-    if (num->IsIntConst())
+    if (num->Is<IntConst>())
     {
         unsigned long result = 0;
         if (num->Type()->ToInteger()->IsSigned())
-            result = Calc<long, unsigned long>(op, to_int(num)->Val());
-        else result = Calc<long, long>(op, to_int(num)->Val());
+            result = Calc<long, unsigned long>(op, num->As<IntConst>()->Val());
+        else result = Calc<long, long>(op, num->As<IntConst>()->Val());
 
         return IntConst::CreateIntConst(pool, result, num->Type()->ToInteger());
     }
     else
     {
-        double result = Calc<double, double>(op, to_float(num)->Val());
+        double result = Calc<double, double>(op, num->As<FloatConst>()->Val());
         if (op == Tag::exclamation)
             return IntConst::CreateIntConst(pool, result, IntType::GetInt32(true));
         else return FloatConst::CreateFloatConst(pool, result, num->Type()->ToFloatPoint());

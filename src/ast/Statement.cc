@@ -5,7 +5,7 @@
 
 void Statement::PushBrInstr(Instr* i)
 {
-    nextlist_.push_back(static_cast<BrInstr*>(i));
+    nextlist_.push_back(i->As<BrInstr>());
 }
 
 
