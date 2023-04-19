@@ -17,7 +17,7 @@ protected:
     OpId id_ = OpId::op;
 
 public:
-    IROperand(const IRType* t) : type_(t) {}
+    IROperand(OpId i, const IRType* t) : id_(i), type_(t) {}
     virtual ~IROperand() {}
     virtual std::string ToString() const = 0;
 
@@ -42,7 +42,7 @@ protected:
     { return op->ID() == OpId::_int || op->ID() == OpId::_float; }
 
 public:
-    Constant(const IRType* t) : IROperand(t) {}
+    Constant(OpId i, const IRType* t) : IROperand(i, t) {}
     virtual bool IsZero() const = 0;
 };
 
@@ -56,7 +56,7 @@ public:
     static IntConst* CreateIntConst(Pool<IROperand>*, unsigned long);
     static IntConst* CreateIntConst(Pool<IROperand>*, unsigned long, const IntType*);
     IntConst(unsigned long ul, const IntType* t) :
-        num_(ul), Constant(t) {}
+        num_(ul), Constant(OpId::_int, t) {}
 
     std::string ToString() const override;
     unsigned long Val() const { return num_; }
@@ -77,7 +77,7 @@ public:
     static FloatConst* CreateFloatConst(Pool<IROperand>*, double);
     static FloatConst* CreateFloatConst(Pool<IROperand>*, double, const FloatType*);
     FloatConst(double d, const FloatType* t) :
-        num_(d), Constant(t) {}
+        num_(d), Constant(OpId::_float, t) {}
 
     std::string ToString() const override;
     double Val() const { return num_; }
@@ -98,7 +98,7 @@ protected:
 public:
     static Register* CreateRegister(Pool<IROperand>*, const std::string&, const IRType*);
     Register(const std::string& n, const IRType* t) :
-        name_(n), IROperand(t) {}
+        name_(n), IROperand(OpId::reg, t) {}
 
     std::string ToString() const override;
     std::string Name() const { return name_; }
@@ -135,7 +135,7 @@ protected:
     { return i->ID() == OpId::x64reg || i->ID() == OpId::x64mem; }
 
 public:
-    x64() : IROperand(nullptr) {}
+    x64(OpId i) : IROperand(i, nullptr) {}
 };
 
 
@@ -147,8 +147,8 @@ protected:
 
 public:
     static x64Reg* CreateX64Reg(Pool<IROperand>*, RegTag = RegTag::none);
-    x64Reg() : reg_(RegTag::none) {}
-    x64Reg(RegTag r) : reg_(r) {}
+    x64Reg() : x64(OpId::x64reg), reg_(RegTag::none) {}
+    x64Reg(RegTag r) : x64(OpId::x64reg), reg_(r) {}
 
     bool operator==(x64Reg& reg) const { return reg_ == reg.reg_; }
     bool operator!=(x64Reg& reg) const { return reg_ != reg.reg_; }
@@ -175,9 +175,9 @@ public:
     static x64Mem* CreateX64Mem(Pool<IROperand>*, long = 0,
         const x64Reg* = nullptr, const x64Reg* = nullptr, size_t = 0);
 
-    x64Mem(const std::string& l) : label_(l) {}
+    x64Mem(const std::string& l) : x64(OpId::x64mem), label_(l) {}
     x64Mem(size_t o, const x64Reg* b, const x64Reg* i, size_t s) :
-        offset_(o), base_(b), index_(i), scale_(s) {}
+        x64(OpId::x64mem), offset_(o), base_(b), index_(i), scale_(s) {}
 
     std::string ToString() const override;
 
@@ -199,7 +199,7 @@ protected:
 
 public:
     static x64Imm* CreateX64Imm(Pool<IROperand>*, const Constant*);
-    x64Imm(const Constant* c) : val_(c) {}
+    x64Imm(const Constant* c) : x64(OpId::x64imm), val_(c) {}
 
     std::string ToString() const override;
 
