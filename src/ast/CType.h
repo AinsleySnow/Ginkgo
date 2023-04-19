@@ -3,6 +3,7 @@
 
 #include "ast/Tag.h"
 #include "IR/IRType.h"
+#include "utils/DynCast.h"
 #include <memory>
 #include <string>
 #include <vector>
@@ -91,20 +92,24 @@ enum class TypeTag
 
 class CType
 {
+protected:
+    enum class CTypeId { none, arithm, pointer, array, function, _enum, _void, error };
+    static bool ClassOf(const CType const*) { return true; }
+    CTypeId id_ = CTypeId::none;
+
 public:
+    CType(CTypeId id) : id_(id) {}
+
     virtual const IRType* ToIRType(Pool<IRType>*) const = 0;
     virtual std::string ToString() const = 0;
 
-    virtual bool Compatible(const CType* other) const = 0;
+    CTypeId ID() const { return id_; }
 
+    ENABLE_IS;
+    ENABLE_AS;
+
+    virtual bool Compatible(const CType* other) const = 0;
     virtual bool IsScalar() const { return false; }
-    virtual bool IsFloat() const { return false; }
-    virtual bool IsInteger() const { return false; }
-    virtual bool IsPtr() const { return false; }
-    virtual bool IsArray() const { return false; }
-    virtual bool IsEnum() const { return false; }
-    virtual bool IsVoid() const { return false; }
-    virtual bool IsFunc() const { return false; }
     virtual bool IsComplete() const { return false; }
 
     QualType Qual() const { return qual_; }
@@ -123,7 +128,13 @@ private:
 
 class ErrorType : public CType
 {
+protected:
+    static bool ClassOf(const ErrorType const*) { return true; }
+    static bool ClassOf(const CType const* t) { return t->ID() == CTypeId::error; }
+
 public:
+    ErrorType() : CType(CTypeId::error) {}
+
     const IRType* ToIRType(Pool<IRType>*) const override { return nullptr; };
     std::string ToString() const override { return "<error-type>"; }
 
@@ -133,6 +144,10 @@ public:
 
 class CArithmType : public CType
 {
+protected:
+    static bool ClassOf(const CArithmType const*) { return true; }
+    static bool ClassOf(const CType const* t) { return t->ID() == CTypeId::arithm; }
+
 public:
     CArithmType(TypeTag);
 
@@ -142,9 +157,9 @@ public:
     bool Compatible(const CType*) const override;
 
     bool IsComplete() const override { return true; }
-    bool IsInteger() const override { return unsigned(type_) & unsigned(TypeTag::integer); }
+    bool IsInteger() const { return unsigned(type_) & unsigned(TypeTag::integer); }
     bool IsScalar() const override { return unsigned(type_) & unsigned(TypeTag::scalar); }
-    bool IsFloat() const override { return type_ == TypeTag::flt32 || type_ == TypeTag::flt64; }
+    bool IsFloat() const { return type_ == TypeTag::flt32 || type_ == TypeTag::flt64; }
     bool IsUnsigned() const { return unsigned(type_) & unsigned(TypeTag::unsign); }
 
     uint64_t Size() const { return size_; }
@@ -160,15 +175,18 @@ private:
 
 class CFuncType : public CType
 {
+protected:
+    static bool ClassOf(const CFuncType const*) { return true; }
+    static bool ClassOf(const CType const* t) { return t->ID() == CTypeId::function; }
+
 public:
-    CFuncType() {}
+    CFuncType() : CType(CTypeId::function) {}
     CFuncType(std::unique_ptr<CType> ret, size_t paramcount) :
-        return_(std::move(ret)) { paramlist_.reserve(paramcount); }
+        CType(CTypeId::function), return_(std::move(ret)) { paramlist_.reserve(paramcount); }
 
     std::string ToString() const override { return ""; }
     const FuncType* ToIRType(Pool<IRType>*) const override;
 
-    bool IsFunc() const override { return true; }
     bool Compatible(const CType*) const override { return false; }
 
     const CType* ReturnType() const { return return_.get(); }
@@ -200,9 +218,14 @@ private:
 
 class CPtrType : public CType
 {
+protected:
+    static bool ClassOf(const CPtrType const*) { return true; }
+    static bool ClassOf(const CType const* t) { return t->ID() == CTypeId::pointer; }
+
 public:
-    CPtrType() {}
-    CPtrType(std::unique_ptr<CType> p) : point2_(std::move(p)) {}
+    CPtrType() : CType(CTypeId::pointer) {}
+    CPtrType(std::unique_ptr<CType> p) :
+        CType(CTypeId::pointer), point2_(std::move(p)) {}
 
     std::string ToString() const override;
     const PtrType* ToIRType(Pool<IRType>*) const override;
@@ -211,7 +234,6 @@ public:
     size_t Size() { return 8; }
 
     bool IsScalar() const override { return true; }
-    bool IsPtr() const override { return  true; }
     bool IsComplete() const override { return true; }
 
     const CType* Point2() const { return point2_.get(); }
@@ -225,17 +247,19 @@ private:
 
 class CArrayType : public CType
 {
+protected:
+    static bool ClassOf(const CArrayType const*) { return true; }
+    static bool ClassOf(const CType const* t) { return t->ID() == CTypeId::array; }
+
 public:
     CArrayType(std::unique_ptr<CType> ty) :
-        arrayof_(std::move(ty)) {}
+        CType(CTypeId::array), arrayof_(std::move(ty)) {}
     CArrayType(std::unique_ptr<CType> ty, size_t c) :
-        arrayof_(std::move(ty)), count_(c) {}
+        CType(CTypeId::array), arrayof_(std::move(ty)), count_(c) {}
 
     std::string ToString() const;
     const ArrayType* ToIRType(Pool<IRType>*) const override;
     bool Compatible(const CType*) const { return false; }
-
-    bool IsArray() const override { return true; }
 
     bool VarlableLen() const { return variable_; }
     bool& VariableLen() { return variable_; }
@@ -254,11 +278,15 @@ class Member;
 
 class CEnumType : public CType
 {
+protected:
+    static bool ClassOf(const CEnumType const*) { return true; }
+    static bool ClassOf(const CType const* t) { return t->ID() == CTypeId::_enum; }
+
 public:
-    CEnumType(const std::string& n) : name_(n), underlying_(
-        std::make_shared<CArithmType>(TypeTag::int32)) {}
+    CEnumType(const std::string& n) : CType(CTypeId::_enum),
+        name_(n), underlying_(std::make_shared<CArithmType>(TypeTag::int32)) {}
     CEnumType(const std::string& n, std::shared_ptr<CType> ty) :
-        name_(n), underlying_(ty) {}
+        CType(CTypeId::_enum), name_(n), underlying_(ty) {}
 
     std::string ToString() const override;
     bool Compatible(const CType*) const override { return false; }
@@ -281,11 +309,16 @@ private:
 
 class CVoidType : public CType
 {
+protected:
+    static bool ClassOf(const CVoidType const*) { return true; }
+    static bool ClassOf(const CType const* t) { return t->ID() == CTypeId::_void; }
+
 public:
+    CVoidType() : CType(CTypeId::_void) {}
+
     const VoidType* ToIRType(Pool<IRType>*) const override;
     std::string ToString() const override { return "void"; }
 
-    bool IsVoid() const override { return true; }
     bool Compatible(const CType* other) const override { return false; }
 };
 

@@ -58,7 +58,7 @@ bool FuncSpec::SetSpec(Tag t)
 }
 
 
-CArithmType::CArithmType(TypeTag tt) : type_(tt)
+CArithmType::CArithmType(TypeTag tt) : CType(CTypeId::arithm), type_(tt)
 {
     switch (tt)
     {
@@ -161,7 +161,7 @@ const FuncType* CFuncType::ToIRType(Pool<IRType>* pool) const
     auto functy = FuncType::GetFuncType(
         pool, ReturnType()->ToIRType(pool), Variadic());
     for (auto& param : paramlist_)
-        if (!param->IsVoid())
+        if (!param->Is<CVoidType>())
             functy->AddParam(param->ToIRType(pool));
     return functy;
 }
