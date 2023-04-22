@@ -1,8 +1,7 @@
 #ifndef _SIMPLE_ALLOC_H_
 #define _SIMPLE_ALLOC_H_
 
-#include "pass/Pass.h"
-#include "pass/RegAlloc.h"
+#include "visitir/RegAlloc.h"
 #include "IR/Instr.h"
 #include <unordered_map>
 
@@ -14,7 +13,7 @@
 // problems if some of these registers are used more than once.
 // For the TSOCA algorithm, see https://www.zhihu.com/question/29355187/answer/51935409.
 
-class SimpleAlloc : public Pass, private x64Alloc
+class SimpleAlloc : private x64Alloc
 {
 public:
     void Init(Module*) override;

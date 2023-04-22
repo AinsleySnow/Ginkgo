@@ -1,4 +1,4 @@
-#include "pass/SimpleAlloc.h"
+#include "visitir/SimpleAlloc.h"
 #include "IR/Value.h"
 
 
