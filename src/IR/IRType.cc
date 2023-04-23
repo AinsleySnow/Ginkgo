@@ -132,9 +132,11 @@ bool IRType::operator>(const IRType& rhs) const
 
 bool IRType::operator==(const IRType& rhs) const
 {
-    if (this->IsFloat() && rhs.IsFloat() ||
-        this->IsInt() && rhs.IsInt())
+    if (this->IsFloat() && rhs.IsFloat())
         return this->Size() == rhs.Size();
+    if (this->IsInt() && rhs.IsInt())
+        return this->Size() == rhs.Size() &&
+            this->ToInteger()->IsSigned() == rhs.ToInteger()->IsSigned();
     return false;
 }
 
