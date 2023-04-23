@@ -3,6 +3,7 @@
 
 #include "visitir/IRVisitor.h"
 #include "visitir/EmitAsm.h"
+#include "visitir/x64.h"
 #include <cstdio>
 #include <string>
 #include <unordered_map>
@@ -15,8 +16,8 @@ class Constant;
 class CodeGen : public IRVisitor
 {
 public:
-    CodeGen() {}
-    CodeGen(const std::string& f) : asmfile_(f) {}
+    CodeGen(x64Alloc& a) : alloc_(a) {}
+    CodeGen(const std::string& f, x64Alloc& a) : asmfile_(f), alloc_(a) {}
 
     std::string GetAsmName() const { return asmfile_.AsmName(); }
 
@@ -60,9 +61,10 @@ public:
     // Will be handled in register allocators
 
 private:
-    inline void BinaryGenHelper(const std::string&, const BinaryInstr*);
-    inline void VarithmGenHelper(const std::string&, const BinaryInstr*);
+    void BinaryGenHelper(const std::string&, const BinaryInstr*);
+    void VarithmGenHelper(const std::string&, const BinaryInstr*);
 
+    x64Alloc& alloc_;
     EmitAsm asmfile_{};
 };
 

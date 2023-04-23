@@ -31,10 +31,14 @@ void CodeGen::VisitGlobalVar(GlobalVar* var)
 
 void CodeGen::VisitFunction(Function* func)
 {
+    alloc_.DoAlloc(func);
+
     asmfile_.EmitPseudoInstr(".text");
     asmfile_.EmitLabel(func->Name());
     for (auto bb : *func)
         VisitBasicBlock(bb);
+
+    alloc_.Clear();
 }
 
 void CodeGen::VisitBasicBlock(BasicBlock* bb)
@@ -45,7 +49,7 @@ void CodeGen::VisitBasicBlock(BasicBlock* bb)
 }
 
 
-inline void CodeGen::BinaryGenHelper(
+void CodeGen::BinaryGenHelper(
     const std::string& name, const BinaryInstr* bi)
 {
     char suffix = bi->AsmSuffix()[0];
@@ -57,7 +61,7 @@ inline void CodeGen::BinaryGenHelper(
             bi->Result()->ToString(), bi->Lhs()->ToString());
 }
 
-inline void CodeGen::VarithmGenHelper(
+void CodeGen::VarithmGenHelper(
     const std::string& name, const BinaryInstr* bi)
 {
     auto precision = bi->AsmSuffix();
@@ -94,7 +98,7 @@ void CodeGen::VisitDivInstr(DivInstr* inst)
     asmfile_.EmitUnary(inst->AsmSuffix()[0], name, inst->Rhs()->ToString());
 
     // if result register is not %*ax, move it to the result register.
-    if (!inst->Result()->As<x64Reg>()->PartOf(RegTag::rax))
+    if (!alloc_.GetIROpMap(inst->Result())->As<x64Reg>()->PartOf(RegTag::rax))
         asmfile_.EmitMov(inst->AsmSuffix()[0],
             inst->Rhs()->ToString(), inst->Result()->ToString());
 }
@@ -109,7 +113,7 @@ void CodeGen::VisitModInstr(ModInstr* inst)
     asmfile_.EmitUnary(inst->AsmSuffix()[0], name, inst->Rhs()->ToString());
 
     // if result register is not %*dx, move it to the result register.
-    if (!inst->Result()->As<x64Reg>()->PartOf(RegTag::rdx))
+    if (!alloc_.GetIROpMap(inst->Result())->As<x64Reg>()->PartOf(RegTag::rdx))
         asmfile_.EmitMov(inst->AsmSuffix()[0],
             inst->Rhs()->ToString(), inst->Result()->ToString());
 }

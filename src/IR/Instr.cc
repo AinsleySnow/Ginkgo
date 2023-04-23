@@ -49,55 +49,55 @@ std::string CallInstr::ToString() const
 
 
 std::string AddInstr::ToString() const
-{ return Result()->As<Register>()->Name() + " = add " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
+{ return Result()->Name() + " = add " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
 void AddInstr::Accept(IRVisitor* v) { v->VisitAddInstr(this); }
 std::string FaddInstr::ToString() const
-{ return Result()->As<Register>()->Name() + " = fadd " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
+{ return Result()->Name() + " = fadd " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
 void FaddInstr::Accept(IRVisitor* v) { v->VisitFaddInstr(this); }
 std::string SubInstr::ToString() const
-{ return Result()->As<Register>()->Name() + " = sub " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
+{ return Result()->Name() + " = sub " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
 void SubInstr::Accept(IRVisitor* v) { v->VisitSubInstr(this); }
 std::string FsubInstr::ToString() const
-{ return Result()->As<Register>()->Name() + " = fsub " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
+{ return Result()->Name() + " = fsub " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
 void FsubInstr::Accept(IRVisitor* v) { v->VisitFsubInstr(this); }
 std::string MulInstr::ToString() const
-{ return Result()->As<Register>()->Name() + " = mul " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
+{ return Result()->Name() + " = mul " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
 void MulInstr::Accept(IRVisitor* v) { v->VisitMulInstr(this); }
 std::string FmulInstr::ToString() const
-{ return Result()->As<Register>()->Name() + " = fmul " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
+{ return Result()->Name() + " = fmul " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
 void FmulInstr::Accept(IRVisitor* v) { v->VisitFmulInstr(this); }
 std::string DivInstr::ToString() const
-{ return Result()->As<Register>()->Name() + " = div " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
+{ return Result()->Name() + " = div " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
 void DivInstr::Accept(IRVisitor* v) { v->VisitDivInstr(this); }
 std::string FdivInstr::ToString() const
-{ return Result()->As<Register>()->Name() + " = fdiv " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
+{ return Result()->Name() + " = fdiv " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
 void FdivInstr::Accept(IRVisitor* v) { v->VisitFdivInstr(this); }
 std::string ModInstr::ToString() const
-{ return Result()->As<Register>()->Name() + " = mod " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
+{ return Result()->Name() + " = mod " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
 void ModInstr::Accept(IRVisitor* v) { v->VisitModInstr(this); }
 std::string ShlInstr::ToString() const
-{ return Result()->As<Register>()->Name() + " = shl " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
+{ return Result()->Name() + " = shl " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
 void ShlInstr::Accept(IRVisitor* v) { v->VisitShlInstr(this); }
 std::string LshrInstr::ToString() const
-{ return Result()->As<Register>()->Name() + " = lshr " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
+{ return Result()->Name() + " = lshr " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
 void LshrInstr::Accept(IRVisitor* v) { v->VisitLshrInstr(this); }
 std::string AshrInstr::ToString() const
-{ return Result()->As<Register>()->Name() + " = ashr " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
+{ return Result()->Name() + " = ashr " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
 void AshrInstr::Accept(IRVisitor* v) { v->VisitAshrInstr(this); }
 std::string AndInstr::ToString() const
-{ return Result()->As<Register>()->Name() + " = and " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
+{ return Result()->Name() + " = and " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
 void AndInstr::Accept(IRVisitor* v) { v->VisitAndInstr(this); }
 std::string OrInstr::ToString() const
-{ return Result()->As<Register>()->Name() + " = or " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
+{ return Result()->Name() + " = or " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
 void OrInstr::Accept(IRVisitor* v) { v->VisitOrInstr(this); }
 std::string XorInstr::ToString() const
-{ return Result()->As<Register>()->Name() + " = xor " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
+{ return Result()->Name() + " = xor " + Lhs()->ToString() + ", " + Rhs()->ToString(); }
 void XorInstr::Accept(IRVisitor* v) { v->VisitXorInstr(this); }
 
 
 std::string AllocaInstr::ToString() const
 {
-    std::string line = result_->As<Register>()->Name() +
+    std::string line = result_->Name() +
         " = alloca " + type_->ToString();
     if (num_ > 1)
         line += "i64 " + std::to_string(num_);
@@ -108,7 +108,7 @@ std::string AllocaInstr::ToString() const
 
 std::string LoadInstr::ToString() const
 {
-    std::string line = result_->As<Register>()->Name() + " = " +
+    std::string line = result_->Name() + " = " +
         (volatile_ ? "volatile load " : "load ");
     line += pointer_->ToString();
     if (align_ > 1)
@@ -145,62 +145,62 @@ std::string GetElePtrInstr::ToString() const
 
 std::string TruncInstr::ToString() const
 {
-    return Dest()->As<Register>()->Name() + " = trunc " + Value()->ToString() +
+    return Dest()->Name() + " = trunc " + Value()->ToString() +
         " to " + Type()->ToString();
 }
 std::string FtruncInstr::ToString() const
 {
-    return Dest()->As<Register>()->Name() + " = ftrunc " + Value()->ToString() +
+    return Dest()->Name() + " = ftrunc " + Value()->ToString() +
         " to " + Type()->ToString();
 }
 std::string ZextInstr::ToString() const
 {
-    return Dest()->As<Register>()->Name() + " = zext " + Value()->ToString() +
+    return Dest()->Name() + " = zext " + Value()->ToString() +
         " to " + Type()->ToString();
 }
 std::string SextInstr::ToString() const
 {
-    return Dest()->As<Register>()->Name() + " = sext " + Value()->ToString() +
+    return Dest()->Name() + " = sext " + Value()->ToString() +
         " to " + Type()->ToString();
 }
 std::string FextInstr::ToString() const
 {
-    return Dest()->As<Register>()->Name() + " = fext " + Value()->ToString() +
+    return Dest()->Name() + " = fext " + Value()->ToString() +
         " to " + Type()->ToString();
 }
 std::string FtoUInstr::ToString() const
 {
-    return Dest()->As<Register>()->Name() + " = ftou " + Value()->ToString() +
+    return Dest()->Name() + " = ftou " + Value()->ToString() +
         " to " + Type()->ToString();
 }
 std::string FtoSInstr::ToString() const
 {
-    return Dest()->As<Register>()->Name() + " = ftos " + Value()->ToString() +
+    return Dest()->Name() + " = ftos " + Value()->ToString() +
         " to " + Type()->ToString();
 }
 std::string UtoFInstr::ToString() const
 {
-    return Dest()->As<Register>()->Name() + " = utof " + Value()->ToString() +
+    return Dest()->Name() + " = utof " + Value()->ToString() +
         " to " + Type()->ToString();
 }
 std::string StoFInstr::ToString() const
 {
-    return Dest()->As<Register>()->Name() + " = stof " + Value()->ToString() +
+    return Dest()->Name() + " = stof " + Value()->ToString() +
         " to " + Type()->ToString();
 }
 std::string PtrtoIInstr::ToString() const
 {
-    return Dest()->As<Register>()->Name() + " = ptrtoi " + Value()->ToString() +
+    return Dest()->Name() + " = ptrtoi " + Value()->ToString() +
         " to " + Type()->ToString();
 }
 std::string ItoPtrInstr::ToString() const
 {
-    return Dest()->As<Register>()->Name() + " = itoptr " + Value()->ToString() +
+    return Dest()->Name() + " = itoptr " + Value()->ToString() +
         " to " + Type()->ToString();
 }
 std::string BitcastInstr::ToString() const
 {
-    return Dest()->As<Register>()->Name() + " = bitcast " + Value()->ToString() +
+    return Dest()->Name() + " = bitcast " + Value()->ToString() +
         " to " + Type()->ToString();
 }
 

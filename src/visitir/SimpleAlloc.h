@@ -2,6 +2,7 @@
 #define _SIMPLE_ALLOC_H_
 
 #include "visitir/RegAlloc.h"
+#include "visitir/x64.h"
 #include "IR/Instr.h"
 #include <unordered_map>
 
@@ -16,24 +17,24 @@
 class SimpleAlloc : private x64Alloc
 {
 public:
-    void Init(Module*) override;
-    void Execute() override;
+    void Clear() override;
 
 private:
     class StackCache
     {
     public:
-        StackCache(BasicBlock*& bb) : basicblock_(bb) {}
+        StackCache(SimpleAlloc& sa) : alloc_(sa) {}
 
         RegTag SpareReg() const;
         RegTag SpareFReg() const;
-        const x64* AccessStack(const Register*) const;
-        const x64* GetPosition(const Register*) const;
+        void AccessStack(const Register*) const;
         void Map2Reg(const Register*, RegTag);
         void Map2Stack(const Register*, long offset);
 
+        void Clear();
+
     private:
-        BasicBlock*& basicblock_;
+        SimpleAlloc& alloc_;
 
         // map virtual registers to where? the value can be
         // either a register or a stack address.
@@ -46,13 +47,11 @@ private:
         mutable int findex_{};
     };
 
-    void Allocate(BasicBlock*, const Register*);
+    void Allocate(const Register*);
     long AllocateOnX64Stack(x64Stack&, size_t, size_t);
     inline void BinaryAllocaHelper(BinaryInstr*);
 
-    Function* curfunc_{};
-    BasicBlock* curbb_{};
-    StackCache stackcache_{ curbb_ };
+    StackCache stackcache_{ *this };
 
 private:
     void VisitFunction(Function*) override;

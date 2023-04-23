@@ -177,7 +177,7 @@ public:
     auto AsmSuffix() const { return asmsuffix_; }
 
 private:
-    const IROperand* result_{};
+    const Register* result_{};
     const IROperand *lhs_{}, *rhs_{};
 
     std::string asmsuffix_{};
@@ -489,8 +489,8 @@ public:
     auto Volatile() const { return volatile_; }
 
 private:
-    const IROperand* result_{};
-    const IROperand* pointer_{};
+    const Register* result_{};
+    const Register* pointer_{};
     size_t align_{ result_->Type()->Size() };
     bool volatile_{};
 };
@@ -515,7 +515,7 @@ public:
 
 private:
     const IROperand* value_{};
-    const IROperand* pointer_{};
+    const Register* pointer_{};
     bool volatile_{};
 };
 
@@ -592,9 +592,9 @@ public:
     auto Value() const { return value_; }
 
 private:
-    const IROperand* result_{};
+    const Register* result_{};
     const IRType* type_{};
-    const IROperand* value_{};
+    const Register* value_{};
 };
 
 
