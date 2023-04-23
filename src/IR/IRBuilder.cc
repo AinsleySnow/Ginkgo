@@ -43,7 +43,7 @@ void BlockBuilder::RemoveBlk(BasicBlock* bb)
 void InstrBuilder::MatchArithmType(
     const IRType* target, const IROperand*& val)
 {
-    if (!dynamic_cast<const Register*>(val))
+    if (!val->Is<Register>())
     {
         if (target->IsFloat() && val->Type()->IsInt())
         {
