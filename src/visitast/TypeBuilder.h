@@ -20,9 +20,25 @@ public:
     void VisitPtrDef(PtrDef*) override;
     void VisitArrayDef(ArrayDef*) override;
 
+    void VisitArrayExpr(ArrayExpr*) override;
+    void VisitAssignExpr(AssignExpr*) override;
+    void VisitBinaryExpr(BinaryExpr*) override;
+    void VisitConstant(ConstExpr*) override;
+    void VisitCallExpr(CallExpr*) override;
+    void VisitCastExpr(CastExpr*) override;
+    void VisitCondExpr(CondExpr*) override;
+    void VisitEnumConst(EnumConst*) override;
+    void VisitEnumList(EnumList*) override;
+    void VisitIdentExpr(IdentExpr*) override;
+    void VisitLogicalExpr(LogicalExpr*) override;
+    void VisitUnaryExpr(UnaryExpr*) override;
 
 private:
     std::unique_ptr<CEnumType> EnumHelper(const EnumSpec*);
+    std::shared_ptr<CType> EnlargeCType(std::shared_ptr<CType>, int);
+    std::shared_ptr<CType> GetCTypeByValue(std::shared_ptr<CType>, std::shared_ptr<CType>, uint64_t);
+    std::shared_ptr<CType> GetCTypeByValue(std::shared_ptr<CType>, std::shared_ptr<CType>, double);
+    std::shared_ptr<CType> MatchCType(std::shared_ptr<CType>, std::shared_ptr<CType>);
 
     ASTVisitor& visitor_;
     ScopeStack& scopestack_;

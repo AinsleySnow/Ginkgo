@@ -25,7 +25,7 @@ void BinaryExpr::Accept(ASTVisitor* v)
 
 bool BinaryExpr::IsConstant() const
 {
-    return Val()->IsConstant();
+    return Val()->Is<Constant>();
 }
 
 void CallExpr::Accept(ASTVisitor* v)
@@ -48,33 +48,23 @@ void ConstExpr::Accept(ASTVisitor* v)
     v->VisitConstant(this);
 }
 
-void EnumConst::Accept(ASTVisitor* v)
+ConstExpr::ConstExpr(uint64_t u) : val_(u)
 {
-    v->VisitEnumConst(this);
-}
-
-ConstExpr::ConstExpr(uint64_t u)
-{
-    val_.intgr_ = u;
     type_ = std::make_unique<CArithmType>(TypeTag::uint64);
 }
 
 ConstExpr::ConstExpr(double d)
 {
-    val_.flt_ = d;
     type_ = std::make_unique<CArithmType>(TypeTag::flt64);
 }
 
-ConstExpr::ConstExpr(bool b)
+ConstExpr::ConstExpr(bool b) : val_(b)
 {
-    val_.intgr_ = b ? 1 : 0;
     type_ = std::make_unique<CArithmType>(TypeTag::int8);
 }
 
-ConstExpr::ConstExpr(uint64_t u, int base, std::string suffix)
+ConstExpr::ConstExpr(uint64_t u, int base, const std::string& suffix) : val_(u)
 {
-    val_.intgr_ = u;
-
     std::transform(suffix.begin(), suffix.end(), suffix.begin(),
         [](char c){ return std::tolower(c); });
 
@@ -123,9 +113,8 @@ ConstExpr::ConstExpr(uint64_t u, int base, std::string suffix)
         type_ = std::make_unique<CArithmType>(TypeTag::uint64);
 }
 
-ConstExpr::ConstExpr(double d, char suffix)
+ConstExpr::ConstExpr(double d, char suffix) : val_(d)
 {
-    val_.flt_ = d;
     if (std::tolower(suffix) == 'f')
         type_ = std::make_unique<CArithmType>(TypeTag::flt32);
     else if (std::tolower(suffix) == 'l')
@@ -137,6 +126,38 @@ ConstExpr::ConstExpr(double d, char suffix)
     }
 }
 
+
+uint64_t ConstExpr::GetInt() const
+{
+    if (std::holds_alternative<uint64_t>(val_))
+        return std::get<uint64_t>(val_);
+    else if (std::holds_alternative<bool>(val_))
+        return std::get<bool>(val_);
+    return;
+}
+
+double ConstExpr::GetFloat() const
+{
+    if (std::holds_alternative<double>(val_))
+        return std::get<double>(val_);
+    return 0;
+}
+
+bool ConstExpr::IsZero() const
+{
+    if (std::holds_alternative<uint64_t>(val_))
+        return std::get<uint64_t>(val_) == 0;
+    else if (std::holds_alternative<double>(val_))
+        return std::get<double>(val_) == 0;
+    else
+        return !std::get<bool>(val_);
+}
+
+
+void EnumConst::Accept(ASTVisitor* v)
+{
+    v->VisitEnumConst(this);
+}
 
 void EnumList::Accept(ASTVisitor* v)
 {
@@ -180,5 +201,5 @@ void UnaryExpr::Accept(ASTVisitor* v)
 
 bool UnaryExpr::IsConstant() const
 {
-    return Val()->IsConstant();
+    return Val()->Is<Constant>();
 }

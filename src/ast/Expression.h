@@ -6,6 +6,8 @@
 #include "ast/Expr.h"
 #include <list>
 #include <memory>
+#include <string>
+#include <variant>
 #include <vector>
 
 class Declaration;
@@ -27,6 +29,8 @@ public:
 
     auto Addr() const { return addr_; }
     auto& Addr() { return addr_; }
+    const auto& Identifier() const { return identifier_; }
+    const auto& Index() const { return index_; }
 
 private:
     friend class IRGen;
@@ -43,6 +47,10 @@ public:
         left_(std::move(l)), op_(t), right_(std::move(r)) {}
 
     void Accept(ASTVisitor* v) override;
+
+    const auto& Left() const { return left_; }
+    Tag Op() const { return op_; }
+    const auto& Right() const { return right_; }
 
 private:
     friend class IRGen;
@@ -61,6 +69,9 @@ public:
 
     void Accept(ASTVisitor* v) override;
     bool IsConstant() const override;
+
+    const auto& Left() const { return left_; }
+    const auto& Right() const { return right_; }
 
 private:
     friend class IRGen;
@@ -81,6 +92,9 @@ public:
 
     void Accept(ASTVisitor* v) override;
 
+    const auto& Postfix() const { return postfix_; }
+    const auto& ArgvList() const { return argvlist_; }
+
 private:
     friend class IRGen;
     std::unique_ptr<Expr> postfix_{};
@@ -95,6 +109,9 @@ public:
         typename_(std::move(tn)), expr_(std::move(e)) {}
 
     void Accept(ASTVisitor* v) override;
+
+    const auto& TypeName() const { return typename_; }
+    const auto& Expression() const { return expr_; }
 
 private:
     friend class IRGen;
@@ -111,6 +128,10 @@ public:
     
     void Accept(ASTVisitor* v) override;
 
+    const auto& Condition() const { return cond_; }
+    const auto& TrueExpr() const { return true_; }
+    const auto& FalseExpr() const { return false_; }
+
 private:
     friend class IRGen;
     friend class CodeChk;
@@ -124,15 +145,15 @@ class ConstExpr : public Expr
 {
 public:
     ConstExpr() {}
-    explicit ConstExpr(uint64_t u);
-    explicit ConstExpr(double d);
-    explicit ConstExpr(bool b);
-    explicit ConstExpr(uint64_t u, int base, std::string);
-    explicit ConstExpr(double d, char);
+    explicit ConstExpr(uint64_t u) : val_(u) {}
+    explicit ConstExpr(double d) : val_(d) {}
+    explicit ConstExpr(bool b) : val_(b) {}
+    explicit ConstExpr(uint64_t u, int b, const std::string& s);
+    explicit ConstExpr(double d, char s);
 
-    uint64_t GetInt() const { return val_.intgr_; }
-    double GetFloat() const { return val_.flt_; }
-    bool IsZero() const { return val_.intgr_ == 0; }
+    uint64_t GetInt() const;
+    double GetFloat() const;
+    bool IsZero() const;
 
     bool IsConstant() const override { return true; }
     ConstExpr* ToConstant() override { return this; }
@@ -141,11 +162,7 @@ public:
     void Accept(ASTVisitor* v) override;
 
 private:
-    union
-    {
-        uint64_t intgr_;
-        double flt_;
-    } val_;
+    std::variant<uint64_t, bool, double> val_{};
 };
 
 
@@ -183,7 +200,6 @@ public:
 
 private:
     std::vector<std::unique_ptr<EnumConst>> exprlist_{};
-    const CType* underlying_{};
 };
 
 
@@ -216,6 +232,7 @@ public:
 
     auto Addr() const { return addr_; }
     auto& Addr() { return addr_; }
+    auto Name() const { return name_; }
 
 private:
     friend class IRGen;
@@ -261,6 +278,9 @@ public:
 
     void Accept(ASTVisitor* v) override;
     bool IsConstant() const override;
+
+    Tag Op() const { return op_; }
+    const auto& Content() const { return content_; }
 
 private:
     friend class IRGen;

@@ -1,6 +1,90 @@
 #include "visitast/TypeBuilder.h"
 #include "visitast/Scope.h"
 #include "ast/Declaration.h"
+#include "ast/Expression.h"
+#include <climits>
+#include <cfloat>
+
+
+std::shared_ptr<CType> TypeBuilder::EnlargeCType(std::shared_ptr<CType> ty, int ext)
+{
+    auto arithm = ty->As<CArithmType>();
+    auto newsize = arithm->Size() + ext;
+    if (arithm->IsUnsigned())
+    {
+        if (newsize <= 2)
+            return std::make_shared<CArithmType>(TypeTag::uint16);
+        else if (newsize > 3 && newsize <= 4)
+            return std::make_shared<CArithmType>(TypeTag::uint32);
+        else if (newsize > 4 && newsize <= 8)
+            return std::make_shared<CArithmType>(TypeTag::uint64);
+    }
+    else
+    {
+        if (newsize <= 2)
+            return std::make_shared<CArithmType>(TypeTag::int16);
+        else if (newsize > 3 && newsize <= 4)
+            return std::make_shared<CArithmType>(TypeTag::int32);
+        else if (newsize > 4 && newsize <= 8)
+            return std::make_shared<CArithmType>(TypeTag::int64);
+    }
+
+    return nullptr;
+}
+
+
+std::shared_ptr<CType> TypeBuilder::GetCTypeByValue(
+    std::shared_ptr<CType> lhs, std::shared_ptr<CType> rhs, uint64_t value)
+{
+    auto larithm = lhs->As<CArithmType>();
+    auto rarithm = rhs->As<CArithmType>();
+    auto bigger = MatchCType(lhs, rhs);
+
+    int size = bigger->As<CArithmType>()->Size() * 8;
+    int pos = 64 - __builtin_clzll(value | 1);
+
+    // enlarge the type if it can't hold the value
+    if (pos > size)
+    {
+        int extend = (pos - size) % 8 + 1;
+        bigger = EnlargeCType(bigger, extend);
+    }
+
+    return bigger;
+}
+
+std::shared_ptr<CType> TypeBuilder::GetCTypeByValue(
+    std::shared_ptr<CType> lhs, std::shared_ptr<CType> rhs, double value)
+{
+    auto larithm = lhs->As<CArithmType>();
+    auto rarithm = rhs->As<CArithmType>();
+    auto bigger = MatchCType(lhs, rhs);
+
+    if (bigger->As<CArithmType>()->Size() == 4 &&
+        (value > FLT_MAX || value < FLT_MIN))
+        bigger = std::make_shared<CArithmType>(TypeTag::flt64);
+
+    return bigger;
+}
+
+
+std::shared_ptr<CType> TypeBuilder::MatchCType(
+    std::shared_ptr<CType> lhs, std::shared_ptr<CType> rhs)
+{
+    auto la = lhs->As<CArithmType>();
+    auto ra = rhs->As<CArithmType>();
+
+    if (la->IsFloat() && ra->IsInteger()) return lhs;
+    else if (la->IsInteger() && ra->IsFloat()) return rhs;
+    else if (la->operator>(*ra)) return lhs;
+    else if (la->operator<(*ra)) return rhs;
+
+    // the two types are compatible
+    if (la->IsFloat() && ra->IsFloat()) return lhs;
+    if ((la->IsUnsigned() && ra->IsUnsigned()) ||
+        (!la->IsUnsigned() && !ra->IsUnsigned())) return lhs;
+    return la->IsUnsigned() ? lhs : rhs;
+}
 
 
 void TypeBuilder::VisitArrayDef(ArrayDef* def)
@@ -135,4 +219,149 @@ void TypeBuilder::VisitPtrDef(PtrDef* def)
     def->Type() = std::make_unique<CPtrType>(
         std::move(def->Child()->Type()));
     def->Type()->Qual() = def->qual_;
+}
+
+
+void TypeBuilder::VisitArrayExpr(ArrayExpr* expr)
+{
+    if (expr->Type()) return;
+
+    auto ty = expr->Identifier()->Type();
+    if (ty->Is<CArrayType>())
+    {
+        auto array = ty->As<CArrayType>();
+        expr->Type() = std::move(array->ArrayOf()->Clone());
+    }
+    else if (ty->Is<CPtrType>())
+    {
+        auto ptr = ty->As<CPtrType>();
+        expr->Type() = std::move(ptr->Point2()->Clone());
+    }
+}
+
+
+void TypeBuilder::VisitAssignExpr(AssignExpr* expr)
+{
+    if (expr->Type()) return;
+
+    auto lhs = expr->Left()->Type();
+    auto rhs = expr->Right()->Type();
+    expr->Type() = MatchCType(lhs, rhs);
+}
+
+
+void TypeBuilder::VisitBinaryExpr(BinaryExpr* expr)
+{
+    if (expr->Type()) return;
+
+    // the value is calculated by constant folding
+    if (expr->IsConstant())
+    {
+        if (expr->Val()->Is<IntConst>())
+            expr->Type() = GetCTypeByValue(
+                expr->Left()->Type(), expr->Right()->Type(), expr->Val()->As<IntConst>()->Val());
+        else if (expr->Val()->Is<FloatConst>())
+            expr->Type() = GetCTypeByValue(
+                expr->Left()->Type(), expr->Right()->Type(), expr->Val()->As<FloatConst>()->Val());
+        return;
+    }
+
+    auto lhs = expr->Left()->Type();
+    auto rhs = expr->Right()->Type();
+    expr->Type() = MatchCType(lhs, rhs);
+}
+
+
+void TypeBuilder::VisitCallExpr(CallExpr* expr)
+{
+    if (expr->Type()) return;
+
+    auto func = expr->Postfix()->Type();
+    if (func->Is<CFuncType>())
+    {
+        auto cfunc = func->As<CFuncType>();
+        expr->Type() = std::move(cfunc->ReturnType()->Clone());
+    }
+    else if (func->Is<CPtrType>())
+    {
+        auto ptr = func->As<CPtrType>();
+        auto cfunc = ptr->Point2()->As<CFuncType>();
+        expr->Type() = std::move(cfunc->ReturnType()->Clone());
+    }
+}
+
+
+void TypeBuilder::VisitCastExpr(CastExpr* expr)
+{
+    if (expr->Type()) return;
+    expr->Type() = std::move(expr->TypeName()->Type());
+}
+
+void TypeBuilder::VisitCondExpr(CondExpr* expr)
+{
+    if (expr->Type()) return;
+    expr->Type() = expr->TrueExpr()->Type();
+}
+
+void TypeBuilder::VisitEnumConst(EnumConst* expr)
+{
+    if (expr->Type()) return;
+    expr->Type() = expr->ValueExpr()->Type();
+}
+
+
+void TypeBuilder::VisitEnumList(EnumList* list)
+{
+    if (list->Type()) return;
+
+    list->Type() = list->front()->Type();
+    for (auto& mem : *list)
+    {
+        auto raw = mem->Type()->As<CArithmType>();
+        auto old = list->Type()->As<CArithmType>();
+        if (raw->operator>(*old))
+        {
+            // if one is unsigned and the other is signed
+            if (raw->IsUnsigned() ^ old->IsUnsigned())
+                list->Type() = MatchCType(mem->Type(), list->Type());
+            else
+                list->Type() = mem->Type();
+        }
+        else if (raw->Compatible(*old) && (raw->IsUnsigned() ^ old->IsUnsigned()))
+            list->Type() = MatchCType(mem->Type(), list->Type());
+    }
+}
+
+
+void TypeBuilder::VisitIdentExpr(IdentExpr* expr)
+{
+    if (expr->Type()) return;
+    auto decl = scopestack_.SearchObject(expr->Name());
+    expr->Type() = std::move(decl->GetCType()->Clone());
+}
+
+
+void TypeBuilder::VisitLogicalExpr(LogicalExpr* expr)
+{
+    if (expr->Type()) return;
+    expr->Type() = std::make_unique<CArithmType>(TypeTag::int32);
+}
+
+
+void TypeBuilder::VisitUnaryExpr(UnaryExpr* expr)
+{
+    if (expr->Type()) return;
+
+    if (expr->Op() == Tag::asterisk)
+    {
+        auto ptr = expr->Content()->Type()->As<CPtrType>();
+        expr->Type() = ptr->Point2()->Clone();
+    }
+    else if (expr->Op() == Tag::_and)
+    {
+        auto ty = expr->Content()->Type()->Clone();
+        expr->Type() = std::make_unique<CPtrType>(std::move(ty));
+    }
+    else
+        expr->Type() = expr->Content()->Type();
 }

@@ -38,7 +38,7 @@ public:
 
 protected:
     const IROperand* val_{};
-    std::unique_ptr<CType> type_;
+    std::shared_ptr<CType> type_;
 };
 
 #endif // _EXPR_H_

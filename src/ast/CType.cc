@@ -92,27 +92,24 @@ const IRType* CArithmType::ToIRType(Pool<IRType>*) const
     return nullptr;
 }
 
-bool CArithmType::Compatible(const CType* other) const
+bool CArithmType::Compatible(const CType& other) const
 {
-    /*auto arithm = other->ToArithm();
+    auto arithm = other.As<CArithmType>();
     if (arithm) return size_ == arithm->size_;
-    auto ptr = other->ToPtr();
-    if (ptr) return size_ == 8;
-    return false;*/
-    return true;
+    auto ptr = other.As<CPtrType>();
+    if (ptr) return size_ == ptr->Size();
+    return false;
 }
 
 bool CArithmType::operator>(const CArithmType& rhs) const
 {
-    /*if (IsInteger() && rhs.IsFloat()) return false;
+    if (IsInteger() && rhs.IsFloat()) return false;
     else if (IsFloat() && rhs.IsInteger()) return true;
     else if (IsInteger() && rhs.IsInteger())
-        return (spec_ & ~static_cast<unsigned>(Spec::_unsigned)) >
-            (rhs.spec_ & ~static_cast<unsigned>(Spec::_unsigned));
+        return this->size_ > rhs.size_;
     else if (IsFloat() && rhs.IsFloat())
-        return spec_ > rhs.spec_;
-    return false;*/
-    return true;
+        return this->size_ > rhs.size_;
+    return false;
 }
 
 bool CArithmType::operator<(const CArithmType& rhs) const

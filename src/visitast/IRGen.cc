@@ -75,7 +75,7 @@ const IROperand* IRGen::LoadVal(Expr* expr)
     if (expr->IsIdentifier())
     {
         auto ident = expr->ToIdentifier();
-        if (ident->Addr()->Type()->ToPointer()->Point2()->IsArray())
+        if (ident->Type()->As<CPtrType>()->Point2()->Is<CArrayType>())
         // tl;dr: if ident is a pointer to some array
         {
             auto zero = IntConst::CreateIntConst(ibud_.Container(), 0);
@@ -205,7 +205,7 @@ void IRGen::VisitObjDef(ObjDef* def)
 
     for (auto& param : def->Child()->ToFuncDef()->GetParamList())
     {
-        if (dynamic_cast<const CVoidType*>(param->RawType()))
+        if (param->RawType()->As<CVoidType>())
             continue;
         auto ctype = param->RawType();
         auto paramreg = Register::CreateRegister(
@@ -339,6 +339,7 @@ void IRGen::VisitBinaryExpr(BinaryExpr* bin)
 {
     bin->left_->Accept(this);
     bin->right_->Accept(this);
+    tbud_.VisitBinaryExpr(bin);
 
     if (bin->left_->IsConstant() && bin->right_->IsConstant())
     {
@@ -459,14 +460,14 @@ void IRGen::VisitCastExpr(CastExpr* cast)
     auto& ty = cast->typename_->Type();
     auto expreg = LoadVal(cast->expr_.get());
 
-    if (ty->IsInteger())
-    {
-        // TODO
-    }
-    else if (ty->IsFloat())
-    {
-        // TODO
-    }
+    // if (ty->IsInteger())
+    // {
+    //     // TODO
+    // }
+    // else if (ty->IsFloat())
+    // {
+    //     // TODO
+    // }
 
     cast->Val() = expreg;
     auto arithm = static_cast<const CArithmType*>(ty.get());
@@ -546,7 +547,7 @@ void IRGen::VisitConstant(ConstExpr* constant)
     if (ibud_.Container()) container = ibud_.Container();
     else container = transunit_.get();
 
-    if (ctype->IsInteger())
+    if (ctype->As<CArithmType>()->IsInteger())
         constant->Val() = IntConst::CreateIntConst(
             container, constant->GetInt(),
             ctype->ToIRType(transunit_.get())->ToInteger());
@@ -570,9 +571,6 @@ void IRGen::VisitEnumConst(EnumConst* enumconst)
 
 void IRGen::VisitEnumList(EnumList* list)
 {
-    // TODO: auto enum type deduction
-    list->Type() = std::make_unique<CArithmType>(TypeTag::int32);
-
     // open up a temporary scope and place the
     // enum member in it, before we deduce the
     // underlying type of the enum.
@@ -587,6 +585,7 @@ void IRGen::VisitEnumList(EnumList* list)
     else
         first->Val() = IntConst::CreateIntConst(
             transunit_.get(), 0);
+    tbud_.VisitEnumConst(first);
 
     for (auto i = list->begin() + 1; i != list->end(); ++i)
     {
@@ -602,13 +601,14 @@ void IRGen::VisitEnumList(EnumList* list)
                 transunit_.get(), pconst->Val() + 1);
         }
 
+        // check type of the enum const after we've evaluated it
+        tbud_.VisitEnumConst(i->get());
         scopestack_.Top().AddMember(
             (*i)->Name(), nullptr, (*i)->Val()->As<IntConst>());
     }
 
-    // TODO: deduce the underlying type and assign it
-    // to list->Type()
-
+    // deduce the underlying type of the enum
+    tbud_.VisitEnumList(list);
     scopestack_.PopScope();
 }
 
@@ -622,6 +622,8 @@ void IRGen::VisitExprList(ExprList* list)
 
 void IRGen::VisitIdentExpr(IdentExpr* ident)
 {
+    tbud_.VisitIdentExpr(ident);
+
     auto object = scopestack_.SearchObject(ident->name_);
     if (object)
         ident->Addr() = object->Addr();
@@ -672,21 +674,18 @@ void IRGen::VisitLogicalExpr(LogicalExpr* logical)
         midblk = bbud_.GetBasicBlock(env_.GetLabelName()),
         finalblk = bbud_.GetBasicBlock(env_.GetLabelName());
 
-    auto zero = IntConst::CreateIntConst(ibud_.Container(), 0);
-    auto cmpans = ibud_.InsertCmpInstr(
-        env_.GetRegName(), Condition::ne, lhs, zero);
-
     if (logical->op_ == Tag::logical_and)
-        ibud_.InsertBrInstr(cmpans, midblk, finalblk);
+        ibud_.InsertBrInstr(lhs, midblk, finalblk);
     else if (logical->op_ == Tag::logical_or)
-        ibud_.InsertBrInstr(cmpans, finalblk, midblk);
+        ibud_.InsertBrInstr(lhs, finalblk, midblk);
 
     ibud_.SetInsertPoint(midblk);
 
     logical->right_->Accept(this);
     rhs = LoadVal(logical->right_.get());
 
-    cmpans = ibud_.InsertCmpInstr(
+    auto zero = IntConst::CreateIntConst(ibud_.Container(), 0);
+    const Register* cmpans = ibud_.InsertCmpInstr(
         env_.GetRegName(), Condition::ne, rhs, zero);
     ibud_.InsertBrInstr(finalblk);
 
@@ -716,6 +715,7 @@ void IRGen::VisitLogicalExpr(LogicalExpr* logical)
 void IRGen::VisitUnaryExpr(UnaryExpr* unary)
 {
     unary->content_->Accept(this);
+    tbud_.VisitUnaryExpr(unary);
 
     if (unary->content_->IsConstant())
     {

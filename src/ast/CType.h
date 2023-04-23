@@ -108,9 +108,10 @@ public:
     ENABLE_IS;
     ENABLE_AS;
 
-    virtual bool Compatible(const CType* other) const = 0;
+    virtual bool Compatible(const CType& other) const = 0;
     virtual bool IsScalar() const { return false; }
     virtual bool IsComplete() const { return false; }
+    virtual std::unique_ptr<CType> Clone() const { return nullptr; }
 
     QualType Qual() const { return qual_; }
     QualType& Qual() { return qual_; }
@@ -139,6 +140,7 @@ public:
     std::string ToString() const override { return "<error-type>"; }
 
     bool Compatible(const CType* other) { return false; };
+    std::unique_ptr<CType> Clone() const override { return std::make_unique<ErrorType>(*this); }
 };
 
 
@@ -154,7 +156,8 @@ public:
     const IRType* ToIRType(Pool<IRType>*) const override;
     std::string ToString() const override;
 
-    bool Compatible(const CType*) const override;
+    bool Compatible(const CType&) const override;
+    std::unique_ptr<CType> Clone() const override { return std::make_unique<CArithmType>(*this); }
 
     bool IsComplete() const override { return true; }
     bool IsInteger() const { return unsigned(type_) & unsigned(TypeTag::integer); }
@@ -187,7 +190,8 @@ public:
     std::string ToString() const override { return ""; }
     const FuncType* ToIRType(Pool<IRType>*) const override;
 
-    bool Compatible(const CType*) const override { return false; }
+    bool Compatible(const CType&) const override { return false; }
+    std::unique_ptr<CType> Clone() const override { return std::make_unique<CFuncType>(*this); }
 
     const CType* ReturnType() const { return return_.get(); }
     auto& ReturnType() { return return_; }
@@ -229,9 +233,11 @@ public:
 
     std::string ToString() const override;
     const PtrType* ToIRType(Pool<IRType>*) const override;
-    bool Compatible(const CType*) const { return false; }
 
-    size_t Size() { return 8; }
+    bool Compatible(const CType&) const { return false; }
+    std::unique_ptr<CType> Clone() const override { return std::make_unique<CPtrType>(*this); }
+
+    size_t Size() const { return 8; }
 
     bool IsScalar() const override { return true; }
     bool IsComplete() const override { return true; }
@@ -259,8 +265,11 @@ public:
 
     std::string ToString() const;
     const ArrayType* ToIRType(Pool<IRType>*) const override;
-    bool Compatible(const CType*) const { return false; }
 
+    bool Compatible(const CType&) const { return false; }
+    std::unique_ptr<CType> Clone() const override { return std::make_unique<CArrayType>(*this); }
+
+    const auto& ArrayOf() const { return arrayof_; }
     bool VarlableLen() const { return variable_; }
     bool& VariableLen() { return variable_; }
     bool Static() const { return static_; }
@@ -289,9 +298,10 @@ public:
         CType(CTypeId::_enum), name_(n), underlying_(ty) {}
 
     std::string ToString() const override;
-    bool Compatible(const CType*) const override { return false; }
-
     const IntType* ToIRType(Pool<IRType>*) const override;
+
+    bool Compatible(const CType&) const override { return false; }
+    std::unique_ptr<CType> Clone() const override { return std::make_unique<CEnumType>(*this); }
 
     void Reserve(size_t size) { members_.reserve(size); }
     void AddMember(const Member* m) { members_[index_++] = m; }
@@ -319,7 +329,8 @@ public:
     const VoidType* ToIRType(Pool<IRType>*) const override;
     std::string ToString() const override { return "void"; }
 
-    bool Compatible(const CType* other) const override { return false; }
+    bool Compatible(const CType& other) const override { return false; }
+    std::unique_ptr<CType> Clone() const override { return std::make_unique<CVoidType>(*this); }
 };
 
 #endif // _TYPE_H_
