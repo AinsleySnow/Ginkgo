@@ -4,6 +4,36 @@
 #include <unordered_map>
 
 
+void CodeGen::BinaryGenHelper(
+    const std::string& name, const BinaryInstr* bi)
+{
+    auto lhs = alloc_.GetIROpMap(bi->Lhs());
+    auto rhs = alloc_.GetIROpMap(bi->Rhs());
+    auto ans = alloc_.GetIROpMap(bi->Result());
+    char suffix = SuffixOf(rhs)[0];
+
+    asmfile_.EmitBinary(suffix, name, rhs->ToString(), lhs->ToString());
+    if (lhs->operator!=(*ans))
+        asmfile_.EmitMov(suffix, lhs->ToString(), ans->ToString());
+}
+
+void CodeGen::VarithmGenHelper(
+    const std::string& name, const BinaryInstr* bi)
+{
+    auto lhs = alloc_.GetIROpMap(bi->Lhs());
+    auto rhs = alloc_.GetIROpMap(bi->Rhs());
+    auto ans = alloc_.GetIROpMap(bi->Result());
+    auto precision = SuffixOf(rhs);
+
+    if (!rhs)
+        asmfile_.EmitVarithm(name, precision,
+            lhs->ToString(), "", ans->ToString());
+    else
+        asmfile_.EmitVarithm(name, precision,
+            lhs->ToString(), rhs->ToString(), ans->ToString());
+}
+
+
 void CodeGen::VisitModule(Module* mod)
 {
     asmfile_.EmitPseudoInstr(".file", { "\"" + mod->Name() + "\"" });
@@ -31,14 +61,11 @@ void CodeGen::VisitGlobalVar(GlobalVar* var)
 
 void CodeGen::VisitFunction(Function* func)
 {
-    alloc_.DoAlloc(func);
-
+    alloc_.EnterFunction(func);
     asmfile_.EmitPseudoInstr(".text");
     asmfile_.EmitLabel(func->Name());
     for (auto bb : *func)
         VisitBasicBlock(bb);
-
-    alloc_.Clear();
 }
 
 void CodeGen::VisitBasicBlock(BasicBlock* bb)
@@ -46,31 +73,6 @@ void CodeGen::VisitBasicBlock(BasicBlock* bb)
     asmfile_.EmitLabel(bb->Name());
     for (auto inst : *bb)
         inst->Accept(this);
-}
-
-
-void CodeGen::BinaryGenHelper(
-    const std::string& name, const BinaryInstr* bi)
-{
-    char suffix = bi->AsmSuffix()[0];
-
-    asmfile_.EmitBinary(suffix, name,
-        bi->Rhs()->ToString(), bi->Lhs()->ToString());
-    if (bi->Lhs() != bi->Result())
-        asmfile_.EmitMov(suffix,
-            bi->Result()->ToString(), bi->Lhs()->ToString());
-}
-
-void CodeGen::VarithmGenHelper(
-    const std::string& name, const BinaryInstr* bi)
-{
-    auto precision = bi->AsmSuffix();
-    if (!bi->Rhs())
-        asmfile_.EmitVarithm(name, precision,
-            bi->Lhs()->ToString(), "", bi->Result()->ToString());
-    else
-        asmfile_.EmitVarithm(name, precision,
-            bi->Lhs()->ToString(), bi->Rhs()->ToString(), bi->Result()->ToString());
 }
 
 
@@ -90,95 +92,136 @@ void CodeGen::VisitXorInstr(XorInstr* inst)     { BinaryGenHelper("xor", inst); 
 
 void CodeGen::VisitDivInstr(DivInstr* inst)
 {
-    asmfile_.EmitCxtx(inst->From(), inst->To());
+    auto lhs = alloc_.GetIROpMap(inst->Lhs());
+    auto rhs = alloc_.GetIROpMap(inst->Rhs());
+    auto ans = alloc_.GetIROpMap(inst->Result());
 
-    // the first op in DivInstr must be in %rax.
-    // this is handled by the register allocator.
-    std::string name = inst->Signed() ? "idiv" : "div";
-    asmfile_.EmitUnary(inst->AsmSuffix()[0], name, inst->Rhs()->ToString());
+    // the first op in DivInstr may not be in %*ax.
+    // move it to %*ax if it is not.
+    if (!lhs->As<x64Reg>()->PartOf(RegTag::rax))
+        asmfile_.EmitMov(SuffixOf(lhs)[0], lhs->ToString(), "%rax");
+
+    asmfile_.EmitCxtx(SuffixOf(lhs)[0], SuffixOf(rhs)[0]);
+
+    bool issigned = inst->Lhs()->Type()->ToInteger()->IsSigned() ||
+        inst->Rhs()->Type()->ToInteger()->IsSigned();
+    std::string name = issigned ? "idiv" : "div";
+    asmfile_.EmitUnary(SuffixOf(rhs)[0], name, rhs->ToString());
 
     // if result register is not %*ax, move it to the result register.
     if (!alloc_.GetIROpMap(inst->Result())->As<x64Reg>()->PartOf(RegTag::rax))
-        asmfile_.EmitMov(inst->AsmSuffix()[0],
-            inst->Rhs()->ToString(), inst->Result()->ToString());
+        asmfile_.EmitMov(SuffixOf(lhs)[0], "%rax", ans->ToString());
 }
 
 void CodeGen::VisitModInstr(ModInstr* inst)
 {
-    asmfile_.EmitCxtx(inst->From(), inst->To());
+    auto lhs = alloc_.GetIROpMap(inst->Lhs());
+    auto rhs = alloc_.GetIROpMap(inst->Rhs());
+    auto ans = alloc_.GetIROpMap(inst->Result());
 
-    // the first op in DivInstr must be in %rax.
-    // this is handled by the register allocator.
-    std::string name = inst->Signed() ? "idiv" : "div";
-    asmfile_.EmitUnary(inst->AsmSuffix()[0], name, inst->Rhs()->ToString());
+    // the first op in DivInstr may not be in %*ax.
+    // move it to %*ax if it is not.
+    if (!lhs->As<x64Reg>()->PartOf(RegTag::rax))
+        asmfile_.EmitMov(SuffixOf(lhs)[0], lhs->ToString(), "%rax");
+
+    asmfile_.EmitCxtx(SuffixOf(lhs)[0], SuffixOf(rhs)[0]);
+
+    bool issigned = inst->Lhs()->Type()->ToInteger()->IsSigned() ||
+        inst->Rhs()->Type()->ToInteger()->IsSigned();
+    std::string name = issigned ? "idiv" : "div";
+    asmfile_.EmitUnary(SuffixOf(rhs)[0], name, rhs->ToString());
 
     // if result register is not %*dx, move it to the result register.
     if (!alloc_.GetIROpMap(inst->Result())->As<x64Reg>()->PartOf(RegTag::rdx))
-        asmfile_.EmitMov(inst->AsmSuffix()[0],
-            inst->Rhs()->ToString(), inst->Result()->ToString());
+        asmfile_.EmitMov(SuffixOf(lhs)[0], "%rdx", ans->ToString());
 }
 
 
 void CodeGen::VisitTruncInstr(TruncInstr* inst)
 {
+    auto from = alloc_.GetIROpMap(inst->Value());
+    auto to = alloc_.GetIROpMap(inst->Dest());
+    char sfrm = SuffixOf(from)[0];
+    char sto = SuffixOf(to)[0];
+
     if (inst->Type()->ToInteger()->IsSigned())
-        asmfile_.EmitMovs(inst->From(), inst->To(),
-            inst->Value()->ToString(), inst->Dest()->ToString());
+        asmfile_.EmitMovs(sfrm, sto, from->ToString(), to->ToString());
     else
-        asmfile_.EmitMovz(inst->From(), inst->To(),
-            inst->Value()->ToString(), inst->Dest()->ToString());
+        asmfile_.EmitMovz(sfrm, sto, from->ToString(), to->ToString());
 }
 
 void CodeGen::VisitFtruncInstr(FtruncInstr* inst)
 {
-    auto value = inst->Value()->ToString();
-    asmfile_.EmitVcvt(inst->From(), inst->To(), value,
-        value, inst->Dest()->ToString());
+    auto from = alloc_.GetIROpMap(inst->Value());
+    auto to = alloc_.GetIROpMap(inst->Dest());
+
+    asmfile_.EmitVcvt(SuffixOf(from), SuffixOf(to),
+        from->ToString(), from->ToString(), to->ToString());
 }
 
 void CodeGen::VisitZextInstr(ZextInstr* inst)
 {
-    asmfile_.EmitMovz(inst->From(), inst->To(),
-        inst->Value()->ToString(), inst->Dest()->ToString());
+    auto from = alloc_.GetIROpMap(inst->Value());
+    auto to = alloc_.GetIROpMap(inst->Dest());
+    char sfrm = SuffixOf(from)[0];
+    char sto = SuffixOf(to)[0];
+
+    asmfile_.EmitMovz(sfrm, sto, from->ToString(), to->ToString());
 }
 
 void CodeGen::VisitSextInstr(SextInstr* inst)
 {
-    asmfile_.EmitMovs(inst->From(), inst->To(),
-        inst->Value()->ToString(), inst->Dest()->ToString());
+    auto from = alloc_.GetIROpMap(inst->Value());
+    auto to = alloc_.GetIROpMap(inst->Dest());
+    char sfrm = SuffixOf(from)[0];
+    char sto = SuffixOf(to)[0];
+
+    asmfile_.EmitMovs(sfrm, sto, from->ToString(), to->ToString());
 }
 
 void CodeGen::VisitFextInstr(FextInstr* inst)
 {
-    auto value = inst->Value()->ToString();
-    asmfile_.EmitVcvt(inst->From(), inst->To(), value,
-        value, inst->Dest()->ToString());
+    auto from = alloc_.GetIROpMap(inst->Value());
+    auto to = alloc_.GetIROpMap(inst->Dest());
+
+    asmfile_.EmitVcvt(SuffixOf(from), SuffixOf(to),
+        from->ToString(), from->ToString(), to->ToString());
 }
 
 void CodeGen::VisitFtoUInstr(FtoUInstr* inst)
 {
-    asmfile_.EmitVcvtt(inst->From(), inst->To(),
-        inst->Value()->ToString(), inst->Dest()->ToString());
+    auto from = alloc_.GetIROpMap(inst->Value());
+    auto to = alloc_.GetIROpMap(inst->Dest());
+
+    asmfile_.EmitVcvtt(SuffixOf(from), SuffixOf(to),
+        from->ToString(), to->ToString());
 }
 
 void CodeGen::VisitFtoSInstr(FtoSInstr* inst)
 {
-    asmfile_.EmitVcvtt(inst->From(), inst->To(),
-        inst->Value()->ToString(), inst->Dest()->ToString());
+    auto from = alloc_.GetIROpMap(inst->Value());
+    auto to = alloc_.GetIROpMap(inst->Dest());
+
+    asmfile_.EmitVcvtt(SuffixOf(from), SuffixOf(to),
+        from->ToString(), to->ToString());
 }
 
 void CodeGen::VisitUtoFInstr(UtoFInstr* inst)
 {
-    auto value = inst->Value()->ToString();
-    asmfile_.EmitVcvt(inst->From(), inst->To(),
-        value, value, inst->Dest()->ToString());
+    auto from = alloc_.GetIROpMap(inst->Value());
+    auto to = alloc_.GetIROpMap(inst->Dest());
+
+    asmfile_.EmitVcvt(SuffixOf(from), SuffixOf(to),
+        from->ToString(), from->ToString(), to->ToString());
 }
 
 void CodeGen::VisitStoFInstr(StoFInstr* inst)
 {
-    auto value = inst->Value()->ToString();
-    asmfile_.EmitVcvt(inst->From(), inst->To(),
-        value, value, inst->Dest()->ToString());
+    auto from = alloc_.GetIROpMap(inst->Value());
+    auto to = alloc_.GetIROpMap(inst->Dest());
+
+    asmfile_.EmitVcvt(SuffixOf(from), SuffixOf(to),
+        from->ToString(), from->ToString(), to->ToString());
 }
 
 

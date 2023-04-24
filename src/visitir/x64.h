@@ -63,12 +63,8 @@ public:
 
     std::string ToString() const override;
 
-    auto& Suffix() { return suffix_; }
-    auto Suffix() const { return suffix_; }
-
 private:
     RegTag reg_;
-    std::string suffix_{};
 };
 
 

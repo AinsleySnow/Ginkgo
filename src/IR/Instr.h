@@ -173,14 +173,10 @@ public:
     auto Rhs() const { return rhs_; }
     auto& Result() { return result_; }
     auto Result() const { return result_; }
-    auto& AsmSuffix() { return asmsuffix_; }
-    auto AsmSuffix() const { return asmsuffix_; }
 
 private:
     const Register* result_{};
     const IROperand *lhs_{}, *rhs_{};
-
-    std::string asmsuffix_{};
 };
 
 
@@ -286,18 +282,6 @@ public:
 
     std::string ToString() const override;
     void Accept(IRVisitor*) override;
-
-    char& From() { return from_; }
-    char From() const { return from_; }
-    char& To() { return to_; }
-    char To() const { return to_; }
-    bool& Signed() { return signed_; }
-    bool Signed() const { return signed_; }
-
-private:
-    char from_{};
-    char to_{};
-    bool signed_{};
 };
 
 
@@ -328,18 +312,6 @@ public:
 
     std::string ToString() const override;
     void Accept(IRVisitor*) override;
-
-    char& From() { return from_; }
-    char From() const { return from_; }
-    char& To() { return to_; }
-    char To() const { return to_; }
-    bool& Signed() { return signed_; }
-    bool Signed() const { return signed_; }
-
-private:
-    char from_{};
-    char to_{};
-    bool signed_{};
 };
 
 
@@ -610,15 +582,6 @@ public:
     ) : ConvertInstr(InstrId::trunc, r, t, v) {}
 
     std::string ToString() const override;
-
-    char& From() { return from_; }
-    char From() const { return from_; }
-    char& To() { return to_; }
-    char To() const { return to_; }
-
-private:
-    char from_{};
-    char to_{};
 };
 
 
@@ -634,15 +597,6 @@ public:
     ) : ConvertInstr(InstrId::ftrunc, r, t, v) {}
 
     std::string ToString() const override;
-
-    std::string From() const { return from_; }
-    std::string To() const { return to_; }
-    std::string& From() { return from_; }
-    std::string& To() { return to_; }
-
-private:
-    std::string from_{};
-    std::string to_{};
 };
 
 
@@ -658,15 +612,6 @@ public:
     ) : ConvertInstr(InstrId::zext, r, t, v) {}
 
     std::string ToString() const override;
-
-    char& From() { return from_; }
-    char From() const { return from_; }
-    char& To() { return to_; }
-    char To() const { return to_; }
-
-private:
-    char from_{};
-    char to_{};
 };
 
 
@@ -682,15 +627,6 @@ public:
     ) : ConvertInstr(InstrId::sext, r, t, v) {}
 
     std::string ToString() const override;
-
-    char& From() { return from_; }
-    char From() const { return from_; }
-    char& To() { return to_; }
-    char To() const { return to_; }
-
-private:
-    char from_{};
-    char to_{};
 };
 
 
@@ -706,15 +642,6 @@ public:
     ) : ConvertInstr(InstrId::fext, r, t, v) {}
 
     std::string ToString() const override;
-
-    std::string& From() { return from_; }
-    std::string From() const { return from_; }
-    std::string& To() { return to_; }
-    std::string To() const { return to_; }
-
-private:
-    std::string from_{};
-    std::string to_{};
 };
 
 
@@ -730,15 +657,6 @@ public:
     ) : ConvertInstr(InstrId::ftou, r, t, v) {}
 
     std::string ToString() const override;
-
-    std::string& From() { return from_; }
-    std::string From() const { return from_; }
-    std::string& To() { return to_; }
-    std::string To() const { return to_; }
-
-private:
-    std::string from_{};
-    std::string to_{};
 };
 
 
@@ -754,15 +672,6 @@ public:
     ) : ConvertInstr(InstrId::ftos, r, t, v) {}
 
     std::string ToString() const override;
-
-    std::string& From() { return from_; }
-    std::string From() const { return from_; }
-    std::string& To() { return to_; }
-    std::string To() const { return to_; }
-
-private:
-    std::string from_{};
-    std::string to_{};
 };
 
 
@@ -778,15 +687,6 @@ public:
     ) : ConvertInstr(InstrId::utof, r, t, v) {}
 
     std::string ToString() const override;
-
-    std::string& From() { return from_; }
-    std::string From() const { return from_; }
-    std::string& To() { return to_; }
-    std::string To() const { return to_; }
-
-private:
-    std::string from_{};
-    std::string to_{};
 };
 
 
@@ -802,15 +702,6 @@ public:
     ) : ConvertInstr(InstrId::stof, r, t, v) {}
 
     std::string ToString() const override;
-
-    std::string& From() { return from_; }
-    std::string From() const { return from_; }
-    std::string& To() { return to_; }
-    std::string To() const { return to_; }
-
-private:
-    std::string from_{};
-    std::string to_{};
 };
 
 
