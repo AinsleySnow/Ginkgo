@@ -1,13 +1,7 @@
-#include "visitir/SimpleAlloc.h"
+#include "pass/SimpleAlloc.h"
 #include "IR/Value.h"
+#include "IR/Instr.h"
 
-
-void SimpleAlloc::Clear()
-{
-    ClearReg();
-    Clearx64();
-    stackcache_.Clear();
-}
 
 RegTag SimpleAlloc::StackCache::SpareReg() const
 {
@@ -57,14 +51,6 @@ void SimpleAlloc::StackCache::Map2Stack(const Register* reg, long offset)
     alloc_.MapRegister(reg, std::move(px64));
     regmap_[reg] = raw;
 }
-
-void SimpleAlloc::StackCache::Clear()
-{
-    index_ = 0;
-    findex_ = 0;
-    regmap_.clear();
-}
-
 
 
 void SimpleAlloc::Allocate(const Register* reg)

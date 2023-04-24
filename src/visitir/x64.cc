@@ -110,38 +110,3 @@ std::string x64Imm::ToString() const
     unsigned long repr = *reinterpret_cast<unsigned long*>(&val);
     return '$' + std::to_string(repr);
 }
-
-
-inline size_t x64Alloc::MakeAlign(size_t base, size_t align) const
-{
-    return (base + 16) % align == 0 ?
-        base : (base + 16) + align - (base + 16) % align;
-}
-
-bool x64Alloc::MapConstAndGlobalVar(const IROperand* op)
-{
-    if (op->Is<Constant>())
-    {
-        irmap_[op] = std::make_unique<x64Imm>(op->As<Constant>());
-        return true;
-    }
-    auto reg = op->As<Register>();
-    if (reg->Name()[0] == '@')
-    {
-        irmap_[op] = std::make_unique<x64Mem>(reg->Name().substr(1));
-        return true;
-    }
-    return false;
-}
-
-void x64Alloc::MapRegister(const IROperand* op, std::unique_ptr<x64> reg)
-{
-    irmap_[op] = std::move(reg);
-}
-
-const x64* x64Alloc::GetIROpMap(const IROperand* op) const
-{
-    auto it = irmap_.find(op);
-    if (it == irmap_.end()) return nullptr;
-    return it->second.get();
-}

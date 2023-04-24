@@ -1,9 +1,10 @@
 #ifndef _SIMPLE_ALLOC_H_
 #define _SIMPLE_ALLOC_H_
 
-#include "visitir/RegAlloc.h"
+#include "pass/Pass.h"
+#include "pass/x64Alloc.h"
+#include "visitir/IRVisitor.h"
 #include "visitir/x64.h"
-#include "IR/Instr.h"
 #include <unordered_map>
 
 
@@ -14,10 +15,10 @@
 // problems if some of these registers are used more than once.
 // For the TSOCA algorithm, see https://www.zhihu.com/question/29355187/answer/51935409.
 
-class SimpleAlloc : private x64Alloc
+class SimpleAlloc : public x64Alloc
 {
 public:
-    void Clear() override;
+    SimpleAlloc(Module* m) : x64Alloc(m) {}
 
 private:
     class StackCache
@@ -30,8 +31,6 @@ private:
         void AccessStack(const Register*) const;
         void Map2Reg(const Register*, RegTag);
         void Map2Stack(const Register*, long offset);
-
-        void Clear();
 
     private:
         SimpleAlloc& alloc_;
@@ -51,6 +50,7 @@ private:
     long AllocateOnX64Stack(x64Stack&, size_t, size_t);
     inline void BinaryAllocaHelper(BinaryInstr*);
 
+    Function* curfunc_{};
     StackCache stackcache_{ *this };
 
 private:

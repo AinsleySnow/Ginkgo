@@ -1,7 +1,6 @@
 #ifndef _X64_H_
 #define _X64_H_
 
-#include "visitir/RegAlloc.h"
 #include "utils/DynCast.h"
 #include <string>
 
@@ -110,57 +109,5 @@ private:
     const Constant* val_{};
 };
 
-
-enum class x64Phys
-{
-    rax, rbx, rcx, rdx,
-    rsi, rdi, rbp, rsp,
-    r8, r9, r10, r11,
-    r12, r13, r14, r15,
-
-    xmm0, xmm1, xmm2, xmm3,
-    xmm4, xmm5, xmm6, xmm7,
-    xmm8, xmm9, xmm10, xmm11,
-    xmm12, xmm13, xmm14, xmm15,
-};
-
-//      high address
-// +-------------------+
-// |    above rsp      |
-// +-------rsp---------+
-// |    below rsp      | <- red zone, 128 bytes
-// +-------------------+
-//      low address
-
-struct x64Stack
-{
-    // the offset of rsp itself.
-    long rspoffset_{};
-    // for leaf functions; how many bytes are used below rsp?
-    size_t belowrsp_{};
-    // how many bytes we'll allocate on the stack.
-    size_t allocated_{};
-    // is current function a leaf function?
-    bool leaf_{ true };
-};
-
-
-class x64Alloc : protected RegAlloc<x64Phys, x64Stack>
-{
-public:
-    virtual void Clear() = 0;
-
-    void DoAlloc(Function* func) { VisitFunction(func); }
-    const x64* GetIROpMap(const IROperand* op) const;
-
-protected:
-    inline size_t MakeAlign(size_t base, size_t align) const;
-    bool MapConstAndGlobalVar(const IROperand* op);
-    void MapRegister(const IROperand*, std::unique_ptr<x64>);
-    void Clearx64() { irmap_.clear(); }
-
-private:
-    std::unordered_map<const IROperand*, std::unique_ptr<x64>> irmap_{};
-};
 
 #endif // _X64_H_
