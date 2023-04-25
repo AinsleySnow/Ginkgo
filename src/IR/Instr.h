@@ -70,6 +70,8 @@ public:
 
     std::string ToString() const override;
 
+    auto& ReturnValue() { return retval_; }
+    auto ReturnValue() const { return retval_; }
 
 private:
     const IROperand* retval_{};
@@ -89,6 +91,8 @@ public:
 
     std::string ToString() const override;
 
+    auto& Cond() { return cond_; }
+    auto Cond() const { return cond_; }
     auto GetTrueBlk() { return true_; }
     auto GetFalseBlk() { return false_; }
     void SetTrueBlk(BasicBlock* blk) { true_ = blk; }
@@ -765,15 +769,20 @@ protected:
     static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::icmp; }
 
 public:
-    IcmpInstr(const std::string& r, Condition c,
+    IcmpInstr(const Register* r, Condition c,
         const IROperand* o1, const IROperand* o2) :
             Instr(InstrId::icmp), result_(r), cond_(c),
             op1_(o1), op2_(o2) {}
 
     std::string ToString() const override;
 
+    auto Cond() const { return cond_; }
+    auto Op1() const { return op1_; }
+    auto Op2() const { return op2_; }
+    auto Result() const { return result_; }
+
 private:
-    std::string result_{};
+    const Register* result_{};
     Condition cond_;
     const IROperand* op1_{};
     const IROperand* op2_{};
@@ -787,15 +796,20 @@ protected:
     static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::fcmp; }
 
 public:
-    FcmpInstr(const std::string& r, Condition c,
+    FcmpInstr(const Register* r, Condition c,
         const IROperand* o1, const IROperand* o2) :
             Instr(InstrId::fcmp), result_(r), cond_(c),
             op1_(o1), op2_(o2) {}
 
     std::string ToString() const override;
 
+    auto Cond() const { return cond_; }
+    auto Op1() const { return op1_; }
+    auto Op2() const { return op2_; }
+    auto Result() const { return result_; }
+
 private:
-    std::string result_{};
+    const Register* result_{};
     Condition cond_;
     const IROperand* op1_{};
     const IROperand* op2_{};
@@ -809,15 +823,25 @@ protected:
     static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::select; }
 
 public:
-    SelectInstr(const std::string& r, const IROperand* s,
+    SelectInstr(const Register* r, const IROperand* s,
         bool c, const IROperand* v1, const IROperand* v2) :
             Instr(InstrId::select), result_(r), selty_(s),
             cond_(c), value1_(v1), value2_(v2) {}
 
     std::string ToString() const override;
 
+    auto& Result() { return result_; }
+    auto Result() const { return result_; }
+    auto& SelType() { return selty_; }
+    auto& Cond() { return cond_; }
+    auto CondPair() const { return std::make_pair(selty_, cond_); }
+    auto& Value1() { return value1_; }
+    auto Value1() const { return value1_; }
+    auto& Value2() { return value2_; }
+    auto Value2() const { return value2_; }
+
 private:
-    std::string result_{};
+    const Register* result_{};
     const IROperand* selty_{};
     bool cond_{};
     const IROperand* value1_{};
@@ -834,14 +858,14 @@ protected:
 public:
     using BlockValPairList = std::vector<std::pair<const BasicBlock*, const IROperand*>>;
 
-    PhiInstr(const std::string& r, const IRType* t) :
+    PhiInstr(const Register* r, const IRType* t) :
         Instr(InstrId::phi), result_(r), type_(t) {}
 
     std::string ToString() const override;
     void AddBlockValPair(const BasicBlock*, const IROperand*);
 
 private:
-    std::string result_{};
+    const Register* result_{};
     const IRType* type_{};
     BlockValPairList labels_{};
 };
