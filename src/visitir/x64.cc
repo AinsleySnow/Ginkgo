@@ -2,77 +2,87 @@
 #include "IR/IROperand.h"
 
 
-namespace std
+bool x64::operator==(const x64& x) const
 {
-string to_string(RegTag rt)
-{
-    switch (rt)
-    {
-    case RegTag::rip:   return "%rip";
-    case RegTag::rax:   return "%rax";      case RegTag::rbx:   return "%rbx";
-    case RegTag::rcx:   return "%rcx";      case RegTag::rdx:   return "%rdx";
-    case RegTag::rsi:   return "%rsi";      case RegTag::rdi:   return "%rdi";
-    case RegTag::rbp:   return "%rbp";      case RegTag::rsp:   return "%rsp";
-    case RegTag::eax:   return "%eax";      case RegTag::ebx:   return "%ebx";
-    case RegTag::ecx:   return "%ecx";      case RegTag::edx:   return "%edx";
-    case RegTag::esi:   return "%esi";      case RegTag::edi:   return "%edi";
-    case RegTag::ebp:   return "%ebp";      case RegTag::esp:   return "%esp";
-    case RegTag::ax:    return "%ax";       case RegTag::bx:    return "%bx";
-    case RegTag::cx:    return "%cx";       case RegTag::dx:    return "%dx";
-    case RegTag::si:    return "%si";       case RegTag::di:    return "%di";
-    case RegTag::bp:    return "%bp";       case RegTag::sp:    return "%sp";
-    case RegTag::al:    return "%al";       case RegTag::bl:    return "%bl";
-    case RegTag::cl:    return "%cl";       case RegTag::dl:    return "%dl";
-    case RegTag::sil:   return "%sil";      case RegTag::dil:   return "%dil";
-    case RegTag::bpl:   return "%bpl";      case RegTag::spl:   return "%spl";
-    case RegTag::r8:    return "%r8";       case RegTag::r9:    return "%r9";
-    case RegTag::r10:   return "%r10";      case RegTag::r11:   return "%r11";
-    case RegTag::r12:   return "%r12";      case RegTag::r13:   return "%r13";
-    case RegTag::r14:   return "%r14";      case RegTag::r15:   return "%r15";
-    case RegTag::r8d:   return "%r8d";      case RegTag::r9d:   return "%r9d";
-    case RegTag::r10d:  return "%r10d";     case RegTag::r11d:  return "%r11d";
-    case RegTag::r12d:  return "%r12d";     case RegTag::r13d:  return "%r13d";
-    case RegTag::r14d:  return "%r14d";     case RegTag::r15d:  return "%r15d";
-    case RegTag::r8w:   return "%r8w";      case RegTag::r9w:   return "%r9w";
-    case RegTag::r10w:  return "%r10w";     case RegTag::r11w:  return "%r11w";
-    case RegTag::r12w:  return "%r12w";     case RegTag::r13w:  return "%r13w";
-    case RegTag::r14w:  return "%r14w";     case RegTag::r15w:  return "%r15w";
-    case RegTag::r8b:   return "%r8b";      case RegTag::r9b:   return "%r9b";
-    case RegTag::r10b:  return "%r10b";     case RegTag::r11b:  return "%r11b";
-    case RegTag::r12b:  return "%r12b";     case RegTag::r13b:  return "%r13b";
-    case RegTag::r14b:  return "%r14b";     case RegTag::r15b:  return "%r15b";
-    case RegTag::xmm0:  return "%xmm0";     case RegTag::xmm1:  return "%xmm1";
-    case RegTag::xmm2:  return "%xmm2";     case RegTag::xmm3:  return "%xmm3";
-    case RegTag::xmm4:  return "%xmm4";     case RegTag::xmm5:  return "%xmm5";
-    case RegTag::xmm6:  return "%xmm6";     case RegTag::xmm7:  return "%xmm7";
-    case RegTag::xmm8:  return "%xmm8";     case RegTag::xmm9:  return "%xmm9";
-    case RegTag::xmm10: return "%xmm10";    case RegTag::xmm11: return "%xmm11";
-    case RegTag::xmm12: return "%xmm12";    case RegTag::xmm13: return "%xmm13";
-    case RegTag::xmm14: return "%xmm14";    case RegTag::xmm15: return "%xmm15";
-    }
-
-    return ""; // make the compiler happy
-}
+    if (x.id_ != id_) return false;
+    if (x.id_ == x64Id::reg)
+        return *(this->As<x64Reg>()) == *(x.As<x64Reg>());
+    if (x.id_ == x64Id::mem)
+        return *(this->As<x64Mem>()) == *(x.As<x64Mem>());
+    if (x.id_ == x64Id::imm)
+        return *(this->As<x64Imm>()) == *(x.As<x64Imm>());
 }
 
-bool x64Reg::PartOf(x64Reg& reg) const
-{
-    return PartOf(reg.reg_);
-}
 
-bool x64Reg::PartOf(RegTag tag) const
-{
-    int cur = static_cast<int>(reg_);
-    int t = static_cast<int>(tag);
-    if (cur <= int(RegTag::rip) || t >= int(RegTag::r15b))
-        return false;
-    return (cur - t) % 8 == 0;
-}
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wswitch-enum"
+#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
 
 std::string x64Reg::ToString() const
 {
-    return std::to_string(reg_);
+    switch (reg_)
+    {
+    case RegTag::rip:   return "%rip";
+    case RegTag::rax:
+        if (Size() == 1) return "%al";  if (Size() == 2) return "%ax";
+        if (Size() == 4) return "%eax"; if (Size() == 8) return "%rax";
+    case RegTag::rbx:
+        if (Size() == 1) return "%bl";  if (Size() == 2) return "%bx";
+        if (Size() == 4) return "%ebx"; if (Size() == 8) return "%rbx";
+    case RegTag::rcx:
+        if (Size() == 1) return "%cl";  if (Size() == 2) return "%cx";
+        if (Size() == 4) return "%ecx"; if (Size() == 8) return "%rcx";
+    case RegTag::rdx:
+        if (Size() == 1) return "%dl";  if (Size() == 2) return "%dx";
+        if (Size() == 4) return "%edx"; if (Size() == 8) return "%rdx";
+    case RegTag::rsi:
+        if (Size() == 1) return "%sil"; if (Size() == 2) return "%si";
+        if (Size() == 4) return "%esi"; if (Size() == 8) return "%rsi";
+    case RegTag::rdi:
+        if (Size() == 1) return "%dil"; if (Size() == 2) return "%di";
+        if (Size() == 4) return "%edi"; if (Size() == 8) return "%rdi";
+    case RegTag::rbp:
+        if (Size() == 1) return "%bpl"; if (Size() == 2) return "%bp";
+        if (Size() == 4) return "%ebp"; if (Size() == 8) return "%rbp";
+    case RegTag::rsp:
+        if (Size() == 1) return "%spl"; if (Size() == 2) return "%sp";
+        if (Size() == 4) return "%esp"; if (Size() == 8) return "%rsp";
+    case RegTag::r8:
+        if (Size() == 1) return "%r8b"; if (Size() == 2) return "%r8w";
+        if (Size() == 4) return "%r8d"; if (Size() == 8) return "%r8";
+    case RegTag::r9:
+        if (Size() == 1) return "%r9b"; if (Size() == 2) return "%r9w";
+        if (Size() == 4) return "%r9d"; if (Size() == 8) return "%r9";
+    case RegTag::r10:
+        if (Size() == 1) return "%r10b"; if (Size() == 2) return "%r10w";
+        if (Size() == 4) return "%r10d"; if (Size() == 8) return "%r10";
+    case RegTag::r11:
+        if (Size() == 1) return "%r11b"; if (Size() == 2) return "%r11w";
+        if (Size() == 4) return "%r11d"; if (Size() == 8) return "%r11";
+    case RegTag::r12:
+        if (Size() == 1) return "%r12b"; if (Size() == 2) return "%r12w";
+        if (Size() == 4) return "%r12d"; if (Size() == 8) return "%r12";
+    case RegTag::r13:
+        if (Size() == 1) return "%r13b"; if (Size() == 2) return "%r13w";
+        if (Size() == 4) return "%r13d"; if (Size() == 8) return "%r13";
+    case RegTag::r14:
+        if (Size() == 1) return "%r14b"; if (Size() == 2) return "%r14w";
+        if (Size() == 4) return "%r14d"; if (Size() == 8) return "%r14";
+    case RegTag::r15:
+        if (Size() == 1) return "%r15b"; if (Size() == 2) return "%r15w";
+        if (Size() == 4) return "%r15d"; if (Size() == 8) return "%r15";
+    case RegTag::xmm0:  return "%xmm0";  case RegTag::xmm1:  return "%xmm1";
+    case RegTag::xmm2:  return "%xmm2";  case RegTag::xmm3:  return "%xmm3";
+    case RegTag::xmm4:  return "%xmm4";  case RegTag::xmm5:  return "%xmm5";
+    case RegTag::xmm6:  return "%xmm6";  case RegTag::xmm7:  return "%xmm7";
+    case RegTag::xmm8:  return "%xmm8";  case RegTag::xmm9:  return "%xmm9";
+    case RegTag::xmm10: return "%xmm10"; case RegTag::xmm11: return "%xmm11";
+    case RegTag::xmm12: return "%xmm12"; case RegTag::xmm13: return "%xmm13";
+    case RegTag::xmm14: return "%xmm14"; case RegTag::xmm15: return "%xmm15";
+    }
 }
+
+#pragma GCC diagnostic pop
 
 
 std::string x64Mem::ToString() const
@@ -90,14 +100,23 @@ std::string x64Mem::ToString() const
     loc += '(';
 
     if (base_ != RegTag::none)
-        loc += std::to_string(base_);
+        loc += base_.ToString();
     if (index_ != RegTag::none)
-        loc += ", " + std::to_string(index_);
+        loc += ", " + index_.ToString();
     if (scale_ != 0)
         loc += ", " + std::to_string(scale_);
 
     loc += ')';
     return loc;
+}
+
+bool x64Mem::operator==(const x64Mem& mem) const
+{
+    if (!label_.empty())
+        return label_ == mem.label_;
+    return base_ == mem.base_ &&
+        index_ == mem.index_ &&
+        scale_ == mem.scale_;
 }
 
 
@@ -109,4 +128,16 @@ std::string x64Imm::ToString() const
     double val = val_->As<FloatConst>()->Val();
     unsigned long repr = *reinterpret_cast<unsigned long*>(&val);
     return '$' + std::to_string(repr);
+}
+
+bool x64Imm::operator==(const x64Imm& imm) const
+{
+    if ((val_->Is<IntConst>() && imm.val_->Is<FloatConst>()) ||
+        (val_->Is<FloatConst>() && imm.val_->Is<IntConst>()))
+        return false;
+    if (val_->Is<IntConst>() && imm.val_->Is<IntConst>())
+        return val_->As<IntConst>()->Val() == imm.val_->As<IntConst>()->Val();
+    if (val_->Is<FloatConst>() && imm.val_->Is<FloatConst>())
+        return val_->As<FloatConst>()->Val() == imm.val_->As<FloatConst>()->Val();
+    return false;
 }

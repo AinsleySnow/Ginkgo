@@ -11,18 +11,15 @@ enum class RegTag
 {
     none, rip,
 
-    rax, rbx, rcx, rdx, rsi, rdi, rbp, rsp,
-    eax, ebx, ecx, edx, esi, edi, ebp, esp,
-     ax,  bx,  cx,  dx,  si,  di,  bp,  sp,
-     al,  bl,  cl,  dl, sil, dil, bpl, spl,
+    rax, rbx, rcx, rdx,
+    rsi, rdi, rbp, rsp,
+    r8,  r9,  r10, r11,
+    r12, r13, r14, r15,
 
-     r8,  r9,  r10,  r11,  r12,  r13,  r14, r15,
-    r8d, r9d, r10d, r11d, r12d, r13d, r14d, r15d,
-    r8w, r9w, r10w, r11w, r12w, r13w, r14w, r15w,
-    r8b, r9b, r10b, r11b, r12b, r13b, r14b, r15b,
-
-    xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7,
-    xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15
+    xmm0, xmm1, xmm2, xmm3,
+    xmm4, xmm5, xmm6, xmm7,
+    xmm8, xmm9, xmm10, xmm11,
+    xmm12, xmm13, xmm14, xmm15
 };
 
 
@@ -34,13 +31,22 @@ protected:
     x64Id id_{};
 
 public:
-    x64(x64Id i) {}
+    x64(x64Id i, size_t s) : id_(i), size_(s) {}
     x64Id ID() const { return id_; }
 
     ENABLE_IS;
     ENABLE_AS;
 
+    bool operator==(const x64& x) const;
+    bool operator!=(const x64& x) const { return !(*this == x); }
+
     virtual std::string ToString() const = 0;
+
+    auto& Size() { return size_; }
+    auto Size() const { return size_; }
+
+private:
+    size_t size_{};
 };
 
 
@@ -51,17 +57,16 @@ protected:
     static bool ClassOf(const x64 const* i) { return i->ID() == x64Id::reg; }
 
 public:
-    x64Reg() : x64(x64Id::reg), reg_(RegTag::none) {}
-    x64Reg(RegTag r) : x64(x64Id::reg), reg_(r) {}
+    x64Reg(size_t s) : x64(x64Id::reg, s), reg_(RegTag::none) {}
+    x64Reg(RegTag r, size_t s) : x64(x64Id::reg, s), reg_(r) {}
 
-    bool operator==(x64Reg& reg) const { return reg_ == reg.reg_; }
-    bool operator!=(x64Reg& reg) const { return reg_ != reg.reg_; }
+    bool operator==(const x64Reg& reg) const { return reg_ == reg.reg_; }
+    bool operator!=(const x64Reg& reg) const { return reg_ != reg.reg_; }
     bool operator==(RegTag tag) const { return reg_ == tag; }
     bool operator!=(RegTag tag) const { return reg_ != tag; }
-    bool PartOf(x64Reg&) const;
-    bool PartOf(RegTag) const;
 
     std::string ToString() const override;
+    RegTag Tag() const { return reg_; }
 
 private:
     RegTag reg_;
@@ -75,18 +80,21 @@ protected:
     static bool ClassOf(const x64 const* i) { return i->ID() == x64Id::mem; }
 
 public:
-    x64Mem(const std::string& l) : x64(x64Id::mem), label_(l) {}
-    x64Mem(size_t o, RegTag b, RegTag i, size_t s) :
-        x64(x64Id::mem), offset_(o), base_(b), index_(i), scale_(s) {}
+    x64Mem(const std::string& l) : x64(x64Id::mem, 0), label_(l) {}
+    x64Mem(size_t sz, size_t o, const x64Reg& b, const x64Reg& i, size_t s) :
+        x64(x64Id::mem, sz), offset_(o), base_(b), index_(i), scale_(s) {}
 
     std::string ToString() const override;
+
+    bool operator==(const x64Mem& mem) const;
+    bool operator!=(const x64Mem& mem) const { return !(*this == mem); }
 
 private:
     std::string label_{};
 
     long offset_{};
-    RegTag base_{};
-    RegTag index_{};
+    x64Reg base_{ 0 };
+    x64Reg index_{ 0 };
     size_t scale_{};
 };
 
@@ -98,8 +106,11 @@ protected:
     static bool ClassOf(const x64 const* i) { return i->ID() == x64Id::imm; }
 
 public:
-    x64Imm(const Constant* c) : x64(x64Id::imm), val_(c) {}
+    x64Imm(const Constant* c) : x64(x64Id::imm, c->Type()->Size()), val_(c) {}
     std::string ToString() const override;
+
+    bool operator==(const x64Imm& imm) const;
+    bool operator!=(const x64Imm& imm) const { return !(*this == imm); }
 
 private:
     const Constant* val_{};
