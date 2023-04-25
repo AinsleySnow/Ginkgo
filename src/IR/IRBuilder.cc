@@ -79,14 +79,14 @@ void InstrBuilder::MatchArithmType(
     if (target->IsFloat() && regty->IsInt())
     {
         if (regty->ToInteger()->IsSigned())
-            val = InsertStofInstr(trgname, target->ToFloatPoint(), reg);
-        else val = InsertUtofInstr(trgname, target->ToFloatPoint(), reg);
+            val = InsertStoFInstr(trgname, target->ToFloatPoint(), reg);
+        else val = InsertUtoFInstr(trgname, target->ToFloatPoint(), reg);
     }
     else if (target->IsInt() && regty->IsFloat())
     {
         if (target->ToInteger()->IsSigned())
-            val = InsertFtosInstr(trgname, target->ToInteger(), reg);
-        else val = InsertFtouInstr(trgname, target->ToInteger(), reg);
+            val = InsertFtoSInstr(trgname, target->ToInteger(), reg);
+        else val = InsertFtoUInstr(trgname, target->ToInteger(), reg);
     }
     else if (target->operator>(*regty))
     {
@@ -342,7 +342,7 @@ const Register* InstrBuilder::InsertFextInstr(
     return Register::CreateRegister(Container(), result, ty);
 }
 
-const Register* InstrBuilder::InsertFtouInstr(
+const Register* InstrBuilder::InsertFtoUInstr(
     const std::string& result, const IntType* ty, const Register* val)
 {
     auto pftou = std::make_unique<FtoUInstr>(result, ty, val);
@@ -350,7 +350,7 @@ const Register* InstrBuilder::InsertFtouInstr(
     return Register::CreateRegister(Container(), result, ty);
 }
 
-const Register* InstrBuilder::InsertFtosInstr(
+const Register* InstrBuilder::InsertFtoSInstr(
     const std::string& result, const IntType* ty, const Register* val)
 {
     auto pftos = std::make_unique<FtoSInstr>(result, ty, val);
@@ -358,7 +358,7 @@ const Register* InstrBuilder::InsertFtosInstr(
     return Register::CreateRegister(Container(), result, ty);
 }
 
-const Register* InstrBuilder::InsertUtofInstr(
+const Register* InstrBuilder::InsertUtoFInstr(
     const std::string& result, const FloatType* ty, const Register* val)
 {
     auto putof = std::make_unique<UtoFInstr>(result, ty, val);
@@ -366,7 +366,7 @@ const Register* InstrBuilder::InsertUtofInstr(
     return Register::CreateRegister(Container(), result, ty);
 }
 
-const Register* InstrBuilder::InsertStofInstr(
+const Register* InstrBuilder::InsertStoFInstr(
     const std::string& result, const FloatType* ty, const Register* val)
 {
     auto pstof = std::make_unique<StoFInstr>(result, ty, val);
@@ -374,7 +374,7 @@ const Register* InstrBuilder::InsertStofInstr(
     return Register::CreateRegister(Container(), result, ty);
 }
 
-const Register* InstrBuilder::InsertPtrtoiInstr(
+const Register* InstrBuilder::InsertPtrtoIInstr(
     const std::string& result, const IntType* ty, const Register* val)
 {
     auto pptrtoi = std::make_unique<PtrtoIInstr>(result, ty, val);
@@ -382,7 +382,7 @@ const Register* InstrBuilder::InsertPtrtoiInstr(
     return Register::CreateRegister(Container(), result, ty);
 }
 
-const Register* InstrBuilder::InsertItoptrInstr(
+const Register* InstrBuilder::InsertItoPtrInstr(
     const std::string& result, const PtrType* ty, const Register* val)
 {
     auto pitoptr = std::make_unique<ItoPtrInstr>(result, ty, val);
@@ -412,17 +412,19 @@ const Register* InstrBuilder::InsertCmpInstr(
 const Register* InstrBuilder::InsertIcmpInstr(
     const std::string& result, Condition cond, const IROperand* lhs, const IROperand* rhs)
 {
-    auto picmp = std::make_unique<IcmpInstr>(result, cond, lhs, rhs);
+    auto ans = Register::CreateRegister(Container(), result, IntType::GetInt8(true));
+    auto picmp = std::make_unique<IcmpInstr>(ans, cond, lhs, rhs);
     Insert(std::move(picmp));
-    return Register::CreateRegister(Container(), result, IntType::GetInt8(true));
+    return ans;
 }
 
 const Register* InstrBuilder::InsertFcmpInstr(
     const std::string& result, Condition cond, const IROperand* lhs, const IROperand* rhs)
 {
-    auto pfcmp = std::make_unique<FcmpInstr>(result, cond, lhs, rhs);
+    auto ans = Register::CreateRegister(Container(), result, IntType::GetInt8(true));
+    auto pfcmp = std::make_unique<FcmpInstr>(ans, cond, lhs, rhs);
     Insert(std::move(pfcmp));
-    return Register::CreateRegister(Container(), result, IntType::GetInt8(true));
+    return ans;
 }
 
 
@@ -430,14 +432,16 @@ const Register* InstrBuilder::InsertSelectInstr(
     const std::string& result, const IROperand* selty,
     bool cond, const IROperand* lhs, const IROperand* rhs)
 {
-    auto pselect = std::make_unique<SelectInstr>(result, selty, cond, lhs, rhs);
+    auto ans = Register::CreateRegister(Container(), result, lhs->Type());
+    auto pselect = std::make_unique<SelectInstr>(ans, selty, cond, lhs, rhs);
     Insert(std::move(pselect));
-    return Register::CreateRegister(Container(), result, lhs->Type());
+    return ans;
 }
 
 const Register* InstrBuilder::InsertPhiInstr(const std::string& result, const IRType* ty)
 {
-    auto pphi = std::make_unique<PhiInstr>(result, ty);
+    auto ans = Register::CreateRegister(Container(), result, ty);
+    auto pphi = std::make_unique<PhiInstr>(ans, ty);
     Insert(std::move(pphi));
-    return Register::CreateRegister(Container(), result, ty);
+    return ans;
 }

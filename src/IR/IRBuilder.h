@@ -192,17 +192,17 @@ public:
     const Register* InsertFextInstr(
         const std::string& result, const FloatType* ty, const Register* val);
 
-    const Register* InsertFtouInstr(
+    const Register* InsertFtoUInstr(
         const std::string& r, const IntType* t, const Register* v);
-    const Register* InsertFtosInstr(
+    const Register* InsertFtoSInstr(
         const std::string& r, const IntType* t, const Register* v);
-    const Register* InsertUtofInstr(
+    const Register* InsertUtoFInstr(
         const std::string& r, const FloatType* t1, const Register* v);
-    const Register* InsertStofInstr(
+    const Register* InsertStoFInstr(
         const std::string& r, const FloatType* t, const Register* v);
-    const Register* InsertPtrtoiInstr(
+    const Register* InsertPtrtoIInstr(
         const std::string& r, const IntType* t, const Register* v);
-    const Register* InsertItoptrInstr(
+    const Register* InsertItoPtrInstr(
         const std::string& r, const PtrType* t, const Register* v);
     const Register* InsertBitcastInstr(
         const std::string& r, const IRType* t, const Register* v);
