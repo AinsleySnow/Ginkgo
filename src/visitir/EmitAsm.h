@@ -20,39 +20,44 @@ public:
     void EmitPseudoInstr(
         const std::string&, std::initializer_list<std::string>);
 
-    void EmitCxtx(char, char);
-    void EmitLeaq(const std::string&, const std::string&);
-    void EmitUnary(char, const std::string&, const std::string&);
-    void EmitBinary(char, const std::string&, const std::string&, const std::string&);
+    void EmitCxtx(const x64Reg* rax);
+    void EmitLeaq(const x64* addr, const x64* dest);
+    void EmitUnary(const std::string& instr, const x64* op);
+    void EmitBinary(const std::string& instr, const x64* op1, const x64* op2);
 
-    void EmitVarithm(const std::string&, const std::string&, const std::string&,
-        const std::string&, const std::string&);
-    void EmitVcvtt(const std::string&, const std::string&,
-        const std::string&, const std::string&);
-    void EmitVcvt(const std::string&, const std::string&, const std::string&,
-        const std::string&, const std::string&);
-    void EmitUcom(const std::string&, const std::string&, const std::string&);
+    void EmitVarithm(const std::string& instr, const x64* op1,
+        const x64* op2, const x64* dest);
+    void EmitVcvtt(const x64* src, const x64* dest);
+    void EmitVcvt(const x64* op1, const x64* op2, const x64* dest);
+    void EmitUcom(const x64* op1, const x64* op2);
 
-    void EmitMov(char, const std::string&, const std::string&);
-    void EmitMovz(char, char, const std::string&, const std::string&);
-    void EmitMovs(char, char, const std::string&, const std::string&);
-    void EmitVmov(const std::string&, const std::string&, const std::string&);
+    void EmitMov(const x64* src, const x64* dest);
+    void EmitMovz(const x64* src, const x64* dest);
+    void EmitMovz(size_t from, size_t to, const x64* op);
+    void EmitMovs(const x64* src, const x64* dest);
+    void EmitMovs(size_t from, size_t to, const x64* op);
+    void EmitVmov(const x64* src, const x64* dest);
 
-    void EmitPop(char, const std::string&);
-    void EmitPush(char, const std::string&);
+    void EmitPop(const x64Reg* dest);
+    void EmitPush(const x64Reg* dest);
 
     void EmitCall(const std::string&);
+    void EmitCall(const x64* func);
     void EmitRet();
 
     void EmitJmp(const std::string&, const std::string&);
-    void EmitCMov(const std::string&, const std::string&, const std::string&);
+    void EmitCMov(const std::string& cond, const x64* op1, const x64* op2);
 
-    void EmitCmp(char, const std::string&, const std::string&);
-    void EmitTest(char, const std::string&, const std::string&);
-    void EmitSet(const std::string&, const std::string&);
-
+    void EmitCmp(const x64* op1, const x64* op2);
+    void EmitCmp(const x64* op1, unsigned long);
+    void EmitTest(const x64* op1, const x64* op2);
+    void EmitTest(const x64* op1, unsigned long);
+    void EmitSet(const std::string& cond, const x64* dest);
 
 private:
+    char GetIntTag(const x64* op) const;
+    std::string GetFltTag(const x64* op) const;
+
     std::string filename_{};
     FILE* file_{};
 };

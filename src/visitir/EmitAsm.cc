@@ -6,6 +6,23 @@
 #define TEMP_PREFIX "@__Ginkgo_temp_"
 
 
+char EmitAsm::GetIntTag(const x64* op) const
+{
+    if (op->Size() == 1) return 'b';
+    if (op->Size() == 2) return 'w';
+    if (op->Size() == 4) return 'l';
+    if (op->Size() == 8) return 'q';
+    return '\0';
+}
+
+std::string EmitAsm::GetFltTag(const x64* op) const
+{
+    if (op->Size() == 4) return "ss";
+    if (op->Size() == 8) return "sd";
+    return "";
+}
+
+
 EmitAsm::EmitAsm()
 {
     std::random_device rd;
@@ -48,99 +65,148 @@ void EmitAsm::EmitPseudoInstr(
 }
 
 
-void EmitAsm::EmitCxtx(char from, char to)
+void EmitAsm::EmitCxtx(const x64Reg* rax)
 {
+    char from = GetIntTag(rax);
+    char to = from == 'q' ? 'o' : 'l';
     fprintf(file_, INDENT "c%ct%c\n", from, to);
 }
 
-void EmitAsm::EmitLeaq(
-    const std::string& addr, const std::string& dest)
+void EmitAsm::EmitLeaq(const x64* addr, const x64* dest)
 {
-    fprintf(file_, INDENT "leaq %s, %s\n", addr.c_str(), dest.c_str());
+    fprintf(file_, INDENT "leaq %s, %s\n",
+        addr->ToString().c_str(), dest->ToString().c_str());
 }
 
-void EmitAsm::EmitUnary(
-    char suffix, const std::string& instr, const std::string& op)
+void EmitAsm::EmitUnary(const std::string& instr, const x64* op)
 {
-    fprintf(file_, INDENT "%s%c %s\n", instr.c_str(), suffix, op.c_str());
+    fprintf(file_, INDENT "%s%c %s\n",
+        instr.c_str(), GetIntTag(op), op->ToString().c_str());
 }
 
-void EmitAsm::EmitBinary(char suffix, const std::string& instr,
-    const std::string& op1, const std::string& op2)
+void EmitAsm::EmitBinary(const std::string& instr, const x64* op1, const x64* op2)
 {
-    fprintf(file_, INDENT "%s%c %s, %s\n",
-        instr.c_str(), suffix, op1.c_str(), op2.c_str());
+    fprintf(file_, INDENT "%s%c %s, %s\n", instr.c_str(),
+        GetIntTag(op1), op1->ToString().c_str(), op2->ToString().c_str());
 }
 
 
-void EmitAsm::EmitVarithm(const std::string& instr, const std::string& precision,
-    const std::string& op1, const std::string& op2, const std::string& dest)
+void EmitAsm::EmitVarithm(const std::string& instr, const x64* op1,
+    const x64* op2, const x64* dest)
 {
+    auto precision = GetFltTag(op1);
+
     if (instr == "sqrt")
-        fprintf(file_, INDENT "%s%s %s, %s\n",
-            instr.c_str(), precision.c_str(), op1.c_str(), dest.c_str());
+        fprintf(file_, INDENT "%s%s %s, %s\n", instr.c_str(),
+            precision.c_str(), op1->ToString().c_str(), dest->ToString().c_str());
     else if (instr == "and")
-        fprintf(file_, INDENT "%s%s %s, %s, %s\n",
-            instr.c_str(), precision.c_str(), op1.c_str(), op2.c_str(), dest.c_str());
+        fprintf(file_, INDENT "%s%s %s, %s, %s\n", instr.c_str(),
+            precision.c_str(), op1->ToString().c_str(), op2->ToString().c_str(), dest->ToString().c_str());
     else
-        fprintf(file_, INDENT "v%s%s %s, %s, %s\n",
-            instr.c_str(), precision.c_str(), op1.c_str(), op2.c_str(), dest.c_str());
+        fprintf(file_, INDENT "v%s%s %s, %s, %s\n", instr.c_str(),
+            precision.c_str(), op1->ToString().c_str(), op2->ToString().c_str(), dest->ToString().c_str());
 }
 
-void EmitAsm::EmitVcvtt(const std::string& from, const std::string& to,
-    const std::string& src, const std::string& dest)
+void EmitAsm::EmitVcvtt(const x64* src, const x64* dest)
 {
-    fprintf(file_, INDENT "vcvtt%s2%s %s, %s\n",
-        from.c_str(), to.c_str(), src.c_str(), dest.c_str());
+    auto from = GetFltTag(src);
+    auto to = dest->Size() == 8 ? "q " : " ";
+
+    fprintf(file_, INDENT "vcvtt%s2si%s%s, %s\n",
+        from.c_str(), to, src->ToString().c_str(), dest->ToString().c_str());
 }
 
-void EmitAsm::EmitVcvt(const std::string& from, const std::string& to,
-    const std::string& op1, const std::string& op2, const std::string& dest)
+void EmitAsm::EmitVcvt(const x64* op1, const x64* op2, const x64* dest)
 {
-    fprintf(file_, INDENT "vcvt%s2%s %s, %s, %s\n",
-        from.c_str(), to.c_str(), op1.c_str(), op2.c_str(), dest.c_str());
+    auto t2 = GetFltTag(dest);
+    auto suffix = op2->Size() == 8 ? "q " : " ";
+
+    fprintf(file_, INDENT "vcvtsi2%s%s%s, %s, %s\n", t2.c_str(), suffix,
+        op1->ToString().c_str(), op2->ToString().c_str(), dest->ToString().c_str());
 }
 
-void EmitAsm::EmitUcom(
-    const std::string& precision, const std::string& op1, const std::string& op2)
+void EmitAsm::EmitUcom(const x64* op1, const x64* op2)
 {
     fprintf(file_, INDENT "vucomi%s %s, %s\n",
-        precision.c_str(), op1.c_str(), op2.c_str());
+        GetFltTag(op1).c_str(), op1->ToString().c_str(), op2->ToString().c_str());
 }
 
 
-void EmitAsm::EmitMov(char suffix, const std::string& src, const std::string& dest)
+void EmitAsm::EmitMov(const x64* src, const x64* dest)
 {
-    fprintf(file_, INDENT "mov%c %s, %s\n", suffix, src.c_str(), dest.c_str());
+    fprintf(file_, INDENT "mov%c %s, %s\n",
+        GetIntTag(src), src->ToString().c_str(), dest->ToString().c_str());
 }
 
-void EmitAsm::EmitMovz(
-    char from, char to, const std::string& src, const std::string& dest)
+void EmitAsm::EmitMovz(const x64* src, const x64* dest)
 {
-    fprintf(file_, INDENT "movz%c%c %s, %s\n", from, to, src.c_str(), dest.c_str());
+    char from = GetIntTag(src);
+    char to = GetIntTag(dest);
+    fprintf(file_, INDENT "movz%c%c %s, %s\n", from, to,
+        src->ToString().c_str(), dest->ToString().c_str());
 }
 
-void EmitAsm::EmitMovs(
-    char from, char to, const std::string& src, const std::string& dest)
+void EmitAsm::EmitMovz(size_t from, size_t to, const x64* op)
 {
-    fprintf(file_, INDENT "movs%c%c %s, %s\n", from, to, src.c_str(), dest.c_str());
+    auto original = op->Size();
+
+    const_cast<x64*>(op)->Size() = from;
+    auto sfrm = op->ToString();
+    auto tfrm = GetIntTag(op);
+
+    const_cast<x64*>(op)->Size() = to;
+    auto sto = op->ToString();
+    auto tto = GetIntTag(op);
+
+    fprintf(file_, INDENT "movz%c%c %s, %s\n",
+        tfrm, tto, sfrm.c_str(), sto.c_str());
+
+    const_cast<x64*>(op)->Size() = original;
 }
 
-void EmitAsm::EmitVmov(
-    const std::string& suffix, const std::string& src, const std::string& dest)
+void EmitAsm::EmitMovs(const x64* src, const x64* dest)
 {
-    fprintf(file_, INDENT "vmov%s %s, %s\n", suffix.c_str(), src.c_str(), dest.c_str());
+    char from = GetIntTag(src);
+    char to = GetIntTag(dest);
+    fprintf(file_, INDENT "movs%c%c %s, %s\n",
+        from, to, src->ToString().c_str(), dest->ToString().c_str());
+}
+
+void EmitAsm::EmitMovs(size_t from, size_t to, const x64* op)
+{
+    auto original = op->Size();
+
+    const_cast<x64*>(op)->Size() = from;
+    auto sfrm = op->ToString();
+    auto tfrm = GetIntTag(op);
+
+    const_cast<x64*>(op)->Size() = to;
+    auto sto = op->ToString();
+    auto tto = GetIntTag(op);
+
+    fprintf(file_, INDENT "movs%c%c %s, %s\n",
+        tfrm, tto, sfrm.c_str(), sto.c_str());
+
+    const_cast<x64*>(op)->Size() = original;
+}
+
+void EmitAsm::EmitVmov(const x64* src, const x64* dest)
+{
+    fprintf(file_, INDENT "vmov%s %s, %s\n",
+        GetFltTag(src).c_str(), src->ToString().c_str(), dest->ToString().c_str());
 }
 
 
-void EmitAsm::EmitPop(char suffix, const std::string& dest)
+void EmitAsm::EmitPop(const x64Reg* dest)
 {
-    fprintf(file_, INDENT "pop%c %s\n", suffix, dest.c_str());
+    fprintf(file_, INDENT "pop%c %s\n",
+        GetIntTag(dest), dest->ToString().c_str());
 }
 
-void EmitAsm::EmitPush(char suffix, const std::string& dest)
+void EmitAsm::EmitPush(const x64Reg* dest)
 {
-    fprintf(file_, INDENT "push%c %s\n", suffix, dest.c_str());
+    fprintf(file_, INDENT "push%c %s\n",
+        GetIntTag(dest), dest->ToString().c_str());
 }
 
 
@@ -149,36 +215,50 @@ void EmitAsm::EmitCall(const std::string& func)
     fprintf(file_, INDENT "call %s\n", func.c_str());
 }
 
+void EmitAsm::EmitCall(const x64* func)
+{
+    fprintf(file_, INDENT "call *%s\n", func->ToString().c_str());
+}
+
 void EmitAsm::EmitRet()
 {
     fprintf(file_, INDENT "ret\n");
 }
 
 
-void EmitAsm::EmitJmp(const std::string& condition, const std::string& label)
+void EmitAsm::EmitJmp(const std::string& cond, const std::string& label)
 {
     fprintf(file_, INDENT "j%s %s\n",
-        condition.empty() ? "mp" : condition.c_str(), label.c_str());
+        cond.empty() ? "mp" : cond.c_str(), label.c_str());
 }
 
-void EmitAsm::EmitCMov(
-    const std::string& condition, const std::string& op1, const std::string& op2)
+void EmitAsm::EmitCMov(const std::string& cond, const x64* op1, const x64* op2)
 {
-    fprintf(file_, INDENT "cmov%s %s, %s\n", condition.c_str(), op1.c_str(), op2.c_str());
+    fprintf(file_, INDENT "cmov%s %s, %s\n",
+        cond.c_str(), op1->ToString().c_str(), op2->ToString().c_str());
 }
 
 
-void EmitAsm::EmitCmp(char suffix, const std::string& op1, const std::string& op2)
+void EmitAsm::EmitCmp(const x64* op1, const x64* op2)
 {
-    fprintf(file_, INDENT "cmp%c %s, %s\n", suffix, op1.c_str(), op2.c_str());
+    fprintf(file_, INDENT "cmp%c %s, %s\n",
+        GetIntTag(op1), op1->ToString().c_str(), op2->ToString().c_str());
 }
 
-void EmitAsm::EmitTest(char suffix, const std::string& op1, const std::string& op2)
+void EmitAsm::EmitCmp(const x64* op1, unsigned long c)
 {
-    fprintf(file_, INDENT "test%c %s, %s\n", suffix, op1.c_str(), op2.c_str());
+    fprintf(file_, INDENT "cmp%c %s, $%s\n",
+        GetIntTag(op1), op1->ToString().c_str(), std::to_string(c));
 }
 
-void EmitAsm::EmitSet(const std::string& condition, const std::string& dest)
+void EmitAsm::EmitTest(const x64* op1, const x64* op2)
 {
-    fprintf(file_, INDENT "set%s %s\n", condition.c_str(), dest.c_str());
+    fprintf(file_, INDENT "test%c %s, %s\n",
+        GetIntTag(op1), op1->ToString().c_str(), op2->ToString().c_str());
+}
+
+void EmitAsm::EmitSet(const std::string& cond, const x64* dest)
+{
+    fprintf(file_, INDENT "set%s %s\n",
+        cond.c_str(), dest->ToString().c_str());
 }

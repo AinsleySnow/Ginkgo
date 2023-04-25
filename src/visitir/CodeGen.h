@@ -4,6 +4,7 @@
 #include "visitir/IRVisitor.h"
 #include "visitir/EmitAsm.h"
 #include "visitir/x64.h"
+#include "pass/x64Alloc.h"
 #include <cstdio>
 #include <string>
 #include <unordered_map>
@@ -26,6 +27,11 @@ public:
     void VisitFunction(Function*) override;
     void VisitBasicBlock(BasicBlock*) override;
 
+    void VisitRetInstr(RetInstr*) override;
+    void VisitBrInstr(BrInstr*) override;
+    void VisitSwitchInstr(SwitchInstr*) override;
+    void VisitCallInstr(CallInstr*) override;
+
     void VisitAddInstr(AddInstr*) override;
     void VisitFaddInstr(FaddInstr*) override;
     void VisitSubInstr(SubInstr*) override;
@@ -42,9 +48,8 @@ public:
     void VisitOrInstr(OrInstr*) override;
     void VisitXorInstr(XorInstr*) override;
 
-    // Load, Alloca and GetElePtr instruction
-    // will be handled in register allocators
-    void VisitStoreInstr(StoreInstr*) override;
+    void VisitLoadInstr(LoadInstr*) override;
+    void VisitStoreInstr(StoreInstr*) override; 
 
     void VisitTruncInstr(TruncInstr*) override;
     void VisitFtruncInstr(FtruncInstr*) override;
@@ -60,7 +65,14 @@ public:
     // instructions like PtrtoI, ItoPtr and Bitcast
     // Will be handled in register allocators
 
+    void VisitIcmpInstr(IcmpInstr*) override;
+    void VisitFcmpInstr(FcmpInstr*) override;
+    void VisitSelectInstr(SelectInstr*) override;
+    void VisitPhiInstr(PhiInstr*) override;
+
 private:
+    void AdjustRsp();
+    std::string Cond2Str(Condition, bool);
     void BinaryGenHelper(const std::string&, const BinaryInstr*);
     void VarithmGenHelper(const std::string&, const BinaryInstr*);
 
