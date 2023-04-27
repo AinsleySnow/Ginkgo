@@ -6,6 +6,7 @@ int yylex(yy::parser::value_type* yylval, CheckType& checktype);
 
 %code requires
 {
+#include <algorithm>
 #include <cstdio>
 #include <cctype>
 #include <memory>
@@ -154,8 +155,17 @@ primary_expression
 	;
 
 constant
-	: I_CONSTANT 
+	: I_CONSTANT
     {
+        if ($1[0] == '\'' || $1[0] == 'U' || $1[0] == 'L' ||
+            $1.substr(0, 1) == "u" || $1.substr(0, 2) == "u8")
+        {
+            $$ = std::make_unique<ConstExpr>($1);
+            break; // since the block will be copied into a switch body
+        }
+
+        str.erase(std::remove(str.begin(), str.end(), '\''), str.end());
+
         auto index = $1.find_first_of("ulUL");
         std::string suffix = "";
         if (index != std::string::npos)
@@ -167,9 +177,7 @@ constant
         else if ($1.length() > 1 && $1[0] == '0') base = 8;
  
         $$ = std::make_unique<ConstExpr>(
-            std::stoull($1.substr(0, $1.length() - suffix.length())),
-            base,
-            suffix);
+            std::stoull($1.substr(0, $1.length() - suffix.length())), base, suffix);
     }
     /* includes character_constant */
 	| F_CONSTANT

@@ -145,9 +145,10 @@ class ConstExpr : public Expr
 {
 public:
     ConstExpr() {}
-    explicit ConstExpr(uint64_t u) : val_(u) {}
-    explicit ConstExpr(double d) : val_(d) {}
-    explicit ConstExpr(bool b) : val_(b) {}
+    explicit ConstExpr(uint64_t u);
+    explicit ConstExpr(double d);
+    explicit ConstExpr(bool b);
+    explicit ConstExpr(const std::string& s);
     explicit ConstExpr(uint64_t u, int b, const std::string& s);
     explicit ConstExpr(double d, char s);
 
@@ -264,9 +265,13 @@ public:
     StrExpr(const std::string& s) : content_(s) {}
 
     void Accept(ASTVisitor* v) override;
+    const auto& Content() const { return content_; }
+    auto& Width() { return width_; }
+    const auto Width() const { return width_; }
 
 private:
     std::string content_{};
+    int width_{};
 };
 
 

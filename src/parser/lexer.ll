@@ -12,14 +12,20 @@ L   [a-zA-Z_]
 A   [a-zA-Z_0-9]
 H   [a-fA-F0-9]
 HP  (0[xX])
-E   ([Ee][+-]?{D}+)
-P   ([Pp][+-]?{D}+)
+OS  ({O}({O}|('{O}))*)
+DS  ({D}({D}|('{D}))*)
+HS  ({H}({H}|('{H}))*)
+E   ([Ee][+-]?{DS})
+P   ([Pp][+-]?{DS})
 FS  (f|F|l|L)
 IS  (((u|U)(l|L|ll|LL)?)|((l|L|ll|LL)(u|U)?))
 CP  (u|U|L)
 SP  (u8|u|U|L)
 ES  (\\(['"\?\\abfnrtv]|[0-7]{1,3}|x[a-fA-F0-9]+))
 WS  [ \t\v\n\f]
+
+/* U8 - expect for [\x00-\x7f] - this one will be handled seperately */
+U8  [\xc2-\xdf][\x80-\xbf]|\xe0[\xa0-\xbf][\x80-\xbf]|[\xe1-\xec][\x80-\xbf][\x80-\xbf]|\xed[\x80-\x9f][\x80-\xbf]|[\xee\xef][\x80-\xbf][\x80-\xbf]|\xf0[\x90-\xbf][\x80-\xbf][\x80-\xbf]|[\xf1-\xf3][\x80-\xbf][\x80-\xbf][\x80-\xbf]|\xf4[\x80-\x8f][\x80-\xbf][\x80-\xbf]
 
 %option nounput
 
@@ -105,7 +111,7 @@ static void comment(void);
 }
 
 
-{L}{A}*					{
+({L}|{U8})({A}|{U8})*		{
     yylval->emplace<std::string>() = yytext;
 
     int ty = checktype(yytext);
@@ -115,17 +121,17 @@ static void comment(void);
     return ty;
 }
 
-{HP}{H}+{IS}?				  { yylval->emplace<std::string>() = yytext; return YYTOKEN::I_CONSTANT; }
-{NZ}{D}*{IS}?				  { yylval->emplace<std::string>() = yytext; return YYTOKEN::I_CONSTANT; }
-"0"{O}*{IS}?				  { yylval->emplace<std::string>() = yytext; return YYTOKEN::I_CONSTANT; }
+{HP}{HS}{IS}?				  { yylval->emplace<std::string>() = yytext; return YYTOKEN::I_CONSTANT; }
+{NZ}{DS}?{IS}?				  { yylval->emplace<std::string>() = yytext; return YYTOKEN::I_CONSTANT; }
+"0"{OS}{IS}?				  { yylval->emplace<std::string>() = yytext; return YYTOKEN::I_CONSTANT; }
 {CP}?"'"([^'\\\n]|{ES})+"'"	  { yylval->emplace<std::string>() = yytext; return YYTOKEN::I_CONSTANT; }
 
-{D}+{E}{FS}?				  { yylval->emplace<std::string>() = yytext; return YYTOKEN::F_CONSTANT; }
-{D}*"."{D}+{E}?{FS}?		  { yylval->emplace<std::string>() = yytext; return YYTOKEN::F_CONSTANT; }
-{D}+"."{E}?{FS}?			  { yylval->emplace<std::string>() = yytext; return YYTOKEN::F_CONSTANT; }
-{HP}{H}+{P}{FS}?			  { yylval->emplace<std::string>() = yytext; return YYTOKEN::F_CONSTANT; }
-{HP}{H}*"."{H}+{P}{FS}?		  { yylval->emplace<std::string>() = yytext; return YYTOKEN::F_CONSTANT; }
-{HP}{H}+"."{P}{FS}?			  { yylval->emplace<std::string>() = yytext; return YYTOKEN::F_CONSTANT; }
+{DS}{E}{FS}?				  { yylval->emplace<std::string>() = yytext; return YYTOKEN::F_CONSTANT; }
+{DS}?"."{D}+{E}?{FS}?		  { yylval->emplace<std::string>() = yytext; return YYTOKEN::F_CONSTANT; }
+{DS}"."{E}?{FS}?			  { yylval->emplace<std::string>() = yytext; return YYTOKEN::F_CONSTANT; }
+{HP}{HS}{P}{FS}?			  { yylval->emplace<std::string>() = yytext; return YYTOKEN::F_CONSTANT; }
+{HP}{HS}?"."{HS}{P}{FS}?	  { yylval->emplace<std::string>() = yytext; return YYTOKEN::F_CONSTANT; }
+{HP}{HS}"."{P}{FS}?			  { yylval->emplace<std::string>() = yytext; return YYTOKEN::F_CONSTANT; }
 
 ({SP}?\"([^"\\\n]|{ES})*\"{WS}*)+	{ return YYTOKEN::STRING_LITERAL; }
 

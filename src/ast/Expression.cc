@@ -3,9 +3,11 @@
 #include "IR/IROperand.h"
 #include "messages/Error.h"
 #include "visitast/ASTVisitor.h"
+#include "utf8.h"
 #include <algorithm>
 #include <climits>
 #include <cfloat>
+#include <iconv.h>
 
 
 void ArrayExpr::Accept(ASTVisitor* v)
@@ -53,7 +55,7 @@ ConstExpr::ConstExpr(uint64_t u) : val_(u)
     type_ = std::make_unique<CArithmType>(TypeTag::uint64);
 }
 
-ConstExpr::ConstExpr(double d)
+ConstExpr::ConstExpr(double d) : val_(d)
 {
     type_ = std::make_unique<CArithmType>(TypeTag::flt64);
 }
@@ -61,6 +63,34 @@ ConstExpr::ConstExpr(double d)
 ConstExpr::ConstExpr(bool b) : val_(b)
 {
     type_ = std::make_unique<CArithmType>(TypeTag::int8);
+}
+
+ConstExpr::ConstExpr(const std::string& s)
+{
+    // no prefix or the prefix is u8
+    if (s[0] == '\'' || s[0] == 'u' && s[1] == '8')
+    {
+        val_ = static_cast<uint64_t>(s[1]);
+        type_ = std::make_unique<CArithmType>(TypeTag::uint8);
+    }
+    else if (s[0] == 'u')
+    {
+        auto copy = s;
+        copy.erase(copy.begin());
+        copy.pop_back();
+        auto temp = utf8::utf8to16(copy);
+        val_ = static_cast<uint64_t>(temp[0]);
+        type_ = std::make_unique<CArithmType>(TypeTag::uint16);
+    }
+    else // the prefix is U or L; wchar_t has width of 32, as defined in stddef.h
+    {
+        auto copy = s;
+        copy.erase(copy.begin());
+        copy.pop_back();
+        auto temp = utf8::utf8to32(copy);
+        val_ = static_cast<uint64_t>(temp[0]);
+        type_ = std::make_unique<CArithmType>(TypeTag::uint32);
+    }
 }
 
 ConstExpr::ConstExpr(uint64_t u, int base, const std::string& suffix) : val_(u)
