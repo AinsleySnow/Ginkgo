@@ -7,6 +7,9 @@
 #include "IR/IROperand.h"
 #include "messages/Error.h"
 #include <algorithm>
+#include <cctype>
+#include "fmt/format.h"
+#include "utf8.h"
 
 
 void IRGen::CurrentEnv::Epilog(BasicBlock* bb)
@@ -709,6 +712,41 @@ void IRGen::VisitLogicalExpr(LogicalExpr* logical)
         phi->AddBlockValPair(firstblk, one);
         phi->AddBlockValPair(midblk, cmpans);
     }
+}
+
+
+template <typename T>
+std::string WashString(T str)
+{
+    std::string result = "";
+
+    for (auto i = str.begin(); i != str.end(); ++i)
+    {
+        if (isprint(*i)) result += *i;
+        else
+        {
+            result += "\\x";
+            result += fmt::format("{:0x}", *i);
+        }
+    }
+}
+
+void IRGen::VisitStrExpr(StrExpr* str)
+{
+    tbud_.VisitStrExpr(str);
+
+    auto content = str->Content();
+    std::string literal = "";
+
+    if (str->Width() == 1)
+        literal = WashString(content);
+    else if (str->Width() == 2)
+        literal = WashString(utf8::utf8to16(content));
+    else if (str->Width() == 4)
+        literal = WashString(utf8::utf8to32(content));
+
+    str->Val() = StrConst::CreateStrConst(
+        transunit_.get(), literal, str->Type()->ToIRType(transunit_.get()));
 }
 
 

@@ -46,6 +46,7 @@ public:
     void VisitExprList(ExprList*) override;
     void VisitIdentExpr(IdentExpr*) override;
     void VisitLogicalExpr(LogicalExpr*) override;
+    void VisitStrExpr(StrExpr*) override;
     void VisitUnaryExpr(UnaryExpr*) override;
 
     void VisitBreakStmt(BreakStmt*) override;

@@ -23,7 +23,6 @@ public:
     void VisitArrayExpr(ArrayExpr*) override;
     void VisitAssignExpr(AssignExpr*) override;
     void VisitBinaryExpr(BinaryExpr*) override;
-    void VisitConstant(ConstExpr*) override;
     void VisitCallExpr(CallExpr*) override;
     void VisitCastExpr(CastExpr*) override;
     void VisitCondExpr(CondExpr*) override;
@@ -31,6 +30,7 @@ public:
     void VisitEnumList(EnumList*) override;
     void VisitIdentExpr(IdentExpr*) override;
     void VisitLogicalExpr(LogicalExpr*) override;
+    void VisitStrExpr(StrExpr*) override;
     void VisitUnaryExpr(UnaryExpr*) override;
 
 private:

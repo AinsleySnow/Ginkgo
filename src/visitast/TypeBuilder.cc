@@ -348,6 +348,55 @@ void TypeBuilder::VisitLogicalExpr(LogicalExpr* expr)
 }
 
 
+void TypeBuilder::VisitStrExpr(StrExpr* str)
+{
+    if (str->Type()) return;
+
+    int width = 0;
+    auto setwidth = [&width] (int w) {
+        if (width) width = -1;
+        width = w;
+    };
+
+    int i = 0;
+    while ((i = str->Content().
+        find_first_of('"', i)) != std::string::npos)
+    {
+        if (i == 0) continue;
+
+        char prefix = str->Content()[i - 1];
+        if (prefix == '8') setwidth(1);
+        else if (prefix == 'u') setwidth(2);
+        else if (prefix == 'U' || prefix == 'L') setwidth(4);
+    
+        // now i is inside a string
+        while ((i = str->Content().
+            find_first_of('"', i)) != std::string::npos)
+            if (str->Content()[i - 1] != '\\')
+                break;
+        
+        i += 1;
+    }
+
+    str->Width() = width <= 0 ? 1 : width;
+
+    // Differently-perfixed wide string will be treated as
+    // a character string literal. (6.4.5[5] in the C23 standard)
+    if (width == 0 || width == -1)
+        str->Type() = std::make_unique<CPtrType>(
+            std::make_unique<CArithmType>(TypeTag::int8));
+    else if (width == 1)
+        str->Type() = std::make_unique<CPtrType>(
+            std::make_unique<CArithmType>(TypeTag::uint8));
+    else if (width == 2)
+        str->Type() = std::make_unique<CPtrType>(
+            std::make_unique<CArithmType>(TypeTag::uint16));
+    else if (width == 4)
+        str->Type() = std::make_unique<CPtrType>(
+            std::make_unique<CArithmType>(TypeTag::uint32));
+}
+
+
 void TypeBuilder::VisitUnaryExpr(UnaryExpr* expr)
 {
     if (expr->Type()) return;
