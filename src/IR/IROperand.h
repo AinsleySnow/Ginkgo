@@ -12,7 +12,7 @@
 class IROperand
 {
 protected:
-    enum class OpId { op, _int, _float, reg };
+    enum class OpId { op, _int, _float, str, reg };
     static bool ClassOf(const IROperand const*) { return true; }
     OpId id_ = OpId::op;
 
@@ -86,6 +86,23 @@ public:
 
 private:
     double num_{};
+};
+
+class StrConst : public IROperand
+{
+protected:
+    static bool ClassOf(const StrConst const*) { return true; }
+    static bool ClassOf(const IROperand const* op) { return op->ID() == OpId::str; }
+
+public:
+    static StrConst* CreateStrConst(Pool<IROperand>*, const std::string&, const IRType*);
+    StrConst(const std::string& s, const PtrType* ty) :
+        literal_(s), IROperand(OpId::str, ty) {}
+
+    std::string ToString() const override { return literal_; }
+
+private:
+    std::string literal_{};
 };
 
 
