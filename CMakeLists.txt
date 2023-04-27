@@ -22,9 +22,14 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 set(GINKGO_SRC_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/src)
-include_directories(${GINKGO_SRC_INCLUDE_DIR})
+set(GINKGO_THIRD_PARTY_INCLUDE_DIR
+    ${PROJECT_SOURCE_DIR}/third_party
+    ${PROJECT_SOURCE_DIR}/third_party/fmt/include
+    ${PROJECT_SOURCE_DIR}/third_party/utfcpp/source)
+include_directories(${GINKGO_SRC_INCLUDE_DIR} ${GINKGO_THIRD_PARTY_INCLUDE_DIR})
 
 add_subdirectory(src)
+add_subdirectory(third_party)
 
 set(GINKGO_SRC_DIR ${PROJECT_SOURCE_DIR}/src)
 
