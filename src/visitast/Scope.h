@@ -32,6 +32,7 @@ public:
     Func* AddFunc(const std::string&, const CFuncType*, const Register*);
     Label* AddLabel(const std::string&);
     Typedef* AddTypedef(const std::string&, const CType*);
+    Typedef* AddTypedef(const std::string&, const Typedef*);
     CustomedType* AddCustomed(const std::string&, const CType*);
     Member* AddMember(const std::string&, const CType*, const IntConst* = nullptr);
 
@@ -50,7 +51,7 @@ public:
     const Object* SearchObject(const std::string&);
     const Func* SearchFunc(const std::string&);
     const Label* SearchLabel(const std::string&);
-    const Typedef* SearchTypedef(const std::string&);
+    const CType* UnderlyingTydef(const std::string&);
     const CustomedType* SearchCustomed(const std::string&);
     const Member* SearchMember(const std::string&);
 

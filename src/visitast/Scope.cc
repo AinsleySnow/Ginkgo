@@ -1,5 +1,4 @@
 #include "visitast/Scope.h"
-#include "ast/CType.h"
 
 
 Identifier* Scope::FindingHelper(const std::string& name, Identifier::IdentType it) const
@@ -72,6 +71,22 @@ Label* Scope::AddLabel(const std::string& name)
     auto plabel = label.get();
     identmap_.emplace(name, std::move(label));
     return plabel;
+}
+
+Typedef* Scope::AddTypedef(const std::string& name, const CType* ty)
+{
+    auto typedef_ = std::make_unique<Typedef>(name, ty);
+    auto ptypedef = typedef_.get();
+    identmap_.emplace(name, std::move(typedef_));
+    return ptypedef;
+}
+
+Typedef* Scope::AddTypedef(const std::string& name, const Typedef* def)
+{
+    auto typedef_ = std::make_unique<Typedef>(name, def);
+    auto ptypedef = typedef_.get();
+    identmap_.emplace(name, std::move(typedef_));
+    return ptypedef;
 }
 
 CustomedType* Scope::AddCustomed(const std::string& name, const CType* ty)
@@ -157,6 +172,28 @@ const Label* ScopeStack::SearchLabel(const std::string& name)
         }
     }
 
+    return nullptr;
+}
+
+const CType* ScopeStack::UnderlyingTydef(const std::string& name)
+{
+    auto n = name;
+    for (auto iter = stack_.rbegin(); iter != stack_.rend(); )
+    {
+        const Typedef* target = (*iter)->GetTypedef(n);
+        if (target)
+        {
+            const auto& ty = target->Type();
+            if (std::holds_alternative<const CType*>(ty))
+                return std::get<const CType*>(ty);
+
+            // if the typedef is of another typedef
+            auto tydef = std::get<const Typedef*>(ty);
+            n = tydef->GetName();
+            continue; // stay in current scope
+        }
+        ++iter;
+    }
     return nullptr;
 }
 

@@ -3,8 +3,10 @@
 
 #include "ast/CType.h"
 #include "ast/Expr.h"
+#include "utils/DynCast.h"
 #include <memory>
 #include <string>
+#include <variant>
 
 class Constant;
 class Object;
@@ -88,6 +90,21 @@ public:
 private:
     const Register* reg_{};
     const Constant* value_{};
+};
+
+
+class Typedef : public Identifier
+{
+public:
+    Typedef(const std::string& n, const CType* ty) :
+        Identifier(Identifier::IdentType::tydef, n, ty) {}
+
+    Typedef* ToTypedef() override { return this; }
+    auto& Type() { return type_; }
+    auto Type() const { return type_; }
+
+private:
+    std::variant<const CType*, const Typedef*> type_{};
 };
 
 
