@@ -8,8 +8,8 @@
 #include "messages/Error.h"
 #include <algorithm>
 #include <cctype>
-#include "fmt/format.h"
-#include "utf8.h"
+#include <fmt/format.h>
+#include <utf8.h>
 
 
 void IRGen::CurrentEnv::Epilog(BasicBlock* bb)

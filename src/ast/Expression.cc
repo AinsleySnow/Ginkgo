@@ -3,11 +3,10 @@
 #include "IR/IROperand.h"
 #include "messages/Error.h"
 #include "visitast/ASTVisitor.h"
-#include "utf8.h"
 #include <algorithm>
 #include <climits>
 #include <cfloat>
-#include <iconv.h>
+#include <utf8.h>
 
 
 void ArrayExpr::Accept(ASTVisitor* v)
