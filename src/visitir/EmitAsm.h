@@ -2,18 +2,26 @@
 #define _EMIT_ASM_H_
 
 #include <cstdio>
+#include <fstream>
 #include <initializer_list>
 #include <string>
+#include <unordered_map>
+#include <vector>
+
+class BasicBlock;
+class x64;
+class x64Reg;
 
 
 class EmitAsm
 {
 public:
-    EmitAsm();
     EmitAsm(const std::string&);
     ~EmitAsm();
 
     std::string AsmName() const { return filename_; }
+    void EnterBlock(int, const BasicBlock*);
+    void WriteFile();
 
     void EmitLabel(const std::string&);
     void EmitPseudoInstr(const std::string&);
@@ -58,8 +66,13 @@ private:
     char GetIntTag(const x64* op) const;
     std::string GetFltTag(const x64* op) const;
 
+    std::unordered_map<
+        const BasicBlock*, std::vector<std::string>> blks_{};
+    std::vector<const BasicBlock*> index_{};
+    const BasicBlock* curblk_{};
+
     std::string filename_{};
-    FILE* file_{};
+    std::fstream file_{};
 };
 
 #endif // _EMIT_ASM_H_
