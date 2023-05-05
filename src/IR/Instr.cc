@@ -224,26 +224,26 @@ string to_string(Condition c)
 
 std::string IcmpInstr::ToString() const
 {
-    return result_ + " = icmp " + std::to_string(cond_) +
+    return result_->ToString() + " = icmp " + std::to_string(cond_) +
         ' ' + op1_->ToString() + ", " + op2_->ToString();
 }
 std::string FcmpInstr::ToString() const
 {
-    return result_ + " = fcmp " + std::to_string(cond_) +
+    return result_->ToString() + " = fcmp " + std::to_string(cond_) +
         ' ' + op1_->ToString() + ", " + op2_->ToString();
 }
 
 
 std::string SelectInstr::ToString() const
 {
-    return result_ + " = select " + selty_->ToString() + " ? " +
+    return result_->ToString() + " = select " + selty_->ToString() + " ? " +
         value1_->ToString() + " : " + value2_->ToString();
 }
 
 
 std::string PhiInstr::ToString() const
 {
-    std::string line = result_ + " = phi " + type_->ToString() + ' ';
+    std::string line = result_->ToString() + " = phi " + type_->ToString() + ' ';
     for (auto l = labels_.begin(); l < labels_.end() - 1; ++l)
         line += '[' + l->first->Name() + ", " +
             l->second->ToString() + "] ";

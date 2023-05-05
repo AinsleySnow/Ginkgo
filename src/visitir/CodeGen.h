@@ -12,6 +12,7 @@
 class BinaryInstr;
 class IROperand;
 class Constant;
+enum class Condition;
 
 
 class CodeGen : public IRVisitor
@@ -48,8 +49,8 @@ public:
     void VisitOrInstr(OrInstr*) override;
     void VisitXorInstr(XorInstr*) override;
 
-    void VisitLoadInstr(LoadInstr*) override;
-    void VisitStoreInstr(StoreInstr*) override; 
+    void VisitLoadInstr(LoadInstr*) override {}
+    void VisitStoreInstr(StoreInstr*) override {} 
 
     void VisitTruncInstr(TruncInstr*) override;
     void VisitFtruncInstr(FtruncInstr*) override;
@@ -77,7 +78,7 @@ private:
     void VarithmGenHelper(const std::string&, const BinaryInstr*);
 
     x64Alloc& alloc_;
-    EmitAsm asmfile_{};
+    EmitAsm asmfile_{ "" };
 };
 
 

@@ -38,7 +38,7 @@ void SimpleAlloc::StackCache::AccessStack(const Register* reg) const
 
 void SimpleAlloc::StackCache::Map2Reg(const Register* reg, RegTag tag)
 {
-    auto px64 = std::make_unique<x64Reg>(tag);
+    auto px64 = std::make_unique<x64Reg>(tag, reg->Type()->Size());
     auto raw = px64.get();
     alloc_.MapRegister(reg, std::move(px64));
     regmap_[reg] = raw;
@@ -46,7 +46,7 @@ void SimpleAlloc::StackCache::Map2Reg(const Register* reg, RegTag tag)
 
 void SimpleAlloc::StackCache::Map2Stack(const Register* reg, long offset)
 {
-    auto px64 = std::make_unique<x64Mem>(offset, RegTag::rsp);
+    auto px64 = std::make_unique<x64Mem>(reg->Type()->Size(), offset, RegTag::rsp, RegTag::none, 0);
     auto raw = px64.get();
     alloc_.MapRegister(reg, std::move(px64));
     regmap_[reg] = raw;

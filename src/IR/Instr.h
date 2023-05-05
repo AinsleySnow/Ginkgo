@@ -13,7 +13,7 @@ class IRVisitor;
 
 class Instr
 {
-protected:
+public:
     enum class InstrId
     {
         ret, br, swtch, call,
@@ -31,9 +31,8 @@ protected:
     };
 
     static bool ClassOf(const Instr* const) { return true; }
+    InstrId id_{};
 
-
-public:
     static Instr* CreateInstr(BasicBlock*, std::unique_ptr<Instr>);
     Instr(InstrId instr) : id_(instr) {}
 
@@ -44,26 +43,21 @@ public:
     ENABLE_IS;
     ENABLE_AS;
 
-    InstrId ID() const { return id_; }
     bool IsControlInstr() const 
     { 
         return id_ == InstrId::br ||
             id_ == InstrId::ret || 
             id_ == InstrId::swtch;
     }
-
-private:
-    InstrId id_{};
 };
 
 
 class RetInstr : public Instr
 {
-protected:
-    static bool ClassOf(const RetInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::ret; }
-
 public:
+    static bool ClassOf(const RetInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::ret; }
+
     RetInstr() : Instr(InstrId::ret) {}
     RetInstr(const IROperand* rv) :
         Instr(InstrId::ret), retval_(rv) {}
@@ -80,11 +74,10 @@ private:
 
 class BrInstr : public Instr
 {
-protected:
-    static bool ClassOf(const BrInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::br; }
-
 public:
+    static bool ClassOf(const BrInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::br; }
+
     BrInstr(const BasicBlock* l) : Instr(InstrId::br), true_(l) {}
     BrInstr(const IROperand* c, const BasicBlock* t, const BasicBlock* f) :
         Instr(InstrId::br), cond_(c), true_(t), false_(f) {}
@@ -107,11 +100,10 @@ private:
 
 class SwitchInstr : public Instr
 {
-protected:
-    static bool ClassOf(const SwitchInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::swtch; }
-
 public:
+    static bool ClassOf(const SwitchInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::swtch; }
+
     using ValueBlkPair = std::vector<std::pair<const IntConst*, const BasicBlock*>>;
 
     SwitchInstr(const IROperand* i) : Instr(InstrId::swtch), ident_(i) {}
@@ -131,11 +123,10 @@ private:
 
 class CallInstr : public Instr
 {
-protected:
-    static bool ClassOf(const CallInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::call; }
-
 public:
+    static bool ClassOf(const CallInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::call; }
+
     CallInstr(const std::string& result, const FuncType* proto, const std::string& name) :
         Instr(InstrId::call), result_(result), proto_(proto), func_(name) {}
     CallInstr(const std::string& result, const Register* addr) :
@@ -158,15 +149,14 @@ private:
 
 class BinaryInstr : public Instr
 {
-protected:
-    static bool ClassOf(const BinaryInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i)
+public:
+    static bool ClassOf(const BinaryInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i)
     {
-        return int(i->ID()) >= int(InstrId::add) &&
-            int(i->ID()) <= int(InstrId::btxor); 
+        return int(i->id_) >= int(InstrId::add) &&
+            int(i->id_) <= int(InstrId::btxor); 
     }
 
-public:
     BinaryInstr(InstrId id, const Register* r,
         const IROperand* o1, const IROperand* o2) :
         Instr(id), result_(r), lhs_(o1), rhs_(o2) {}
@@ -186,11 +176,10 @@ private:
 
 class AddInstr : public BinaryInstr
 {
-protected:
-    static bool ClassOf(const AddInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::add; }
-
 public:
+    static bool ClassOf(const AddInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::add; }
+
     AddInstr(const Register* r, const IROperand* o1, const IROperand* o2) :
         BinaryInstr(InstrId::add, r, o1, o2) {}
 
@@ -201,11 +190,10 @@ public:
 
 class FaddInstr : public BinaryInstr
 {
-protected:
-    static bool ClassOf(const FaddInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::fadd; }
-
 public:
+    static bool ClassOf(const FaddInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::fadd; }
+
     FaddInstr(const Register* r, const IROperand* o1, const IROperand* o2) :
         BinaryInstr(InstrId::fadd, r, o1, o2) {}
 
@@ -216,11 +204,10 @@ public:
 
 class SubInstr : public BinaryInstr
 {
-protected:
-    static bool ClassOf(const SubInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::sub; }
-
 public:
+    static bool ClassOf(const SubInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::sub; }
+
     SubInstr(const Register* r, const IROperand* o1, const IROperand* o2) :
         BinaryInstr(InstrId::sub, r, o1, o2) {}
 
@@ -231,11 +218,10 @@ public:
 
 class FsubInstr : public BinaryInstr
 {
-protected:
-    static bool ClassOf(const FsubInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::fsub; }
-
 public:
+    static bool ClassOf(const FsubInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::fsub; }
+
     FsubInstr(const Register* r, const IROperand* o1, const IROperand* o2) :
         BinaryInstr(InstrId::fsub, r, o1, o2) {}
 
@@ -246,11 +232,10 @@ public:
 
 class MulInstr : public BinaryInstr
 {
-protected:
-    static bool ClassOf(const MulInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::mul; }
-
 public:
+    static bool ClassOf(const MulInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::mul; }
+
     MulInstr(const Register* r, const IROperand* o1, const IROperand* o2) :
         BinaryInstr(InstrId::mul, r, o1, o2) {}
 
@@ -261,11 +246,10 @@ public:
 
 class FmulInstr : public BinaryInstr
 {
-protected:
-    static bool ClassOf(const FmulInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::fmul; }
-
 public:
+    static bool ClassOf(const FmulInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::fmul; }
+
     FmulInstr(const Register* r, const IROperand* o1, const IROperand* o2) :
         BinaryInstr(InstrId::fmul, r, o1, o2) {}
 
@@ -276,11 +260,10 @@ public:
 
 class DivInstr : public BinaryInstr
 {
-protected:
-    static bool ClassOf(const DivInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::div; }
-
 public:
+    static bool ClassOf(const DivInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::div; }
+
     DivInstr(const Register* r, const IROperand* o1, const IROperand* o2) :
         BinaryInstr(InstrId::div, r, o1, o2) {}
 
@@ -291,11 +274,10 @@ public:
 
 class FdivInstr : public BinaryInstr
 {
-protected:
-    static bool ClassOf(const FdivInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::fdiv; }
-
 public:
+    static bool ClassOf(const FdivInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::fdiv; }
+
     FdivInstr(const Register* r, const IROperand* o1, const IROperand* o2) :
         BinaryInstr(InstrId::fdiv, r, o1, o2) {}
 
@@ -306,11 +288,10 @@ public:
 
 class ModInstr : public BinaryInstr
 {
-protected:
-    static bool ClassOf(const ModInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::mod; }
-
 public:
+    static bool ClassOf(const ModInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::mod; }
+
     ModInstr(const Register* r, const IROperand* o1, const IROperand* o2) :
         BinaryInstr(InstrId::mod, r, o1, o2) {}
 
@@ -321,11 +302,10 @@ public:
 
 class ShlInstr : public BinaryInstr
 {
-protected:
-    static bool ClassOf(const ShlInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::shl; }
-
 public:
+    static bool ClassOf(const ShlInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::shl; }
+
     ShlInstr(const Register* r, const IROperand* o1, const IROperand* o2) :
         BinaryInstr(InstrId::shl, r, o1, o2) {}
 
@@ -336,11 +316,10 @@ public:
 
 class LshrInstr : public BinaryInstr
 {
-protected:
-    static bool ClassOf(const LshrInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::lshr; }
-
 public:
+    static bool ClassOf(const LshrInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::lshr; }
+
     LshrInstr(const Register* r, const IROperand* o1, const IROperand* o2) :
         BinaryInstr(InstrId::lshr, r, o1, o2) {}
 
@@ -351,11 +330,10 @@ public:
 
 class AshrInstr : public BinaryInstr
 {
-protected:
-    static bool ClassOf(const AshrInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::ashr; }
-
 public:
+    static bool ClassOf(const AshrInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::ashr; }
+
     AshrInstr(const Register* r, const IROperand* o1, const IROperand* o2) :
         BinaryInstr(InstrId::ashr, r, o1, o2) {}
 
@@ -366,11 +344,10 @@ public:
 
 class AndInstr : public BinaryInstr
 {
-protected:
-    static bool ClassOf(const AndInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::btand; }
-
 public:
+    static bool ClassOf(const AndInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::btand; }
+
     AndInstr(const Register* r, const IROperand* o1, const IROperand* o2) :
         BinaryInstr(InstrId::btand, r, o1, o2) {}
 
@@ -381,11 +358,10 @@ public:
 
 class OrInstr : public BinaryInstr
 {
-protected:
-    static bool ClassOf(const OrInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::btor; }
-
 public:
+    static bool ClassOf(const OrInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::btor; }
+
     OrInstr(const Register* r, const IROperand* o1, const IROperand* o2) :
         BinaryInstr(InstrId::btor, r, o1, o2) {}
 
@@ -396,11 +372,10 @@ public:
 
 class XorInstr : public BinaryInstr
 {
-protected:
-    static bool ClassOf(const XorInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::btxor; }
-
 public:
+    static bool ClassOf(const XorInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::btxor; }
+
     XorInstr(const Register* r, const IROperand* o1, const IROperand* o2) :
         BinaryInstr(InstrId::btxor, r, o1, o2) {}
 
@@ -411,11 +386,10 @@ public:
 
 class AllocaInstr : public Instr
 {
-protected:
-    static bool ClassOf(const AllocaInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::alloca; }
-
 public:
+    static bool ClassOf(const AllocaInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::alloca; }
+
     AllocaInstr(const Register* r, const IRType* t) :
         Instr(InstrId::alloca), result_(r), type_(t) {}
     AllocaInstr(const Register* r, const IRType* t, size_t n) :
@@ -441,11 +415,10 @@ private:
 
 class LoadInstr : public Instr
 {
-protected:
-    static bool ClassOf(const LoadInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::load; }
-
 public:
+    static bool ClassOf(const LoadInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::load; }
+
     LoadInstr(const Register* r, const Register* p) :
         Instr(InstrId::load), result_(r), pointer_(p) {}
     LoadInstr(const Register* r, const Register* p, size_t a) :
@@ -474,11 +447,10 @@ private:
 
 class StoreInstr : public Instr
 {
-protected:
-    static bool ClassOf(const StoreInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::store; }
-
 public:
+    static bool ClassOf(const StoreInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::store; }
+
     StoreInstr(const IROperand* v, const Register* p, bool vol) :
         Instr(InstrId::store), value_(v), pointer_(p), volatile_(vol) {}
 
@@ -498,11 +470,10 @@ private:
 
 class ExtractValInstr : public Instr
 {
-protected:
-    static bool ClassOf(const ExtractValInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::exval; }
-
 public:
+    static bool ClassOf(const ExtractValInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::exval; }
+
     ExtractValInstr(const std::string& r, const Register* p, const IROperand* i) :
         Instr(InstrId::exval), result_(r), pointer_(p), index_(i) {}
 
@@ -517,11 +488,10 @@ private:
 
 class SetValInstr : public Instr
 {
-protected:
-    static bool ClassOf(const SetValInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::setval; }
-
 public:
+    static bool ClassOf(const SetValInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::setval; }
+
     SetValInstr(const IROperand* nv, const Register* p, const IROperand* i) :
         Instr(InstrId::setval), newval_(nv), pointer_(p), index_(i) {}
 
@@ -536,11 +506,10 @@ private:
 
 class GetElePtrInstr : public Instr
 {
-protected:
-    static bool ClassOf(const GetElePtrInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::geteleptr; }
-
 public:
+    static bool ClassOf(const GetElePtrInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::geteleptr; }
+
     GetElePtrInstr(const std::string& r, const Register* p, const IROperand* i) :
         Instr(InstrId::geteleptr), result_(r), pointer_(p), index_(i) {}
 
@@ -576,11 +545,10 @@ private:
 
 class TruncInstr : public ConvertInstr
 {
-protected:
-    static bool ClassOf(const TruncInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::trunc; }
-
 public:
+    static bool ClassOf(const TruncInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::trunc; }
+
     TruncInstr(
         const Register* r, const IntType* t, const Register* v
     ) : ConvertInstr(InstrId::trunc, r, t, v) {}
@@ -591,11 +559,10 @@ public:
 
 class FtruncInstr : public ConvertInstr
 {
-protected:
-    static bool ClassOf(const FtruncInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::ftrunc; }
-
 public:
+    static bool ClassOf(const FtruncInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::ftrunc; }
+
     FtruncInstr(
         const Register* r, const FloatType* t, const Register* v
     ) : ConvertInstr(InstrId::ftrunc, r, t, v) {}
@@ -606,11 +573,10 @@ public:
 
 class ZextInstr : public ConvertInstr
 {
-protected:
-    static bool ClassOf(const ZextInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::zext; }
-
 public:
+    static bool ClassOf(const ZextInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::zext; }
+
     ZextInstr(
         const Register* r, const IntType* t, const Register* v
     ) : ConvertInstr(InstrId::zext, r, t, v) {}
@@ -621,11 +587,10 @@ public:
 
 class SextInstr : public ConvertInstr
 {
-protected:
-    static bool ClassOf(const SextInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::sext; }
-
 public:
+    static bool ClassOf(const SextInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::sext; }
+
     SextInstr(
         const Register* r, const IntType* t, const Register* v
     ) : ConvertInstr(InstrId::sext, r, t, v) {}
@@ -636,11 +601,10 @@ public:
 
 class FextInstr : public ConvertInstr
 {
-protected:
-    static bool ClassOf(const FextInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::fext; }
-
 public:
+    static bool ClassOf(const FextInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::fext; }
+
     FextInstr(
         const Register* r, const FloatType* t, const Register* v
     ) : ConvertInstr(InstrId::fext, r, t, v) {}
@@ -651,11 +615,10 @@ public:
 
 class FtoUInstr : public ConvertInstr
 {
-protected:
-    static bool ClassOf(const FtoUInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::ftou; }
-
 public:
+    static bool ClassOf(const FtoUInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::ftou; }
+
     FtoUInstr(
         const Register* r, const IntType* t, const Register* v
     ) : ConvertInstr(InstrId::ftou, r, t, v) {}
@@ -666,9 +629,9 @@ public:
 
 class FtoSInstr : public ConvertInstr
 {
-protected:
-    static bool ClassOf(const FtoSInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::ftos; }
+public:
+    static bool ClassOf(const FtoSInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::ftos; }
 
 public:
     FtoSInstr(
@@ -681,11 +644,10 @@ public:
 
 class UtoFInstr : public ConvertInstr
 {
-protected:
-    static bool ClassOf(const UtoFInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::utof; }
-
 public:
+    static bool ClassOf(const UtoFInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::utof; }
+
     UtoFInstr(
         const Register* r, const FloatType* t, const Register* v
     ) : ConvertInstr(InstrId::utof, r, t, v) {}
@@ -696,11 +658,10 @@ public:
 
 class StoFInstr : public ConvertInstr
 {
-protected:
-    static bool ClassOf(const StoFInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::stof; }
-
 public:
+    static bool ClassOf(const StoFInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::stof; }
+
     StoFInstr(
         const Register* r, const FloatType* t, const Register* v
     ) : ConvertInstr(InstrId::stof, r, t, v) {}
@@ -711,11 +672,10 @@ public:
 
 class PtrtoIInstr : public ConvertInstr
 {
-protected:
-    static bool ClassOf(const PtrtoIInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::ptrtoi; }
-
 public:
+    static bool ClassOf(const PtrtoIInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::ptrtoi; }
+
     PtrtoIInstr(
         const Register* r, const IntType* t, const Register* v
     ) : ConvertInstr(InstrId::ptrtoi, r, t, v) {}
@@ -726,11 +686,10 @@ public:
 
 class ItoPtrInstr : public ConvertInstr
 {
-protected:
-    static bool ClassOf(const ItoPtrInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::itoptr; }
-
 public:
+    static bool ClassOf(const ItoPtrInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::itoptr; }
+
     ItoPtrInstr(
         const Register* r, const PtrType* t, const Register* v
     ) : ConvertInstr(InstrId::itoptr, r, t, v) {}
@@ -741,11 +700,10 @@ public:
 
 class BitcastInstr : public ConvertInstr
 {
-protected:
-    static bool ClassOf(const BitcastInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::bitcast; }
-
 public:
+    static bool ClassOf(const BitcastInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::bitcast; }
+
     BitcastInstr(
         const Register* r, const IRType* t, const Register* v
     ) : ConvertInstr(InstrId::bitcast, r, t, v) {}
@@ -764,11 +722,10 @@ enum class Condition
 
 class IcmpInstr : public Instr
 {
-protected:
-    static bool ClassOf(const IcmpInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::icmp; }
-
 public:
+    static bool ClassOf(const IcmpInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::icmp; }
+
     IcmpInstr(const Register* r, Condition c,
         const IROperand* o1, const IROperand* o2) :
             Instr(InstrId::icmp), result_(r), cond_(c),
@@ -791,11 +748,10 @@ private:
 
 class FcmpInstr : public Instr
 {
-protected:
-    static bool ClassOf(const FcmpInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::fcmp; }
-
 public:
+    static bool ClassOf(const FcmpInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::fcmp; }
+
     FcmpInstr(const Register* r, Condition c,
         const IROperand* o1, const IROperand* o2) :
             Instr(InstrId::fcmp), result_(r), cond_(c),
@@ -818,11 +774,10 @@ private:
 
 class SelectInstr : public Instr
 {
-protected:
-    static bool ClassOf(const SelectInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::select; }
-
 public:
+    static bool ClassOf(const SelectInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::select; }
+
     SelectInstr(const Register* r, const IROperand* s,
         bool c, const IROperand* v1, const IROperand* v2) :
             Instr(InstrId::select), result_(r), selty_(s),
@@ -851,11 +806,10 @@ private:
 
 class PhiInstr : public Instr
 {
-protected:
-    static bool ClassOf(const PhiInstr const*) { return true; }
-    static bool ClassOf(const Instr const* i) { return i->ID() == InstrId::phi; }
-
 public:
+    static bool ClassOf(const PhiInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::phi; }
+
     using BlockValPairList = std::vector<std::pair<const BasicBlock*, const IROperand*>>;
 
     PhiInstr(const Register* r, const IRType* t) :

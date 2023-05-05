@@ -11,17 +11,14 @@
 
 class IROperand
 {
-protected:
+public:
     enum class OpId { op, _int, _float, str, reg };
-    static bool ClassOf(const IROperand const*) { return true; }
+    static bool ClassOf(const IROperand* const) { return true; }
     OpId id_ = OpId::op;
 
-public:
     IROperand(OpId i, const IRType* t) : id_(i), type_(t) {}
     virtual ~IROperand() {}
     virtual std::string ToString() const = 0;
-
-    OpId ID() const { return id_; }
 
     ENABLE_IS;
     ENABLE_AS;
@@ -36,23 +33,22 @@ protected:
 
 class Constant : public IROperand
 {
-protected:
-    static bool ClassOf(const Constant const*) { return true; }
-    static bool ClassOf(const IROperand const* op)
-    { return op->ID() == OpId::_int || op->ID() == OpId::_float; }
-
 public:
+    static bool ClassOf(const Constant* const) { return true; }
+    static bool ClassOf(const IROperand* const op)
+    { return op->id_ == OpId::_int || op->id_ == OpId::_float; }
+
     Constant(OpId i, const IRType* t) : IROperand(i, t) {}
     virtual bool IsZero() const = 0;
 };
 
 class IntConst : public Constant
 {
-protected:
-    static bool ClassOf(const IntConst const*) { return true; }
-    static bool ClassOf(const Constant const* c) { return c->ID() == OpId::_int; }
-
 public:
+    static bool ClassOf(const IntConst* const) { return true; }
+    static bool ClassOf(const Constant* const c) { return c->id_ == OpId::_int; }
+    static bool ClassOf(const IROperand* const i) { return i->id_ == OpId::_int; }
+
     static IntConst* CreateIntConst(Pool<IROperand>*, unsigned long);
     static IntConst* CreateIntConst(Pool<IROperand>*, unsigned long, const IntType*);
     IntConst(unsigned long ul, const IntType* t) :
@@ -69,11 +65,11 @@ private:
 
 class FloatConst : public Constant
 {
-protected:
-    static bool ClassOf(const FloatConst const*) { return true; }
-    static bool ClassOf(const Constant const* c) { return c->ID() == OpId::_float; }
-
 public:
+    static bool ClassOf(const FloatConst* const) { return true; }
+    static bool ClassOf(const Constant* const c) { return c->id_ == OpId::_float; }
+    static bool ClassOf(const IROperand* const i) { return i->id_ == OpId::_float; }
+
     static FloatConst* CreateFloatConst(Pool<IROperand>*, double);
     static FloatConst* CreateFloatConst(Pool<IROperand>*, double, const FloatType*);
     FloatConst(double d, const FloatType* t) :
@@ -90,12 +86,11 @@ private:
 
 class StrConst : public IROperand
 {
-protected:
-    static bool ClassOf(const StrConst const*) { return true; }
-    static bool ClassOf(const IROperand const* op) { return op->ID() == OpId::str; }
-
 public:
-    static StrConst* CreateStrConst(Pool<IROperand>*, const std::string&, const IRType*);
+    static bool ClassOf(const StrConst* const) { return true; }
+    static bool ClassOf(const IROperand* const op) { return op->id_ == OpId::str; }
+
+    static StrConst* CreateStrConst(Pool<IROperand>*, const std::string&, const PtrType*);
     StrConst(const std::string& s, const PtrType* ty) :
         literal_(s), IROperand(OpId::str, ty) {}
 
@@ -108,11 +103,10 @@ private:
 
 class Register : public IROperand
 {
-protected:
-    static bool ClassOf(const Register const*) { return true; }
-    static bool ClassOf(const IROperand const* op) { return op->ID() == OpId::reg; }
-
 public:
+    static bool ClassOf(const Register* const) { return true; }
+    static bool ClassOf(const IROperand* const op) { return op->id_ == OpId::reg; }
+
     static Register* CreateRegister(Pool<IROperand>*, const std::string&, const IRType*);
     Register(const std::string& n, const IRType* t) :
         name_(n), IROperand(OpId::reg, t) {}

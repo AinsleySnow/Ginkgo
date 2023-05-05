@@ -59,7 +59,7 @@ std::string FloatConst::ToString() const
         return type_->ToString() + ' ' + std::to_string(num_);
 }
 
-StrConst* StrConst::CreateStrConst(Pool<IROperand>* pool, const std::string& str, const IRType* ty)
+StrConst* StrConst::CreateStrConst(Pool<IROperand>* pool, const std::string& str, const PtrType* ty)
 {
     auto strconst = std::make_unique<StrConst>(str, ty);
     auto raw = strconst.get();

@@ -257,7 +257,7 @@ const Register* InstrBuilder::InsertLoadInstr(
     const std::string& result, const Register* ptr, size_t align, bool vol)
 {
     auto ans = Register::CreateRegister(Container(), result, ptr->Type()->ToPointer()->Point2());
-    Insert(std::make_unique<LoadInstr>(result, ptr, align, vol));
+    Insert(std::make_unique<LoadInstr>(ans, ptr, align, vol));
     return ans;
 }
 
@@ -305,97 +305,97 @@ const Register* InstrBuilder::InsertGetElePtrInstr(
 const Register* InstrBuilder::InsertTruncInstr(
     const std::string& result, const IntType* ty, const Register* val)
 {
-    auto ptrunc = std::make_unique<TruncInstr>(result, ty, val);
-    Insert(std::move(ptrunc));
-    return Register::CreateRegister(Container(), result, ty);
+    auto ans = Register::CreateRegister(Container(), result, ty);
+    Insert(std::make_unique<TruncInstr>(ans, ty, val));
+    return ans;
 }
 
 const Register* InstrBuilder::InsertFtruncInstr(
     const std::string& result, const FloatType* ty, const Register* val)
 {
-    auto pftrunc = std::make_unique<FtruncInstr>(result, ty, val);
-    Insert(std::move(pftrunc));
-    return Register::CreateRegister(Container(), result, ty);
+    auto ans = Register::CreateRegister(Container(), result, ty);
+    Insert(std::make_unique<FtruncInstr>(ans, ty, val));
+    return ans;
 }
 
 const Register* InstrBuilder::InsertZextInstr(
     const std::string& result, const IntType* ty, const Register* val)
 {
-    auto pzext = std::make_unique<ZextInstr>(result, ty, val);
-    Insert(std::move(pzext));
-    return Register::CreateRegister(Container(), result, ty);
+    auto ans = Register::CreateRegister(Container(), result, ty);
+    Insert(std::make_unique<ZextInstr>(ans, ty, val));
+    return ans;
 }
 
 const Register* InstrBuilder::InsertSextInstr(
     const std::string& result, const IntType* ty, const Register* val)
 {
-    auto psext = std::make_unique<SextInstr>(result, ty, val);
-    Insert(std::move(psext));
-    return Register::CreateRegister(Container(), result, ty);
+    auto ans = Register::CreateRegister(Container(), result, ty);
+    Insert(std::make_unique<SextInstr>(ans, ty, val));
+    return ans;
 }
 
 const Register* InstrBuilder::InsertFextInstr(
     const std::string& result, const FloatType* ty, const Register* val)
 {
-    auto pfext = std::make_unique<FextInstr>(result, ty, val);
-    Insert(std::move(pfext));
-    return Register::CreateRegister(Container(), result, ty);
+    auto ans = Register::CreateRegister(Container(), result, ty);
+    Insert(std::make_unique<FextInstr>(ans, ty, val));
+    return ans;
 }
 
 const Register* InstrBuilder::InsertFtoUInstr(
     const std::string& result, const IntType* ty, const Register* val)
 {
-    auto pftou = std::make_unique<FtoUInstr>(result, ty, val);
-    Insert(std::move(pftou));
-    return Register::CreateRegister(Container(), result, ty);
+    auto ans = Register::CreateRegister(Container(), result, ty);
+    Insert(std::make_unique<FtoUInstr>(ans, ty, val));
+    return ans;
 }
 
 const Register* InstrBuilder::InsertFtoSInstr(
     const std::string& result, const IntType* ty, const Register* val)
 {
-    auto pftos = std::make_unique<FtoSInstr>(result, ty, val);
-    Insert(std::move(pftos));
-    return Register::CreateRegister(Container(), result, ty);
+    auto ans = Register::CreateRegister(Container(), result, ty);
+    Insert(std::make_unique<FtoSInstr>(ans, ty, val));
+    return ans;
 }
 
 const Register* InstrBuilder::InsertUtoFInstr(
     const std::string& result, const FloatType* ty, const Register* val)
 {
-    auto putof = std::make_unique<UtoFInstr>(result, ty, val);
-    Insert(std::move(putof));
-    return Register::CreateRegister(Container(), result, ty);
+    auto ans = Register::CreateRegister(Container(), result, ty);
+    Insert(std::make_unique<UtoFInstr>(ans, ty, val));
+    return ans;
 }
 
 const Register* InstrBuilder::InsertStoFInstr(
     const std::string& result, const FloatType* ty, const Register* val)
 {
-    auto pstof = std::make_unique<StoFInstr>(result, ty, val);
-    Insert(std::move(pstof));
-    return Register::CreateRegister(Container(), result, ty);
+    auto ans = Register::CreateRegister(Container(), result, ty);
+    Insert(std::make_unique<StoFInstr>(ans, ty, val));
+    return ans;
 }
 
 const Register* InstrBuilder::InsertPtrtoIInstr(
     const std::string& result, const IntType* ty, const Register* val)
 {
-    auto pptrtoi = std::make_unique<PtrtoIInstr>(result, ty, val);
-    Insert(std::move(pptrtoi));
-    return Register::CreateRegister(Container(), result, ty);
+    auto ans = Register::CreateRegister(Container(), result, ty);
+    Insert(std::make_unique<PtrtoIInstr>(ans, ty, val));
+    return ans;
 }
 
 const Register* InstrBuilder::InsertItoPtrInstr(
     const std::string& result, const PtrType* ty, const Register* val)
 {
-    auto pitoptr = std::make_unique<ItoPtrInstr>(result, ty, val);
-    Insert(std::move(pitoptr));
-    return Register::CreateRegister(Container(), result, ty);
+    auto ans = Register::CreateRegister(Container(), result, ty);
+    Insert(std::make_unique<ItoPtrInstr>(ans, ty, val));
+    return ans;
 }
 
 const Register* InstrBuilder::InsertBitcastInstr(
     const std::string& result, const IRType* ty, const Register* val)
 {
-    auto pbitcast = std::make_unique<BitcastInstr>(result, ty, val);
-    Insert(std::move(pbitcast));
-    return Register::CreateRegister(Container(), result, ty);
+    auto ans = Register::CreateRegister(Container(), result, ty);
+    Insert(std::make_unique<BitcastInstr>(ans, ty, val));
+    return ans;
 }
 
 
@@ -413,8 +413,7 @@ const Register* InstrBuilder::InsertIcmpInstr(
     const std::string& result, Condition cond, const IROperand* lhs, const IROperand* rhs)
 {
     auto ans = Register::CreateRegister(Container(), result, IntType::GetInt8(true));
-    auto picmp = std::make_unique<IcmpInstr>(ans, cond, lhs, rhs);
-    Insert(std::move(picmp));
+    Insert(std::make_unique<IcmpInstr>(ans, cond, lhs, rhs));
     return ans;
 }
 
@@ -422,8 +421,7 @@ const Register* InstrBuilder::InsertFcmpInstr(
     const std::string& result, Condition cond, const IROperand* lhs, const IROperand* rhs)
 {
     auto ans = Register::CreateRegister(Container(), result, IntType::GetInt8(true));
-    auto pfcmp = std::make_unique<FcmpInstr>(ans, cond, lhs, rhs);
-    Insert(std::move(pfcmp));
+    Insert(std::make_unique<FcmpInstr>(ans, cond, lhs, rhs));
     return ans;
 }
 
@@ -433,15 +431,13 @@ const Register* InstrBuilder::InsertSelectInstr(
     bool cond, const IROperand* lhs, const IROperand* rhs)
 {
     auto ans = Register::CreateRegister(Container(), result, lhs->Type());
-    auto pselect = std::make_unique<SelectInstr>(ans, selty, cond, lhs, rhs);
-    Insert(std::move(pselect));
+    Insert(std::make_unique<SelectInstr>(ans, selty, cond, lhs, rhs));
     return ans;
 }
 
 const Register* InstrBuilder::InsertPhiInstr(const std::string& result, const IRType* ty)
 {
     auto ans = Register::CreateRegister(Container(), result, ty);
-    auto pphi = std::make_unique<PhiInstr>(ans, ty);
-    Insert(std::move(pphi));
+    Insert(std::make_unique<PhiInstr>(ans, ty));
     return ans;
 }

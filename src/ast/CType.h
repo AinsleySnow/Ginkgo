@@ -92,18 +92,15 @@ enum class TypeTag
 
 class CType
 {
-protected:
+public:
     enum class CTypeId { none, arithm, pointer, array, function, _enum, _void, error };
-    static bool ClassOf(const CType const*) { return true; }
+    static bool ClassOf(const CType* const) { return true; }
     CTypeId id_ = CTypeId::none;
 
-public:
     CType(CTypeId id) : id_(id) {}
 
     virtual const IRType* ToIRType(Pool<IRType>*) const = 0;
     virtual std::string ToString() const = 0;
-
-    CTypeId ID() const { return id_; }
 
     ENABLE_IS;
     ENABLE_AS;
@@ -129,28 +126,26 @@ private:
 
 class ErrorType : public CType
 {
-protected:
-    static bool ClassOf(const ErrorType const*) { return true; }
-    static bool ClassOf(const CType const* t) { return t->ID() == CTypeId::error; }
-
 public:
+    static bool ClassOf(const ErrorType* const) { return true; }
+    static bool ClassOf(const CType* const t) { return t->id_ == CTypeId::error; }
+
     ErrorType() : CType(CTypeId::error) {}
 
     const IRType* ToIRType(Pool<IRType>*) const override { return nullptr; };
     std::string ToString() const override { return "<error-type>"; }
 
-    bool Compatible(const CType* other) { return false; };
+    bool Compatible(const CType& other) const override { return false; };
     std::unique_ptr<CType> Clone() const override { return std::make_unique<ErrorType>(*this); }
 };
 
 
 class CArithmType : public CType
 {
-protected:
-    static bool ClassOf(const CArithmType const*) { return true; }
-    static bool ClassOf(const CType const* t) { return t->ID() == CTypeId::arithm; }
-
 public:
+    static bool ClassOf(const CArithmType* const) { return true; }
+    static bool ClassOf(const CType* const t) { return t->id_ == CTypeId::arithm; }
+
     CArithmType(TypeTag);
 
     const IRType* ToIRType(Pool<IRType>*) const override;
@@ -178,11 +173,10 @@ private:
 
 class CFuncType : public CType
 {
-protected:
-    static bool ClassOf(const CFuncType const*) { return true; }
-    static bool ClassOf(const CType const* t) { return t->ID() == CTypeId::function; }
-
 public:
+    static bool ClassOf(const CFuncType* const) { return true; }
+    static bool ClassOf(const CType* const t) { return t->id_ == CTypeId::function; }
+
     CFuncType() : CType(CTypeId::function) {}
     CFuncType(std::unique_ptr<CType> ret, size_t paramcount) :
         CType(CTypeId::function), return_(std::move(ret)) { paramlist_.reserve(paramcount); }
@@ -191,7 +185,7 @@ public:
     const FuncType* ToIRType(Pool<IRType>*) const override;
 
     bool Compatible(const CType&) const override { return false; }
-    std::unique_ptr<CType> Clone() const override { return std::make_unique<CFuncType>(*this); }
+    std::unique_ptr<CType> Clone() const override;
 
     const CType* ReturnType() const { return return_.get(); }
     auto& ReturnType() { return return_; }
@@ -222,11 +216,10 @@ private:
 
 class CPtrType : public CType
 {
-protected:
-    static bool ClassOf(const CPtrType const*) { return true; }
-    static bool ClassOf(const CType const* t) { return t->ID() == CTypeId::pointer; }
-
 public:
+    static bool ClassOf(const CPtrType* const) { return true; }
+    static bool ClassOf(const CType* const t) { return t->id_ == CTypeId::pointer; }
+
     CPtrType() : CType(CTypeId::pointer) {}
     CPtrType(std::unique_ptr<CType> p) :
         CType(CTypeId::pointer), point2_(std::move(p)) {}
@@ -235,7 +228,7 @@ public:
     const PtrType* ToIRType(Pool<IRType>*) const override;
 
     bool Compatible(const CType&) const { return false; }
-    std::unique_ptr<CType> Clone() const override { return std::make_unique<CPtrType>(*this); }
+    std::unique_ptr<CType> Clone() const override;
 
     size_t Size() const { return 8; }
 
@@ -253,11 +246,11 @@ private:
 
 class CArrayType : public CType
 {
-protected:
-    static bool ClassOf(const CArrayType const*) { return true; }
-    static bool ClassOf(const CType const* t) { return t->ID() == CTypeId::array; }
-
 public:
+    static bool ClassOf(const CArrayType* const) { return true; }
+    static bool ClassOf(const CType* const t) { return t->id_ == CTypeId::array; }
+
+    CArrayType() : CType(CTypeId::array) {}
     CArrayType(std::unique_ptr<CType> ty) :
         CType(CTypeId::array), arrayof_(std::move(ty)) {}
     CArrayType(std::unique_ptr<CType> ty, size_t c) :
@@ -267,7 +260,7 @@ public:
     const ArrayType* ToIRType(Pool<IRType>*) const override;
 
     bool Compatible(const CType&) const { return false; }
-    std::unique_ptr<CType> Clone() const override { return std::make_unique<CArrayType>(*this); }
+    std::unique_ptr<CType> Clone() const override;
 
     const auto& ArrayOf() const { return arrayof_; }
     bool VarlableLen() const { return variable_; }
@@ -287,11 +280,10 @@ class Member;
 
 class CEnumType : public CType
 {
-protected:
-    static bool ClassOf(const CEnumType const*) { return true; }
-    static bool ClassOf(const CType const* t) { return t->ID() == CTypeId::_enum; }
-
 public:
+    static bool ClassOf(const CEnumType* const) { return true; }
+    static bool ClassOf(const CType* const t) { return t->id_ == CTypeId::_enum; }
+
     CEnumType(const std::string& n) : CType(CTypeId::_enum),
         name_(n), underlying_(std::make_shared<CArithmType>(TypeTag::int32)) {}
     CEnumType(const std::string& n, std::shared_ptr<CType> ty) :
@@ -319,11 +311,10 @@ private:
 
 class CVoidType : public CType
 {
-protected:
-    static bool ClassOf(const CVoidType const*) { return true; }
-    static bool ClassOf(const CType const* t) { return t->ID() == CTypeId::_void; }
-
 public:
+    static bool ClassOf(const CVoidType* const) { return true; }
+    static bool ClassOf(const CType* const t) { return t->id_ == CTypeId::_void; }
+
     CVoidType() : CType(CTypeId::_void) {}
 
     const VoidType* ToIRType(Pool<IRType>*) const override;

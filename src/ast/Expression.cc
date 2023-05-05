@@ -94,51 +94,52 @@ ConstExpr::ConstExpr(const std::string& s)
 
 ConstExpr::ConstExpr(uint64_t u, int base, const std::string& suffix) : val_(u)
 {
-    std::transform(suffix.begin(), suffix.end(), suffix.begin(),
+    auto copy = suffix;
+    std::transform(copy.begin(), copy.end(), copy.begin(),
         [](char c){ return std::tolower(c); });
 
-    if (suffix.empty() && base == 10)
+    if (copy.empty() && base == 10)
     {
         if (u <= INT32_MAX) type_ = std::make_unique<CArithmType>(TypeTag::int32);
         else type_ = std::make_unique<CArithmType>(TypeTag::int64);
     }
-    else if (suffix.empty())
+    else if (copy.empty())
     {
         if (u <= INT32_MAX) type_ = std::make_unique<CArithmType>(TypeTag::int32);
         else if (u <= UINT32_MAX) type_ = std::make_unique<CArithmType>(TypeTag::uint32);
         else if (u <= INT64_MAX) type_ = std::make_unique<CArithmType>(TypeTag::int64);
         else type_ = std::make_unique<CArithmType>(TypeTag::uint64);
     }
-    else if (suffix == "u")
+    else if (copy == "u")
     {
         if (u <= UINT32_MAX) type_ = std::make_unique<CArithmType>(TypeTag::uint32);
         else type_ = std::make_unique<CArithmType>(TypeTag::uint64);
     }
-    else if (suffix == "l" && base == 10)
+    else if (copy == "l" && base == 10)
     {
         if (u <= INT32_MAX) type_ = std::make_unique<CArithmType>(TypeTag::int32);
         else type_ = std::make_unique<CArithmType>(TypeTag::int64);
     }
-    else if (suffix == "l")
+    else if (copy == "l")
     {
         if (u <= INT32_MAX) type_ = std::make_unique<CArithmType>(TypeTag::int32);
         else if (u <= UINT32_MAX) type_ = std::make_unique<CArithmType>(TypeTag::uint32);
         else if (u <= INT64_MAX) type_ = std::make_unique<CArithmType>(TypeTag::int64);
         else type_ = std::make_unique<CArithmType>(TypeTag::uint64);
     }
-    else if (suffix == "ul")
+    else if (copy == "ul")
     {
         if (u <= UINT32_MAX) type_ = std::make_unique<CArithmType>(TypeTag::uint32);
         else type_ = std::make_unique<CArithmType>(TypeTag::uint64);
     }
-    else if (suffix == "ll" && base == 10)
+    else if (copy == "ll" && base == 10)
         type_ = std::make_unique<CArithmType>(TypeTag::int64);
-    else if (suffix == "ll")
+    else if (copy == "ll")
     {
         if (u <= INT64_MAX) type_ = std::make_unique<CArithmType>(TypeTag::uint32);
         else type_ = std::make_unique<CArithmType>(TypeTag::uint64);
     }
-    else if (suffix == "ull")
+    else if (copy == "ull")
         type_ = std::make_unique<CArithmType>(TypeTag::uint64);
 }
 
@@ -162,7 +163,7 @@ uint64_t ConstExpr::GetInt() const
         return std::get<uint64_t>(val_);
     else if (std::holds_alternative<bool>(val_))
         return std::get<bool>(val_);
-    return;
+    return 0;
 }
 
 double ConstExpr::GetFloat() const

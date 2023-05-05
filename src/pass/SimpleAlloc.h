@@ -7,6 +7,9 @@
 #include "visitir/x64.h"
 #include <unordered_map>
 
+class BinaryInstr;
+class Register;
+
 
 // the SimpleAlloc class do register allocation using the 3-TOSCA algorithm.
 // DO NOT use it if any optimization pass is used, since the allocator just
@@ -77,20 +80,20 @@ private:
     void VisitLoadInstr(LoadInstr*) override;
     void VisitStoreInstr(StoreInstr*) override;
 
-    void VisitTruncInstr(TruncInstr*) override;
-    void VisitFtruncInstr(FtruncInstr*) override;
+    void VisitTruncInstr(TruncInstr*) override {}
+    void VisitFtruncInstr(FtruncInstr*) override {}
 
-    void VisitZextInstr(ZextInstr*) override;
-    void VisitSextInstr(SextInstr*) override;
-    void VisitFextInstr(FextInstr*) override;
-    void VisitFtoUInstr(FtoUInstr*) override;
-    void VisitFtoSInstr(FtoSInstr*) override;
+    void VisitZextInstr(ZextInstr*) override {}
+    void VisitSextInstr(SextInstr*) override {}
+    void VisitFextInstr(FextInstr*) override {}
+    void VisitFtoUInstr(FtoUInstr*) override {}
+    void VisitFtoSInstr(FtoSInstr*) override {}
 
-    void VisitUtoFInstr(UtoFInstr*) override;
-    void VisitStoFInstr(StoFInstr*) override;
-    void VisitPtrtoIInstr(PtrtoIInstr*) override;
-    void VisitItoPtrInstr(ItoPtrInstr*) override;
-    void VisitBitcastInstr(BitcastInstr*) override;
+    void VisitUtoFInstr(UtoFInstr*) override {}
+    void VisitStoFInstr(StoFInstr*) override {}
+    void VisitPtrtoIInstr(PtrtoIInstr*) override {}
+    void VisitItoPtrInstr(ItoPtrInstr*) override {}
+    void VisitBitcastInstr(BitcastInstr*) override {}
 };
 
 #endif // _SIMPLE_ALLOC_H_

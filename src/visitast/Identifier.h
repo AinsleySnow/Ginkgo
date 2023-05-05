@@ -97,7 +97,9 @@ class Typedef : public Identifier
 {
 public:
     Typedef(const std::string& n, const CType* ty) :
-        Identifier(Identifier::IdentType::tydef, n, ty) {}
+        Identifier(Identifier::IdentType::tydef, n, ty), type_(ty) {}
+    Typedef(const std::string& n, const Typedef* t) :
+        Identifier(Identifier::IdentType::tydef, n, nullptr), type_(t) {}
 
     Typedef* ToTypedef() override { return this; }
     auto& Type() { return type_; }

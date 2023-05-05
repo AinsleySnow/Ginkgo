@@ -722,13 +722,15 @@ std::string WashString(T str)
 
     for (auto i = str.begin(); i != str.end(); ++i)
     {
-        if (isprint(*i)) result += *i;
+        if (isprint(*i)) result += static_cast<char>(*i);
         else
         {
             result += "\\x";
-            result += fmt::format("{:0x}", *i);
+            result += fmt::format("{:0x}", static_cast<int>(*i));
         }
     }
+
+    return result;
 }
 
 void IRGen::VisitStrExpr(StrExpr* str)
@@ -746,7 +748,7 @@ void IRGen::VisitStrExpr(StrExpr* str)
         literal = WashString(utf8::utf8to32(content));
 
     str->Val() = StrConst::CreateStrConst(
-        transunit_.get(), literal, str->Type()->ToIRType(transunit_.get()));
+        transunit_.get(), literal, str->Type()->ToIRType(transunit_.get())->ToPointer());
 }
 
 

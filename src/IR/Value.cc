@@ -10,6 +10,11 @@ std::string Module::ToString() const
     return mod;
 }
 
+void Module::Accept(IRVisitor* v)
+{
+    v->VisitModule(this);
+}
+
 Function* Module::AddFunc(std::unique_ptr<Function> func)
 {
     auto pfunc = func.get();
@@ -91,6 +96,10 @@ std::string Function::ToString() const
     return func;
 }
 
+void Function::Accept(IRVisitor* v)
+{
+    v->VisitFunction(this);
+}
 
 BasicBlock* Function::GetBasicBlock(const std::string& name)
 {
@@ -134,6 +143,11 @@ std::string GlobalVar::ToString() const
     return var;
 }
 
+void GlobalVar::Accept(IRVisitor* v)
+{
+    v->VisitGlobalVar(this);
+}
+
 void GlobalVar::SetBasicBlock(std::unique_ptr<BasicBlock> bb)
 {
     blk_ = std::move(bb);
@@ -163,6 +177,11 @@ std::string BasicBlock::ToString() const
     for (auto i = elements_.begin(); i != elements_.end(); ++i)
         blk += "  " + (*i)->ToString() + ";\n";
     return blk;
+}
+
+void BasicBlock::Accept(IRVisitor* v)
+{
+    v->VisitBasicBlock(this);
 }
 
 void BasicBlock::MergePools(BasicBlock* bb)
