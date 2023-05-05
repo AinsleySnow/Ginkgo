@@ -11,12 +11,14 @@ bool x64::operator==(const x64& x) const
         return *(this->As<x64Mem>()) == *(x.As<x64Mem>());
     if (x.id_ == x64Id::imm)
         return *(this->As<x64Imm>()) == *(x.As<x64Imm>());
+    return false;
 }
 
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wswitch-enum"
 #pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
+#pragma GCC diagnostic ignored "-Wreturn-type"
 
 std::string x64Reg::ToString() const
 {
@@ -119,6 +121,9 @@ bool x64Mem::operator==(const x64Mem& mem) const
         scale_ == mem.scale_;
 }
 
+
+x64Imm::x64Imm(const Constant* c) :
+    x64(x64Id::imm, c->Type()->Size()), val_(c) {}
 
 std::string x64Imm::ToString() const
 {

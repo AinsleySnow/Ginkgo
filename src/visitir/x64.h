@@ -25,14 +25,12 @@ enum class RegTag
 
 class x64
 {
-protected:
+public:
     enum class x64Id { reg, mem, imm };
-    static bool ClassOf(const x64 const*) { return true; }
+    static bool ClassOf(const x64* const) { return true; }
     x64Id id_{};
 
-public:
     x64(x64Id i, size_t s) : id_(i), size_(s) {}
-    x64Id ID() const { return id_; }
 
     ENABLE_IS;
     ENABLE_AS;
@@ -52,12 +50,12 @@ private:
 
 class x64Reg : public x64
 {
-protected:
-    static bool ClassOf(const x64Reg const*) { return true; }
-    static bool ClassOf(const x64 const* i) { return i->ID() == x64Id::reg; }
-
 public:
+    static bool ClassOf(const x64Reg* const) { return true; }
+    static bool ClassOf(const x64* const i) { return i->id_ == x64Id::reg; }
+
     x64Reg(size_t s) : x64(x64Id::reg, s), reg_(RegTag::none) {}
+    x64Reg(RegTag r) : x64(x64Id::reg, 8), reg_(r) {}
     x64Reg(RegTag r, size_t s) : x64(x64Id::reg, s), reg_(r) {}
 
     bool operator==(const x64Reg& reg) const { return reg_ == reg.reg_; }
@@ -75,11 +73,10 @@ private:
 
 class x64Mem : public x64
 {
-protected:
-    static bool ClassOf(const x64Mem const*) { return true; }
-    static bool ClassOf(const x64 const* i) { return i->ID() == x64Id::mem; }
-
 public:
+    static bool ClassOf(const x64Mem* const) { return true; }
+    static bool ClassOf(const x64* const i) { return i->id_ == x64Id::mem; }
+
     x64Mem(const std::string& l) : x64(x64Id::mem, 0), label_(l) {}
     x64Mem(size_t sz, size_t o, const x64Reg& b, const x64Reg& i, size_t s) :
         x64(x64Id::mem, sz), offset_(o), base_(b), index_(i), scale_(s) {}
@@ -101,12 +98,11 @@ private:
 
 class x64Imm : public x64
 {
-protected:
-    static bool ClassOf(const x64Mem const*) { return true; }
-    static bool ClassOf(const x64 const* i) { return i->ID() == x64Id::imm; }
-
 public:
-    x64Imm(const Constant* c) : x64(x64Id::imm, c->Type()->Size()), val_(c) {}
+    static bool ClassOf(const x64Mem* const) { return true; }
+    static bool ClassOf(const x64* const i) { return i->id_ == x64Id::imm; }
+
+    x64Imm(const Constant* c);
     std::string ToString() const override;
 
     bool operator==(const x64Imm& imm) const;

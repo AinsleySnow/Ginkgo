@@ -4,12 +4,6 @@
 #include "visitir/x64.h"
 
 
-inline size_t x64Alloc::MakeAlign(size_t base, size_t align) const
-{
-    return (base + 16) % align == 0 ?
-        base : (base + 16) + align - (base + 16) % align;
-}
-
 bool x64Alloc::MapConstAndGlobalVar(const IROperand* op)
 {
     if (op->Is<Constant>())

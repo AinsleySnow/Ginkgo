@@ -1,6 +1,7 @@
 #ifndef _X64_ALLOC_H_
 #define _X64_ALLOC_H_
 
+#include "pass/Pass.h"
 #include "pass/RegAlloc.h"
 #include <memory>
 #include <unordered_map>
@@ -56,7 +57,12 @@ public:
     const x64* GetIROpMap(const IROperand* op) const;
 
 protected:
-    inline size_t MakeAlign(size_t base, size_t align) const;
+    inline size_t MakeAlign(size_t base, size_t align) const
+    {
+        return (base + 16) % align == 0 ?
+            base : (base + 16) + align - (base + 16) % align;
+    }
+
     bool MapConstAndGlobalVar(const IROperand* op);
     void MapRegister(const IROperand*, std::unique_ptr<x64>);
 
