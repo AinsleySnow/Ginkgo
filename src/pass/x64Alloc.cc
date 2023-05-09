@@ -31,7 +31,9 @@ void x64Alloc::Execute()
     for (auto sym : *CurModule())
     {
         if (!sym->Is<Function>()) continue;
-        ExecuteOnFunction(sym->As<Function>());
+        auto func = sym->As<Function>();
+        EnterFunction(func);
+        ExecuteOnFunction(func);
     }
 }
 

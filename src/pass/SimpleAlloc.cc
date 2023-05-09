@@ -25,7 +25,7 @@ RegTag SimpleAlloc::StackCache::SpareFReg() const
     return ret;
 }
 
-void SimpleAlloc::StackCache::AccessStack(const Register* reg) const
+void SimpleAlloc::StackCache::Access(const Register* reg) const
 {
     auto it = regmap_.find(reg);
     if (it == regmap_.end()) return;
@@ -46,7 +46,8 @@ void SimpleAlloc::StackCache::Map2Reg(const Register* reg, RegTag tag)
 
 void SimpleAlloc::StackCache::Map2Stack(const Register* reg, long offset)
 {
-    auto px64 = std::make_unique<x64Mem>(reg->Type()->Size(), offset, RegTag::rsp, RegTag::none, 0);
+    auto px64 = std::make_unique<x64Mem>(
+        reg->Type()->Size(), offset, RegTag::rsp, RegTag::none, 0);
     auto raw = px64.get();
     alloc_.MapRegister(reg, std::move(px64));
     regmap_[reg] = raw;
@@ -98,16 +99,27 @@ void SimpleAlloc::BinaryAllocaHelper(BinaryInstr* instr)
     auto lhs = MapConstAndGlobalVar(instr->Lhs());
     auto rhs = MapConstAndGlobalVar(instr->Rhs());
 
-    auto lreg = instr->Lhs()->As<Register>();
-    auto rreg = instr->Rhs()->As<Register>();
-    if (!lhs) Allocate(lreg);
-    if (!rhs) Allocate(rreg);
-    if (!lhs) stackcache_.AccessStack(lreg);
-    if (!rhs) stackcache_.AccessStack(rreg);
+    if (!lhs) stackcache_.Access(instr->Lhs()->As<Register>());
+    if (!rhs) stackcache_.Access(instr->Rhs()->As<Register>());
+    Allocate(instr->Result()->As<Register>());
+}
 
-    auto ansreg = instr->Result()->As<Register>();
-    Allocate(ansreg);
-    stackcache_.AccessStack(ansreg);
+void SimpleAlloc::ConvertAllocaHelper(ConvertInstr* instr)
+{
+    auto value = MapConstAndGlobalVar(instr->Value());
+    auto dest = MapConstAndGlobalVar(instr->Dest());
+
+    if (!value) Allocate(instr->Value()->As<Register>());
+    if (!dest) stackcache_.Access(instr->Dest()->As<Register>());
+}
+
+void SimpleAlloc::DirectCastAllocaHelper(ConvertInstr* instr)
+{
+    auto value = MapConstAndGlobalVar(instr->Value());
+    auto dest = MapConstAndGlobalVar(instr->Dest());
+
+    if (!value) stackcache_.Access(instr->Value()->As<Register>());
+    if (!dest) Allocate(instr->Dest()->As<Register>());
 }
 
 
@@ -148,21 +160,21 @@ void SimpleAlloc::VisitBasicBlock(BasicBlock* bb)
 }
 
 
-void SimpleAlloc::VisitAddInstr(AddInstr* instr) { BinaryAllocaHelper(instr); }
-void SimpleAlloc::VisitFaddInstr(FaddInstr* instr) { BinaryAllocaHelper(instr); }
-void SimpleAlloc::VisitSubInstr(SubInstr* instr) { BinaryAllocaHelper(instr); }
-void SimpleAlloc::VisitFsubInstr(FsubInstr* instr) { BinaryAllocaHelper(instr); }
-void SimpleAlloc::VisitMulInstr(MulInstr* instr) { BinaryAllocaHelper(instr); }
-void SimpleAlloc::VisitFmulInstr(FmulInstr* instr) { BinaryAllocaHelper(instr); }
-void SimpleAlloc::VisitDivInstr(DivInstr* instr) { BinaryAllocaHelper(instr); }
-void SimpleAlloc::VisitFdivInstr(FdivInstr* instr) { BinaryAllocaHelper(instr); }
-void SimpleAlloc::VisitModInstr(ModInstr* instr) { BinaryAllocaHelper(instr); }
-void SimpleAlloc::VisitShlInstr(ShlInstr* instr) { BinaryAllocaHelper(instr); }
-void SimpleAlloc::VisitLshrInstr(LshrInstr* instr) { BinaryAllocaHelper(instr); }
-void SimpleAlloc::VisitAshrInstr(AshrInstr* instr) { BinaryAllocaHelper(instr); }
-void SimpleAlloc::VisitAndInstr(AndInstr* instr) { BinaryAllocaHelper(instr); }
-void SimpleAlloc::VisitOrInstr(OrInstr* instr) { BinaryAllocaHelper(instr); }
-void SimpleAlloc::VisitXorInstr(XorInstr* instr) { BinaryAllocaHelper(instr); }
+void SimpleAlloc::VisitAddInstr(AddInstr* i) { BinaryAllocaHelper(i); }
+void SimpleAlloc::VisitFaddInstr(FaddInstr* i) { BinaryAllocaHelper(i); }
+void SimpleAlloc::VisitSubInstr(SubInstr* i) { BinaryAllocaHelper(i); }
+void SimpleAlloc::VisitFsubInstr(FsubInstr* i) { BinaryAllocaHelper(i); }
+void SimpleAlloc::VisitMulInstr(MulInstr* i) { BinaryAllocaHelper(i); }
+void SimpleAlloc::VisitFmulInstr(FmulInstr* i) { BinaryAllocaHelper(i); }
+void SimpleAlloc::VisitDivInstr(DivInstr* i) { BinaryAllocaHelper(i); }
+void SimpleAlloc::VisitFdivInstr(FdivInstr* i) { BinaryAllocaHelper(i); }
+void SimpleAlloc::VisitModInstr(ModInstr* i) { BinaryAllocaHelper(i); }
+void SimpleAlloc::VisitShlInstr(ShlInstr* i) { BinaryAllocaHelper(i); }
+void SimpleAlloc::VisitLshrInstr(LshrInstr* i) { BinaryAllocaHelper(i); }
+void SimpleAlloc::VisitAshrInstr(AshrInstr* i) { BinaryAllocaHelper(i); }
+void SimpleAlloc::VisitAndInstr(AndInstr* i) { BinaryAllocaHelper(i); }
+void SimpleAlloc::VisitOrInstr(OrInstr* i) { BinaryAllocaHelper(i); }
+void SimpleAlloc::VisitXorInstr(XorInstr* i) { BinaryAllocaHelper(i); }
 
 
 void SimpleAlloc::VisitAllocaInstr(AllocaInstr* instr)
@@ -174,24 +186,30 @@ void SimpleAlloc::VisitAllocaInstr(AllocaInstr* instr)
     stackcache_.Map2Stack(instr->Result()->As<Register>(), offset);
 }
 
-
 void SimpleAlloc::VisitLoadInstr(LoadInstr* instr)
 {
     auto ptr = MapConstAndGlobalVar(instr->Pointer());
-    auto ptrreg = instr->Pointer()->As<Register>();
-    if (!ptr) stackcache_.AccessStack(ptrreg);
-
-    Allocate(ptrreg);
+    if (!ptr) stackcache_.Access(instr->Result()->As<Register>());
+    Allocate(instr->Result()->As<Register>());
 }
-
 
 void SimpleAlloc::VisitStoreInstr(StoreInstr* instr)
 {
-    auto value = MapConstAndGlobalVar(instr->Value());
-    auto dest = MapConstAndGlobalVar(instr->Dest());
-
-    auto valreg = instr->Value()->As<Register>();
-    auto destreg = instr->Dest()->As<Register>();
-    if (!dest) Allocate(destreg);
-    if (!value) Allocate(valreg);
+    MapConstAndGlobalVar(instr->Dest());
+    if (MapConstAndGlobalVar(instr->Value()))
+        stackcache_.Access(instr->Value()->As<Register>());
 }
+
+
+void SimpleAlloc::VisitTruncInstr(TruncInstr* i) { ConvertAllocaHelper(i); }
+void SimpleAlloc::VisitFtruncInstr(FtruncInstr* i) { ConvertAllocaHelper(i); }
+void SimpleAlloc::VisitZextInstr(ZextInstr* i) { ConvertAllocaHelper(i); }
+void SimpleAlloc::VisitSextInstr(SextInstr* i) { ConvertAllocaHelper(i); }
+void SimpleAlloc::VisitFextInstr(FextInstr* i) { ConvertAllocaHelper(i); }
+void SimpleAlloc::VisitFtoUInstr(FtoUInstr* i) { ConvertAllocaHelper(i); }
+void SimpleAlloc::VisitFtoSInstr(FtoSInstr* i) { ConvertAllocaHelper(i); }
+void SimpleAlloc::VisitUtoFInstr(UtoFInstr* i) { ConvertAllocaHelper(i); }
+void SimpleAlloc::VisitStoFInstr(StoFInstr* i) { ConvertAllocaHelper(i); }
+void SimpleAlloc::VisitPtrtoIInstr(PtrtoIInstr* i) { ConvertAllocaHelper(i); }
+void SimpleAlloc::VisitItoPtrInstr(ItoPtrInstr* i) { ConvertAllocaHelper(i); }
+void SimpleAlloc::VisitBitcastInstr(BitcastInstr* i) { ConvertAllocaHelper(i); }

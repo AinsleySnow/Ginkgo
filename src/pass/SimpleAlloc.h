@@ -31,7 +31,7 @@ private:
 
         RegTag SpareReg() const;
         RegTag SpareFReg() const;
-        void AccessStack(const Register*) const;
+        void Access(const Register*) const;
         void Map2Reg(const Register*, RegTag);
         void Map2Stack(const Register*, long offset);
 
@@ -51,7 +51,9 @@ private:
 
     void Allocate(const Register*);
     long AllocateOnX64Stack(x64Stack&, size_t, size_t);
-    inline void BinaryAllocaHelper(BinaryInstr*);
+    void BinaryAllocaHelper(BinaryInstr*);
+    void ConvertAllocaHelper(ConvertInstr*);
+    void DirectCastAllocaHelper(ConvertInstr*);
 
     Function* curfunc_{};
     StackCache stackcache_{ *this };
@@ -80,20 +82,20 @@ private:
     void VisitLoadInstr(LoadInstr*) override;
     void VisitStoreInstr(StoreInstr*) override;
 
-    void VisitTruncInstr(TruncInstr*) override {}
-    void VisitFtruncInstr(FtruncInstr*) override {}
+    void VisitTruncInstr(TruncInstr*) override;
+    void VisitFtruncInstr(FtruncInstr*) override;
 
-    void VisitZextInstr(ZextInstr*) override {}
-    void VisitSextInstr(SextInstr*) override {}
-    void VisitFextInstr(FextInstr*) override {}
-    void VisitFtoUInstr(FtoUInstr*) override {}
-    void VisitFtoSInstr(FtoSInstr*) override {}
+    void VisitZextInstr(ZextInstr*) override;
+    void VisitSextInstr(SextInstr*) override;
+    void VisitFextInstr(FextInstr*) override;
+    void VisitFtoUInstr(FtoUInstr*) override;
+    void VisitFtoSInstr(FtoSInstr*) override;
 
-    void VisitUtoFInstr(UtoFInstr*) override {}
-    void VisitStoFInstr(StoFInstr*) override {}
-    void VisitPtrtoIInstr(PtrtoIInstr*) override {}
-    void VisitItoPtrInstr(ItoPtrInstr*) override {}
-    void VisitBitcastInstr(BitcastInstr*) override {}
+    void VisitUtoFInstr(UtoFInstr*) override;
+    void VisitStoFInstr(StoFInstr*) override;
+    void VisitPtrtoIInstr(PtrtoIInstr*) override;
+    void VisitItoPtrInstr(ItoPtrInstr*) override;
+    void VisitBitcastInstr(BitcastInstr*) override;
 };
 
 #endif // _SIMPLE_ALLOC_H_
