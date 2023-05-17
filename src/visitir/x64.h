@@ -103,6 +103,8 @@ public:
     static bool ClassOf(const x64* const i) { return i->id_ == x64Id::imm; }
 
     x64Imm(const Constant* c);
+
+    unsigned long GetRepr() const;
     std::string ToString() const override;
 
     bool operator==(const x64Imm& imm) const;

@@ -1,5 +1,6 @@
 #include "visitir/x64.h"
 #include "IR/IROperand.h"
+#include <cstring>
 
 
 bool x64::operator==(const x64& x) const
@@ -125,15 +126,25 @@ bool x64Mem::operator==(const x64Mem& mem) const
 x64Imm::x64Imm(const Constant* c) :
     x64(x64Id::imm, c->Type()->Size()), val_(c) {}
 
-std::string x64Imm::ToString() const
+
+unsigned long x64Imm::GetRepr() const
 {
     if (val_->Is<IntConst>())
-        return '$' + std::to_string(val_->As<IntConst>()->Val());
+        return val_->As<IntConst>()->Val();
 
     double val = val_->As<FloatConst>()->Val();
-    unsigned long repr = *reinterpret_cast<unsigned long*>(&val);
-    return '$' + std::to_string(repr);
+    unsigned long repr = 0;
+    std::memcpy(reinterpret_cast<char*>(&repr),
+        reinterpret_cast<char*>(&val), sizeof(unsigned long));
+
+    return repr;
 }
+
+std::string x64Imm::ToString() const
+{
+    return '$' + std::to_string(GetRepr());
+}
+
 
 bool x64Imm::operator==(const x64Imm& imm) const
 {
