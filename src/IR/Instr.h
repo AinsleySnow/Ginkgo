@@ -111,8 +111,10 @@ public:
     std::string ToString() const override;
 
     void AddValueBlkPair(const IntConst* val, const BasicBlock* blk) { cases_.push_back({ val, blk }); }
+    const auto& GetValueBlkPairs() const { return cases_; }
     void SetDefault(const BasicBlock* bb) { default_ = bb; }
-    auto GetDefault() { return default_; }
+    auto GetDefault() const { return default_; }
+    auto GetIdent() const { return ident_; }
 
 private:
     const IROperand* ident_{};
@@ -127,17 +129,22 @@ public:
     static bool ClassOf(const CallInstr* const) { return true; }
     static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::call; }
 
-    CallInstr(const std::string& result, const FuncType* proto, const std::string& name) :
+    CallInstr(const Register* result, const FuncType* proto, const std::string& name) :
         Instr(InstrId::call), result_(result), proto_(proto), func_(name) {}
-    CallInstr(const std::string& result, const Register* addr) :
+    CallInstr(const Register* result, const Register* addr) :
         Instr(InstrId::call), result_(result), funcaddr_(addr) {}
 
     std::string ToString() const override;
 
     void AddArgv(const IROperand* argv) { arglist_.push_back(argv); }
+    const auto& ArgvList() const { return arglist_; }
+    auto Result() const { return result_; }
+    auto Proto() const { return proto_; }
+    auto FuncName() const { return func_; }
+    auto FuncAddr() const { return funcaddr_; }
 
 private:
-    std::string result_{};
+    const Register* result_{};
     const FuncType* proto_{};
 
     std::string func_{};
@@ -510,13 +517,17 @@ public:
     static bool ClassOf(const GetElePtrInstr* const) { return true; }
     static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::geteleptr; }
 
-    GetElePtrInstr(const std::string& r, const Register* p, const IROperand* i) :
+    GetElePtrInstr(const Register* r, const Register* p, const IROperand* i) :
         Instr(InstrId::geteleptr), result_(r), pointer_(p), index_(i) {}
 
     std::string ToString() const override;
 
+    auto Result() const { return result_; }
+    auto Pointer() const { return pointer_; }
+    auto Index() const { return index_; }
+
 private:
-    std::string result_{};
+    const Register* result_{};
     const Register* pointer_{};
     const IROperand* index_{};
 };
@@ -817,6 +828,8 @@ public:
 
     std::string ToString() const override;
     void AddBlockValPair(const BasicBlock*, const IROperand*);
+    const auto& GetBlockValPair() const { return labels_; }
+    auto Result() const { return result_; }
 
 private:
     const Register* result_{};

@@ -43,8 +43,7 @@ std::string CallInstr::ToString() const
             call += (*arg)->ToString() + ", ";
         call += arglist_.back()->ToString();
     }
-    return result_.empty() ?
-        call + ')' : result_ + " = " + call + ')';
+    return result_ ? call + ')' : result_->Name() + " = " + call + ')';
 }
 
 
@@ -138,7 +137,7 @@ std::string SetValInstr::ToString() const
 
 std::string GetElePtrInstr::ToString() const
 {
-    return result_ + " = geteleptr " + pointer_->ToString() +
+    return result_->Name() + " = geteleptr " + pointer_->ToString() +
         " [" + index_->ToString() + ']';
 }
 

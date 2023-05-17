@@ -151,10 +151,10 @@ void InstrBuilder::InsertSwitchInstr(const IROperand* ident)
 const Register* InstrBuilder::InsertCallInstr(
     const std::string& result, const FuncType* proto, const std::string& func)
 {
-    auto pcall = std::make_unique<CallInstr>(result, proto, func);
-    Insert(std::move(pcall));
-    return result.empty() ?
+    auto preg = result.empty() ?
         nullptr : Register::CreateRegister((Container()), result, proto->ReturnType());
+    Insert(std::make_unique<CallInstr>(preg, proto, func));
+    return preg;
 }
 
 const Register* InstrBuilder::InsertCallInstr(
@@ -164,10 +164,10 @@ const Register* InstrBuilder::InsertCallInstr(
     auto rety = func->Type()->ToPointer()->
         Point2()->ToFunction()->ReturnType();
 
-    auto pcall = std::make_unique<CallInstr>(result, func);
-    Insert(std::move(pcall));
-    return result.empty() ?
+    auto preg = result.empty() ?
         nullptr : Register::CreateRegister(Container(), result, rety);
+    Insert(std::make_unique<CallInstr>(preg, func));
+    return preg;
 }
 
 
@@ -288,9 +288,6 @@ void InstrBuilder::InsertSetValInstr(
 const Register* InstrBuilder::InsertGetElePtrInstr(
     const std::string& result, const Register* val, const IROperand* index)
 {
-    auto pgeteleptr = std::make_unique<GetElePtrInstr>(result, val, index);
-    Insert(std::move(pgeteleptr));
-
     auto point2 = val->Type()->ToPointer()->Point2();
     const IRType* rety = nullptr;
 
@@ -298,7 +295,9 @@ const Register* InstrBuilder::InsertGetElePtrInstr(
         rety = PtrType::GetPtrType(Container(), point2->ToArray()->ArrayOf());
     else rety = PtrType::GetPtrType(Container(), point2);
 
-    return Register::CreateRegister(Container(), result, rety);
+    auto reg = Register::CreateRegister(Container(), result, rety);
+    Insert(std::make_unique<GetElePtrInstr>(reg, val, index));
+    return reg;
 }
 
 
