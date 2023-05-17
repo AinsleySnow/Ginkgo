@@ -16,21 +16,27 @@ class x64Reg;
 class EmitAsm
 {
 public:
-    EmitAsm(const std::string&);
-    ~EmitAsm();
+    EmitAsm(const std::string& fn) : filename_(fn) { file_.open(fn); }
+    ~EmitAsm() { file_.close(); }
 
     std::string AsmName() const { return filename_; }
-    void EnterBlock(int, const BasicBlock*);
-    void WriteFile();
+
+    auto CurBlock() const { return curblk_; }
+    void EnterBlock(const BasicBlock*);
+    void SwitchBlock(const BasicBlock*);
+
+    void Write2Mem() { write2file_ = false; }
+    void Dump2File();
 
     void EmitLabel(const std::string&);
     void EmitPseudoInstr(const std::string&);
     void EmitPseudoInstr(
         const std::string&, std::initializer_list<std::string>);
 
-    void EmitCxtx(const x64Reg* rax);
+    void EmitCxtx(size_t);
     void EmitLeaq(const x64* addr, const x64* dest);
     void EmitUnary(const std::string& instr, const x64* op);
+    void EmitBinary(const std::string& instr, unsigned long imm, const x64* op);
     void EmitBinary(const std::string& instr, const x64* op1, const x64* op2);
 
     void EmitVarithm(const std::string& instr, const x64* op1,
@@ -40,14 +46,18 @@ public:
     void EmitUcom(const x64* op1, const x64* op2);
 
     void EmitMov(const x64* src, const x64* dest);
+    void EmitMov(RegTag, const x64* dest);
+    void EmitMov(const x64* src, RegTag);
     void EmitMovz(const x64* src, const x64* dest);
     void EmitMovz(size_t from, size_t to, const x64* op);
     void EmitMovs(const x64* src, const x64* dest);
     void EmitMovs(size_t from, size_t to, const x64* op);
     void EmitVmov(const x64* src, const x64* dest);
 
-    void EmitPop(const x64Reg* dest);
-    void EmitPush(const x64Reg* dest);
+    void EmitPop(const x64* dest);
+    void EmitPop(RegTag, size_t);
+    void EmitPush(const x64* dest);
+    void EmitPush(RegTag, size_t);
 
     void EmitCall(const std::string&);
     void EmitCall(const x64* func);
@@ -63,16 +73,18 @@ public:
     void EmitSet(const std::string& cond, const x64* dest);
 
 private:
-    char GetIntTag(const x64* op) const;
-    std::string GetFltTag(const x64* op) const;
+    void Output(const std::string&);
+
+    mutable int labelindex_{};
 
     std::unordered_map<
         const BasicBlock*, std::vector<std::string>> blks_{};
-    std::vector<const BasicBlock*> index_{};
+    std::vector<const BasicBlock*> blkindexes_{};
     const BasicBlock* curblk_{};
 
     std::string filename_{};
     std::fstream file_{};
+    bool write2file_{ true };
 };
 
 #endif // _EMIT_ASM_H_

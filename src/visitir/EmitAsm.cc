@@ -6,7 +6,7 @@
 #define INDENT "    "
 
 
-char EmitAsm::GetIntTag(const x64* op) const
+static char GetIntTag(const x64* op)
 {
     if (op->Size() == 1) return 'b';
     if (op->Size() == 2) return 'w';
@@ -15,7 +15,7 @@ char EmitAsm::GetIntTag(const x64* op) const
     return '\0';
 }
 
-std::string EmitAsm::GetFltTag(const x64* op) const
+static std::string GetFltTag(const x64* op)
 {
     if (op->Size() == 4) return "ss";
     if (op->Size() == 8) return "sd";
@@ -23,41 +23,45 @@ std::string EmitAsm::GetFltTag(const x64* op) const
 }
 
 
-EmitAsm::EmitAsm(const std::string& filename) : filename_(filename)
+void EmitAsm::Output(const std::string& str)
 {
-    file_.open(filename);
-}
-
-EmitAsm::~EmitAsm()
-{
-    file_.close();
+    if (write2file_) file_ << str;
+    else blks_[curblk_].push_back(str);
 }
 
 
-void EmitAsm::EnterBlock(int i, const BasicBlock* bb)
+void EmitAsm::EnterBlock(const BasicBlock* bb)
 {
     curblk_ = bb;
-    index_.emplace(index_.begin() + i, bb);
+    blkindexes_.push_back(bb);
 }
 
-
-void EmitAsm::WriteFile()
+void EmitAsm::SwitchBlock(const BasicBlock* bb)
 {
-    for (auto bb : index_)
+    curblk_ = bb;
+}
+
+void EmitAsm::Dump2File()
+{
+    for (auto bb : blkindexes_)
         for (auto s : blks_[bb])
             file_ << s;
+
+    blks_.clear();
+    blkindexes_.clear();
+    write2file_ = true;
+    labelindex_ = 0;
 }
 
 
 void EmitAsm::EmitLabel(const std::string& label)
 {
-    blks_[curblk_].push_back(fmt::format("{}:\n", label));
+    Output(fmt::format("{}:\n", label));
 }
-
 
 void EmitAsm::EmitPseudoInstr(const std::string& instr)
 {
-    blks_[curblk_].push_back(fmt::format(INDENT "{}\n", instr));
+    Output(fmt::format(INDENT "{}\n", instr));
 }
 
 void EmitAsm::EmitPseudoInstr(
@@ -67,32 +71,32 @@ void EmitAsm::EmitPseudoInstr(
     for (auto i = args.begin(); i < args.end() - 1; ++i)
         line += fmt::format("{}, ", *i);
     line += fmt::format("{}\n", *(args.end() - 1));
-    blks_[curblk_].push_back(line);
+    Output(line);
 }
 
 
-void EmitAsm::EmitCxtx(const x64Reg* rax)
+void EmitAsm::EmitCxtx(size_t size)
 {
-    char from = GetIntTag(rax);
+    char from = size == 4 ? 'l' : 'q';
     char to = from == 'q' ? 'o' : 'l';
-    blks_[curblk_].push_back(fmt::format(INDENT "c{}t{}\n", from, to));
+    Output(fmt::format(INDENT "c{}t{}\n", from, to));
 }
 
 void EmitAsm::EmitLeaq(const x64* addr, const x64* dest)
 {
-    blks_[curblk_].push_back(fmt::format(
+    Output(fmt::format(
         INDENT "leaq {}, {}\n", addr->ToString(), dest->ToString()));
 }
 
 void EmitAsm::EmitUnary(const std::string& instr, const x64* op)
 {
-    blks_[curblk_].push_back(fmt::format(
+    Output(fmt::format(
         INDENT "{}{} {}\n", instr, GetIntTag(op), op->ToString()));
 }
 
 void EmitAsm::EmitBinary(const std::string& instr, const x64* op1, const x64* op2)
 {
-    blks_[curblk_].push_back(fmt::format(INDENT "{}{} {}, {}\n",
+    Output(fmt::format(INDENT "{}{} {}, {}\n",
         instr, GetIntTag(op1), op1->ToString(), op2->ToString()));
 }
 
@@ -103,13 +107,13 @@ void EmitAsm::EmitVarithm(const std::string& instr, const x64* op1,
     auto precision = GetFltTag(op1);
 
     if (instr == "sqrt")
-        blks_[curblk_].push_back(fmt::format(INDENT "{}{} {}, {}\n",
+        Output(fmt::format(INDENT "{}{} {}, {}\n",
             instr, precision, op1->ToString(), dest->ToString()));
     else if (instr == "and")
-        blks_[curblk_].push_back(fmt::format(INDENT "{}{} {}, {}, {}\n",
+        Output(fmt::format(INDENT "{}{} {}, {}, {}\n",
             instr, precision, op1->ToString(), op2->ToString(), dest->ToString()));
     else
-        blks_[curblk_].push_back(fmt::format(INDENT "v{}{} {}, {}, {}\n",
+        Output(fmt::format(INDENT "v{}{} {}, {}, {}\n",
             instr, precision, op1->ToString(), op2->ToString(), dest->ToString()));
 }
 
@@ -118,7 +122,7 @@ void EmitAsm::EmitVcvtt(const x64* src, const x64* dest)
     auto from = GetFltTag(src);
     auto to = dest->Size() == 8 ? "q " : " ";
 
-    blks_[curblk_].push_back(fmt::format(INDENT "vcvtt{}2si{}{}, {}\n",
+    Output(fmt::format(INDENT "vcvtt{}2si{}{}, {}\n",
         from, to, src->ToString(), dest->ToString()));
 }
 
@@ -127,28 +131,42 @@ void EmitAsm::EmitVcvt(const x64* op1, const x64* op2, const x64* dest)
     auto t2 = GetFltTag(dest);
     auto suffix = op2->Size() == 8 ? "q " : " ";
 
-    blks_[curblk_].push_back(fmt::format(INDENT "vcvtsi2{}{}{}, {}, {}\n",
+    Output(fmt::format(INDENT "vcvtsi2{}{}{}, {}, {}\n",
         t2, suffix, op1->ToString(), op2->ToString(), dest->ToString()));
 }
 
 void EmitAsm::EmitUcom(const x64* op1, const x64* op2)
 {
-   blks_[curblk_].push_back(fmt::format(INDENT "vucomi{} {}, {}\n",
+   Output(fmt::format(INDENT "vucomi{} {}, {}\n",
         GetFltTag(op1), op1->ToString(), op2->ToString()));
 }
 
 
 void EmitAsm::EmitMov(const x64* src, const x64* dest)
 {
-    blks_[curblk_].push_back(fmt::format(INDENT "mov{} {}, {}\n",
+    Output(fmt::format(INDENT "mov{} {}, {}\n",
         GetIntTag(src), src->ToString(), dest->ToString()));
+}
+
+void EmitAsm::EmitMov(const x64* src, RegTag tag)
+{
+    auto dest = x64Reg(tag, src->Size());
+    Output(fmt::format(INDENT "mov{} {}, {}\n",
+        GetIntTag(src), src->ToString(), dest.ToString()));
+}
+
+void EmitAsm::EmitMov(RegTag tag, const x64* dest)
+{
+    auto src = x64Reg(tag, dest->Size());
+    Output(fmt::format(INDENT "mov{} {}, {}\n",
+        GetIntTag(dest), src.ToString(), dest->ToString()));
 }
 
 void EmitAsm::EmitMovz(const x64* src, const x64* dest)
 {
     char from = GetIntTag(src);
     char to = GetIntTag(dest);
-    blks_[curblk_].push_back(fmt::format(INDENT "movz{}{} {}, {}\n",
+    Output(fmt::format(INDENT "movz{}{} {}, {}\n",
         from, to, src->ToString(), dest->ToString()));
 }
 
@@ -164,7 +182,7 @@ void EmitAsm::EmitMovz(size_t from, size_t to, const x64* op)
     auto sto = op->ToString();
     auto tto = GetIntTag(op);
 
-    blks_[curblk_].push_back(fmt::format(
+    Output(fmt::format(
         INDENT "movz{}{} {}, {}\n", tfrm, tto, sfrm, sto));
 
     const_cast<x64*>(op)->Size() = original;
@@ -174,7 +192,7 @@ void EmitAsm::EmitMovs(const x64* src, const x64* dest)
 {
     char from = GetIntTag(src);
     char to = GetIntTag(dest);
-    blks_[curblk_].push_back(fmt::format(INDENT "movs{}{} {}, {}\n",
+    Output(fmt::format(INDENT "movs{}{} {}, {}\n",
         from, to, src->ToString(), dest->ToString()));
 }
 
@@ -190,7 +208,7 @@ void EmitAsm::EmitMovs(size_t from, size_t to, const x64* op)
     auto sto = op->ToString();
     auto tto = GetIntTag(op);
 
-    blks_[curblk_].push_back(fmt::format(
+    Output(fmt::format(
         INDENT "movs{}{} {}, {}\n", tfrm, tto, sfrm, sto));
 
     const_cast<x64*>(op)->Size() = original;
@@ -198,79 +216,91 @@ void EmitAsm::EmitMovs(size_t from, size_t to, const x64* op)
 
 void EmitAsm::EmitVmov(const x64* src, const x64* dest)
 {
-    blks_[curblk_].push_back(fmt::format(INDENT "vmov{} {}, {}\n",
+    Output(fmt::format(INDENT "vmov{} {}, {}\n",
         GetFltTag(src), src->ToString(), dest->ToString()));
 }
 
 
-void EmitAsm::EmitPop(const x64Reg* dest)
+void EmitAsm::EmitPop(const x64* dest)
 {
-    blks_[curblk_].push_back(fmt::format(INDENT "pop{} {}\n",
+    Output(fmt::format(INDENT "pop{} {}\n",
         GetIntTag(dest), dest->ToString()));
 }
 
-void EmitAsm::EmitPush(const x64Reg* dest)
+void EmitAsm::EmitPop(RegTag tag, size_t size)
 {
-    blks_[curblk_].push_back(fmt::format(INDENT "push{} {}\n",
+    x64Reg reg{ tag, size };
+    EmitPop(&reg);
+}
+
+void EmitAsm::EmitPush(const x64* dest)
+{
+    Output(fmt::format(INDENT "push{} {}\n",
         GetIntTag(dest), dest->ToString()));
+}
+
+void EmitAsm::EmitPush(RegTag tag, size_t size)
+{
+    x64Reg reg{ tag, size };
+    EmitPush(&reg);
 }
 
 
 void EmitAsm::EmitCall(const std::string& func)
 {
-    blks_[curblk_].push_back(fmt::format(INDENT "call {}\n", func));
+    Output(fmt::format(INDENT "call {}\n", func));
 }
 
 void EmitAsm::EmitCall(const x64* func)
 {
-    blks_[curblk_].push_back(fmt::format(INDENT "call *{}\n", func->ToString()));
+    Output(fmt::format(INDENT "call *{}\n", func->ToString()));
 }
 
 void EmitAsm::EmitRet()
 {
-    blks_[curblk_].push_back(fmt::format(INDENT "ret\n"));
+    Output(fmt::format(INDENT "ret\n"));
 }
 
 
 void EmitAsm::EmitJmp(const std::string& cond, const std::string& label)
 {
-    blks_[curblk_].push_back(fmt::format(INDENT "j{} {}\n",
+    Output(fmt::format(INDENT "j{} {}\n",
         cond.empty() ? "mp" : cond, label));
 }
 
 void EmitAsm::EmitCMov(const std::string& cond, const x64* op1, const x64* op2)
 {
-    blks_[curblk_].push_back(fmt::format(INDENT "cmov{} {}, {}\n",
+    Output(fmt::format(INDENT "cmov{} {}, {}\n",
         cond, op1->ToString(), op2->ToString()));
 }
 
 
 void EmitAsm::EmitCmp(const x64* op1, const x64* op2)
 {
-    blks_[curblk_].push_back(fmt::format(INDENT "cmp{} {}, {}\n",
+    Output(fmt::format(INDENT "cmp{} {}, {}\n",
         GetIntTag(op1), op1->ToString(), op2->ToString()));
 }
 
 void EmitAsm::EmitCmp(const x64* op1, unsigned long c)
 {
-    blks_[curblk_].push_back(fmt::format(INDENT "cmp{} {}, ${}\n",
+    Output(fmt::format(INDENT "cmp{} {}, ${}\n",
         GetIntTag(op1), op1->ToString(), std::to_string(c)));
 }
 
 void EmitAsm::EmitTest(const x64* op1, const x64* op2)
 {
-    blks_[curblk_].push_back(fmt::format(INDENT "test{} {}, {}\n",
+    Output(fmt::format(INDENT "test{} {}, {}\n",
         GetIntTag(op1), op1->ToString(), op2->ToString()));
 }
 
 void EmitAsm::EmitTest(const x64* op1, unsigned long c)
 {
-    blks_[curblk_].push_back(fmt::format(INDENT "test{} {}, ${}\n",
+    Output(fmt::format(INDENT "test{} {}, ${}\n",
         GetIntTag(op1), op1->ToString(), std::to_string(c)));
 }
 
 void EmitAsm::EmitSet(const std::string& cond, const x64* dest)
 {
-    blks_[curblk_].push_back(fmt::format(INDENT "set{} {}\n",
+    Output(fmt::format(INDENT "set{} {}\n",
         cond, dest->ToString()));
 }
