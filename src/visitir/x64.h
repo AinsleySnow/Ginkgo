@@ -86,7 +86,15 @@ public:
     bool operator==(const x64Mem& mem) const;
     bool operator!=(const x64Mem& mem) const { return !(*this == mem); }
 
+    bool& LoadTwice() { return loadtwice_; }
+    bool LoadTwice() const { return loadtwice_; }
+
 private:
+    // if this field is true, it means that the address stores
+    // an address as well, and in order to get the value,
+    // we have to use two mov instructions.
+    bool loadtwice_{};
+
     std::string label_{};
 
     long offset_{};
