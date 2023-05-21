@@ -35,15 +35,25 @@ public:
 
     void EmitCxtx(size_t);
     void EmitLeaq(const x64* addr, const x64* dest);
+    void EmitLeaq(const x64* addr, RegTag dest);
     void EmitUnary(const std::string& instr, const x64* op);
     void EmitBinary(const std::string& instr, unsigned long imm, const x64* op);
     void EmitBinary(const std::string& instr, const x64* op1, const x64* op2);
 
     void EmitVarithm(const std::string& instr, const x64* op1,
         const x64* op2, const x64* dest);
+    void EmitVarithm(const std::string& instr, RegTag op1, RegTag op2, RegTag op3);
+
     void EmitVcvtt(const x64* src, const x64* dest);
-    void EmitVcvt(const x64* op1, const x64* op2, const x64* dest);
+    void EmitVcvtt(const x64* op1, RegTag op2);
+    void EmitVcvtt(RegTag op1, const x64* op2);
+
+    void EmitVcvt(const x64* op1, const x64* dest);
+    void EmitVcvt(const x64* op1, RegTag op2);
+    void EmitVcvt(RegTag op1, const x64* op2);
+
     void EmitUcom(const x64* op1, const x64* op2);
+    void EmitUcom(RegTag op1, const x64* op2);
 
     void EmitMov(const x64* src, const x64* dest);
     void EmitMov(RegTag, const x64* dest);
@@ -52,7 +62,13 @@ public:
     void EmitMovz(size_t from, size_t to, const x64* op);
     void EmitMovs(const x64* src, const x64* dest);
     void EmitMovs(size_t from, size_t to, const x64* op);
+
     void EmitVmov(const x64* src, const x64* dest);
+    void EmitVmov(const x64* src, RegTag);
+    void EmitVmov(RegTag, const x64* dest);
+    void EmitVmovap(const x64Reg* src, const x64Reg* dest);
+    void EmitVmovap(const x64Reg* src, RegTag dest);
+    void EmitVmovap(RegTag, const x64Reg*);
 
     void EmitPop(const x64* dest);
     void EmitPop(RegTag, size_t);

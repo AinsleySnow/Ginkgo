@@ -1,4 +1,5 @@
 #include "visitir/EmitAsm.h"
+#include "visitir/x64.h"
 #include <climits>
 #include <fmt/format.h>
 #include <random>
@@ -88,10 +89,22 @@ void EmitAsm::EmitLeaq(const x64* addr, const x64* dest)
         INDENT "leaq {}, {}\n", addr->ToString(), dest->ToString()));
 }
 
+void EmitAsm::EmitLeaq(const x64* addr, RegTag dest)
+{
+    x64Reg reg{ dest };
+    EmitLeaq(addr, &reg);
+}
+
 void EmitAsm::EmitUnary(const std::string& instr, const x64* op)
 {
     Output(fmt::format(
         INDENT "{}{} {}\n", instr, GetIntTag(op), op->ToString()));
+}
+
+void EmitAsm::EmitBinary(const std::string& instr, unsigned long imm, const x64* op)
+{
+    Output(fmt::format(INDENT "{}{} ${}, {}\n",
+        instr, std::to_string(imm), op->ToString()));
 }
 
 void EmitAsm::EmitBinary(const std::string& instr, const x64* op1, const x64* op2)
@@ -117,6 +130,13 @@ void EmitAsm::EmitVarithm(const std::string& instr, const x64* op1,
             instr, precision, op1->ToString(), op2->ToString(), dest->ToString()));
 }
 
+void EmitAsm::EmitVarithm(const std::string& instr, RegTag op1, RegTag op2, RegTag op3)
+{
+    x64Reg r1{ op1 }, r2{ op2 }, r3{ op3 };
+    EmitVarithm(instr, &r1, &r2, &r3);
+}
+
+
 void EmitAsm::EmitVcvtt(const x64* src, const x64* dest)
 {
     auto from = GetFltTag(src);
@@ -126,19 +146,52 @@ void EmitAsm::EmitVcvtt(const x64* src, const x64* dest)
         from, to, src->ToString(), dest->ToString()));
 }
 
-void EmitAsm::EmitVcvt(const x64* op1, const x64* op2, const x64* dest)
+void EmitAsm::EmitVcvtt(const x64* op1, RegTag op2)
+{
+    x64Reg reg{ op2 };
+    EmitVcvtt(op1, &reg);
+}
+
+void EmitAsm::EmitVcvtt(RegTag op1, const x64* op2)
+{
+    x64Reg reg{ op1 };
+    EmitVcvtt(&reg, op2);
+}
+
+
+void EmitAsm::EmitVcvt(const x64* op1, const x64* dest)
 {
     auto t2 = GetFltTag(dest);
-    auto suffix = op2->Size() == 8 ? "q " : " ";
+    auto suffix = dest->Size() == 8 ? "q " : " ";
+    auto sdest = dest->ToString();
 
     Output(fmt::format(INDENT "vcvtsi2{}{}{}, {}, {}\n",
-        t2, suffix, op1->ToString(), op2->ToString(), dest->ToString()));
+        t2, suffix, op1->ToString(), dest, dest));
 }
+
+void EmitAsm::EmitVcvt(const x64* op1, RegTag op2)
+{
+    x64Reg reg{ op2 };
+    EmitVcvt(op1, &reg);
+}
+
+void EmitAsm::EmitVcvt(RegTag op1, const x64* op2)
+{
+    x64Reg reg{ op1 };
+    EmitVcvt(&reg, op2);
+}
+
 
 void EmitAsm::EmitUcom(const x64* op1, const x64* op2)
 {
    Output(fmt::format(INDENT "vucomi{} {}, {}\n",
         GetFltTag(op1), op1->ToString(), op2->ToString()));
+}
+
+void EmitAsm::EmitUcom(RegTag op1, const x64* op2)
+{
+    x64Reg reg{ op1 };
+    EmitUcom(op1, &reg);
 }
 
 
@@ -214,10 +267,43 @@ void EmitAsm::EmitMovs(size_t from, size_t to, const x64* op)
     const_cast<x64*>(op)->Size() = original;
 }
 
+
 void EmitAsm::EmitVmov(const x64* src, const x64* dest)
 {
     Output(fmt::format(INDENT "vmov{} {}, {}\n",
         GetFltTag(src), src->ToString(), dest->ToString()));
+}
+
+void EmitAsm::EmitVmov(const x64* src, RegTag dest)
+{
+    auto destreg = x64Reg(dest, src->Size());
+    Output(fmt::format(INDENT "vmov{} {}, {}\n",
+        GetFltTag(src), src->ToString(), destreg.ToString()));
+}
+
+void EmitAsm::EmitVmov(RegTag src, const x64* dest)
+{
+    auto srcreg = x64Reg(src, dest->Size());
+    Output(fmt::format(INDENT "vmov{} {}, {}\n",
+        GetFltTag(dest), srcreg.ToString(), dest->ToString()));
+}
+
+void EmitAsm::EmitVmovap(const x64Reg* src, const x64Reg* dest)
+{
+    Output(fmt::format(INDENT "vmovap{} {}, {}\n",
+        GetFltTag(src)[1], src->ToString(), dest->ToString()));
+}
+
+void EmitAsm::EmitVmovap(const x64Reg* src, RegTag dest)
+{
+    x64Reg reg{ dest, src->Size() };
+    EmitVmovap(src, &reg);
+}
+
+void EmitAsm::EmitVmovap(RegTag src, const x64Reg* dest)
+{
+    x64Reg reg{ src, dest->Size() };
+    EmitVmovap(&reg, dest);
 }
 
 
