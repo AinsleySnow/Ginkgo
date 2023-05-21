@@ -89,6 +89,11 @@ public:
     bool& LoadTwice() { return loadtwice_; }
     bool LoadTwice() const { return loadtwice_; }
 
+    auto Offset() const { return offset_; }
+    auto Base() const { return base_; }
+    auto Index() const { return index_; }
+    auto Scale() const { return scale_; }
+
 private:
     // if this field is true, it means that the address stores
     // an address as well, and in order to get the value,

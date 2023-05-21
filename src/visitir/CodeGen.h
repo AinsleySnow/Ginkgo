@@ -3,16 +3,19 @@
 
 #include "visitir/IRVisitor.h"
 #include "visitir/EmitAsm.h"
-#include "visitir/x64.h"
 #include "pass/x64Alloc.h"
 #include <cstdio>
+#include <memory>
 #include <string>
 #include <unordered_map>
 
 class BinaryInstr;
-class IROperand;
 class Constant;
+class FuncType;
+class IROperand;
+class x64;
 enum class Condition;
+enum class RegTag;
 
 
 class CodeGen : public IRVisitor
@@ -49,8 +52,17 @@ public:
     void VisitOrInstr(OrInstr*) override;
     void VisitXorInstr(XorInstr*) override;
 
-    void VisitLoadInstr(LoadInstr*) override {}
-    void VisitStoreInstr(StoreInstr*) override {} 
+    // registers given by alloca is directly mapped
+    // to some locations; so nothing to do here
+
+    void VisitLoadInstr(LoadInstr*) override;
+    void VisitStoreInstr(StoreInstr*) override;
+
+    // commented; since we don't have struct now
+    // void VisitExtractValInstr(ExtractValInstr*) override;
+    // void VisitSetValInstr(SetValInstr*) override;
+
+    void VisitGetElePtrInstr(GetElePtrInstr*) override;
 
     void VisitTruncInstr(TruncInstr*) override;
     void VisitFtruncInstr(FtruncInstr*) override;
@@ -63,8 +75,8 @@ public:
     void VisitUtoFInstr(UtoFInstr*) override;
     void VisitStoFInstr(StoFInstr*) override;
 
-    // instructions like PtrtoI, ItoPtr and Bitcast
-    // Will be handled in register allocators
+    void VisitPtrtoIInstr(PtrtoIInstr*) override;
+    void VisitItoPtrInstr(ItoPtrInstr*) override;
 
     void VisitIcmpInstr(IcmpInstr*) override;
     void VisitFcmpInstr(FcmpInstr*) override;
@@ -72,10 +84,59 @@ public:
     void VisitPhiInstr(PhiInstr*) override;
 
 private:
-    void AdjustRsp();
-    std::string Cond2Str(Condition, bool);
+    std::string GetLCLabel() const;
+    std::string GetTempLabel() const;
+
+    // since x64 requires that float point constants
+    // must be loaded from the memory, so when the operators
+    // in some instructions can be floatpoint constants,
+    // use this method to get the value correctly loaded.
+    // in other cases, use bare alloc_.GetIROpMap would be enough.
+    const x64* MapPossibleFloat(const IROperand*);
+    // sometimes an operator with pointer type maps to a stack
+    // address where the address stores itself, not the value
+    // it points to. MapPossiblePointer tackle with this problem.
+    std::pair<const x64*, bool> MapPossiblePointer(const IROperand*); 
+
+    void AlignRspAs(size_t);
+    void AdjustRsp(long);
+    void DeallocFrame();
+
+    void PassParam(const FuncType*, const std::vector<const IROperand*>&);
+    void SaveCalleeSaved();
+    void RestoreCalleeSaved();
+    void SaveCallerSaved();
+    void RestoreCallerSaved();
+
     void BinaryGenHelper(const std::string&, const BinaryInstr*);
     void VarithmGenHelper(const std::string&, const BinaryInstr*);
+
+    void LeaqEmitHelper(const x64*, const x64*);
+    void MovEmitHelper(const x64*, const x64*);
+    void MovzEmitHelper(const x64*, const x64*);
+    void MovzEmitHelper(size_t, size_t, const x64*);
+    void MovsEmitHelper(const x64*, const x64*);
+    void MovsEmitHelper(size_t, size_t, const x64*);
+    void VecMovEmitHelper(const x64*, const x64*);
+    void VecMovEmitHelper(const x64*, RegTag);
+    void VecMovEmitHelper(RegTag, const x64*);
+
+    void VcvtEmitHelper(const x64*, const x64*);
+    void VcvttEmitHelper(const x64*, const x64*);
+
+    void PushEmitHelper(const x64*);
+    void PushEmitHelper(RegTag, size_t);
+    void PopEmitHelper(const x64*);
+    void PopEmitHelper(RegTag, size_t);
+    void PushXmmReg(RegTag);
+    void PopXmmReg(RegTag);
+
+    size_t stacksize_{};
+    mutable int labelindex_{};
+
+    std::unordered_map<
+        const IROperand*, std::unique_ptr<const x64>> tempmap_{};
+    std::unordered_map<double, std::string> fpconst_{};
 
     x64Alloc& alloc_;
     EmitAsm asmfile_{ "" };
@@ -95,8 +156,6 @@ public:
     std::string GetExpr(const std::string& name) const { return map_.at(name); }
 
 private:
-    std::string Const2Str(const Constant* c) const;
-    std::string Strip(const std::string& s) const;
     std::string Find(const std::string&) const;
     std::string Op2Str(const IROperand* op) const;
 
