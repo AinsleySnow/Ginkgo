@@ -3,6 +3,7 @@ add_library(
     OBJECT
     CodeGen.cc
     EmitAsm.cc
+    SysVConv.cc
     x64.cc
 )
 
@@ -12,6 +13,7 @@ target_precompile_headers(
     PRIVATE CodeGen.h
     PRIVATE EmitAsm.h
     PRIVATE IRVisitor.h
+    PRIVATE SysVConv.h
 )
 
 
