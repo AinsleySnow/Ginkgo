@@ -51,9 +51,9 @@ private:
 
     void Allocate(const Register*);
     long AllocateOnX64Stack(x64Stack&, size_t, size_t);
+
     void BinaryAllocaHelper(BinaryInstr*);
     void ConvertAllocaHelper(ConvertInstr*);
-    void DirectCastAllocaHelper(ConvertInstr*);
 
     Function* curfunc_{};
     StackCache stackcache_{ *this };
@@ -61,6 +61,11 @@ private:
 private:
     void VisitFunction(Function*) override;
     void VisitBasicBlock(BasicBlock*) override;
+
+    void VisitRetInstr(RetInstr*) override;
+    void VisitBrInstr(BrInstr*) override;
+    void VisitSwitchInstr(SwitchInstr*) override;
+    void VisitCallInstr(CallInstr*) override;
 
     void VisitAddInstr(AddInstr*) override;
     void VisitFaddInstr(FaddInstr*) override;
@@ -81,6 +86,9 @@ private:
     void VisitAllocaInstr(AllocaInstr*) override;
     void VisitLoadInstr(LoadInstr*) override;
     void VisitStoreInstr(StoreInstr*) override;
+    // void VisitExtractValInstr(ExtractValInstr*) override;
+    // void VisitSetValInstr(SetValInstr*) override;
+    void VisitGetElePtrInstr(GetElePtrInstr*) override;
 
     void VisitTruncInstr(TruncInstr*) override;
     void VisitFtruncInstr(FtruncInstr*) override;
@@ -96,6 +104,11 @@ private:
     void VisitPtrtoIInstr(PtrtoIInstr*) override;
     void VisitItoPtrInstr(ItoPtrInstr*) override;
     void VisitBitcastInstr(BitcastInstr*) override;
+
+    void VisitIcmpInstr(IcmpInstr*) override;
+    void VisitFcmpInstr(FcmpInstr*) override;
+    void VisitSelectInstr(SelectInstr*) override;
+    void VisitPhiInstr(PhiInstr*) override;
 };
 
 #endif // _SIMPLE_ALLOC_H_
