@@ -2,8 +2,7 @@
 #define _REG_ALLOC_H_
 
 #include "visitir/IRVisitor.h"
-#include <unordered_map>
-#include <unordered_set>
+#include <set>
 
 class Function;
 
@@ -23,8 +22,8 @@ protected:
     auto& UsedRegs() const { return used_; }
 
 private:
-    std::unordered_set<REGENUM> inuse_{};
-    std::unordered_set<REGENUM> used_{};
+    std::set<REGENUM> inuse_{};
+    std::set<REGENUM> used_{};
     ARCHINFO curfunc_{};
 };
 
