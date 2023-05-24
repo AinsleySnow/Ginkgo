@@ -63,6 +63,8 @@ RegTag SysVConv::GetVecReg()
 
 SysVConv::SysVConv(const FuncType* f)
 {
+#define ALIGN_BY_8(x) (((x) + 7) & ~7)
+
     auto size = f->ParamType().size();
     for (int i = 0; i < size; ++i)
         CheckParamClass(f->ParamType()[i]);
@@ -92,16 +94,20 @@ SysVConv::SysVConv(const FuncType* f)
             windex += 2; // since x87up always follows behind x87
             continue;
         case ParamClass::memory:
+            stacksize_ += f->ParamType()[i]->Size();
+            stacksize_ = ALIGN_BY_8(stacksize_);
             windex++;
             continue;
         }
     }
+
+#undef ALIGN_BY_8
 }
 
 
-const x64* SysVConv::PlaceOfArgv(int index)
+const x64* SysVConv::PlaceOfArgv(int index) const
 {
     if (argvs_.find(index) != argvs_.end())
-        return argvs_[index].get();
+        return argvs_.at(index).get();
     return nullptr;
 }

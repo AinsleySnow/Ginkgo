@@ -22,7 +22,9 @@ public:
     };
 
     SysVConv(const FuncType*);
-    const x64* PlaceOfArgv(int);
+    const x64* PlaceOfArgv(int) const;
+    auto StackSize() const { return stacksize_; }
+
 
 private:
     void CheckParamClass(const IRType*);
@@ -36,10 +38,12 @@ private:
 
     // class of every eight bytes
     std::vector<ParamClass> wordclass_{};
+    // how many bytes of parameters are passed in the stack
+    size_t stacksize_{};
 
     // to where does the xth parameter map?
     // no map will be created if some parameter
-    // is to be placed into somewhere in the memory
+    // is to be placed into somewhere of the memory
     std::map<int, std::unique_ptr<x64>> argvs_{};
 };
 
