@@ -4,6 +4,7 @@
 #include "pass/Pass.h"
 #include "pass/RegAlloc.h"
 #include <memory>
+#include <set>
 #include <unordered_map>
 
 class Function;
@@ -15,12 +16,12 @@ enum class x64Phys
 {
     rax, rbx, rcx, rdx,
     rsi, rdi, rbp, rsp,
-    r8, r9, r10, r11,
+    r8,  r9,  r10, r11,
     r12, r13, r14, r15,
 
-    xmm0, xmm1, xmm2, xmm3,
-    xmm4, xmm5, xmm6, xmm7,
-    xmm8, xmm9, xmm10, xmm11,
+    xmm0,  xmm1,  xmm2,  xmm3,
+    xmm4,  xmm5,  xmm6,  xmm7,
+    xmm8,  xmm9,  xmm10, xmm11,
     xmm12, xmm13, xmm14, xmm15,
 };
 
@@ -48,13 +49,25 @@ struct x64Stack
 class x64Alloc : public FunctionPass, protected IRVisitor, public RegAlloc<x64Phys, x64Stack>
 {
 public:
+    using RegSet = std::set<x64Phys>;
+    using RegX64Map = std::unordered_map<const IROperand*, std::unique_ptr<x64>>;
+
     x64Alloc(Module* m) : FunctionPass(m) {}
 
     void Execute() override;
     void EnterFunction(Function* func) override { curfunc_ = func; }
-    void ExecuteOnFunction(Function* func) override { VisitFunction(func); }
+    void ExecuteOnFunction(Function* func) override
+    {
+        VisitFunction(func);
+        regmap_.emplace(func, UsedRegs());
+    }
 
     const x64* GetIROpMap(const IROperand* op) const;
+
+    RegSet UsedCallerSaved() const;
+    RegSet UsedCalleeSaved() const;
+    RegSet NotUsedIntReg() const;
+    RegSet NotUsedVecReg() const;
 
 protected:
     inline size_t MakeAlign(size_t base, size_t align) const
@@ -63,14 +76,14 @@ protected:
             base : (base + 16) + align - (base + 16) % align;
     }
 
+    void LoadParam();
     bool MapConstAndGlobalVar(const IROperand* op);
     void MapRegister(const IROperand*, std::unique_ptr<x64>);
 
 private:
     Function* curfunc_{};
-    std::unordered_map<Function*,
-        std::unordered_map<
-            const IROperand*, std::unique_ptr<x64>>> irmap_{};
+    std::unordered_map<const Function*, RegX64Map> irmap_{};
+    std::unordered_map<const Function*, RegSet> regmap_{};
 };
 
 
