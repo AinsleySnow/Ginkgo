@@ -95,6 +95,12 @@ const IROperand* IRGen::LoadVal(Expr* expr)
             env_.GetRegName(), expr->ToSubscript()->Addr());
         return expr->Val();
     }
+    else if (expr->IsUnary() && expr->ToUnary()->Op() == Tag::_and)
+    {
+        expr->Val() = ibud_.InsertLoadInstr(
+            env_.GetRegName(), expr->ToUnary()->Val()->As<Register>());
+        return expr->Val();
+    }
     else return expr->Val();
 }
 
@@ -104,6 +110,9 @@ const Register* IRGen::LoadAddr(Expr* expr)
         return expr->ToIdentifier()->Addr();
     else if (expr->IsSubscript())
         return expr->ToSubscript()->Addr();
+    // else if (expr->IsUnary() && expr->ToUnary()->Op() == Tag::_and)
+    // no Addr method in UnaryExpr; if address-of is used,
+    // the Val() of expr is just the desired address
     return expr->Val()->As<Register>();
 }
 

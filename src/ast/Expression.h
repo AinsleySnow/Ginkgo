@@ -282,7 +282,12 @@ public:
         op_(t), content_(std::move(c)) {}
 
     void Accept(ASTVisitor* v) override;
+    bool IsLVal() const override { return op_ == Tag::_and; }
     bool IsConstant() const override;
+
+    bool IsUnary() const override { return true; }
+    UnaryExpr* ToUnary() override { return this; }
+    const UnaryExpr* ToUnary() const override { return this; }
 
     Tag Op() const { return op_; }
     const auto& Content() const { return content_; }

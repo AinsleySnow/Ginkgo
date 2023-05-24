@@ -21,13 +21,16 @@ public:
     virtual bool IsConstant() const { return false; }
     virtual bool IsIdentifier() const { return false; }
     virtual bool IsSubscript() const { return false; }
+    virtual bool IsUnary() const { return false; }
 
     virtual ConstExpr* ToConstant() { return nullptr; }
     virtual IdentExpr* ToIdentifier() { return nullptr; }
     virtual ArrayExpr* ToSubscript() { return nullptr; }
+    virtual UnaryExpr* ToUnary() { return nullptr; }
     virtual const ConstExpr* ToConstant() const { return nullptr; }
     virtual const IdentExpr* ToIdentifier() const { return nullptr; }
     virtual const ArrayExpr* ToSubscript() const { return nullptr; }
+    virtual const UnaryExpr* ToUnary() const { return nullptr; }
 
     const auto& Type() const { return type_; }
     auto& Type() { return type_; }
