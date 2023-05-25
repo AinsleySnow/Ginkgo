@@ -93,7 +93,7 @@ private:
         void AddLabelBlkPair(const std::string& s, BasicBlock* bb) { labelmap_.emplace(s, bb); }
         void AddBrLabelPair(BrInstr* br, const std::string& s) { gotomap_.emplace(br, s); }
 
-        void Epilog(BasicBlock*);
+        void Epilogue(BasicBlock*);
 
     private:
         std::variant<Function*, GlobalVar*> env_{};

@@ -12,11 +12,15 @@
 #include <utf8.h>
 
 
-void IRGen::CurrentEnv::Epilog(BasicBlock* bb)
+void IRGen::CurrentEnv::Epilogue(BasicBlock* bb)
 {
     Backpatch(ret_, bb);
     for (auto gotopair : gotomap_)
         FillNullBlk(gotopair.first, labelmap_[gotopair.second]);
+
+    for (auto bb : *GetFunction())
+        if (!bb->LastInstr()->IsControlInstr())
+            bb->Append(std::make_unique<BrInstr>(bb));
 }
 
 
@@ -246,7 +250,7 @@ void IRGen::VisitObjDef(ObjDef* def)
     }
     else ibud_.InsertRetInstr();
 
-    env_.Epilog(ibud_.Container());
+    env_.Epilogue(ibud_.Container());
     scopestack_.PopScope();
 }
 
