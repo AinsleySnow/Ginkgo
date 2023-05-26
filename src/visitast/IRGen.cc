@@ -574,6 +574,22 @@ void IRGen::VisitConstant(ConstExpr* constant)
 }
 
 
+void IRGen::VisitDataofExpr(DataofExpr* expr)
+{
+    if (expr->ContentAsDecl())
+        expr->ContentAsDecl()->Accept(&tbud_);
+    else // if expr->IsAlignof()
+        expr->ContentAsExpr()->Accept(&tbud_);
+
+    if (expr->IsSizeof())
+        expr->Val() = IntConst::CreateIntConst(
+            ibud_.Container(), expr->ContentAsExpr()->Type()->Size(), IntType::GetInt32(true));
+    else // if expr->IsAlignof()
+        expr->Val() = IntConst::CreateIntConst(
+            ibud_.Container(), expr->ContentAsDecl()->Type()->Align(), IntType::GetInt32(true));
+}
+
+
 void IRGen::VisitEnumConst(EnumConst* enumconst)
 {
     // All members of an enum specifier has been evaluated in

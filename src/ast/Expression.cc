@@ -184,6 +184,25 @@ bool ConstExpr::IsZero() const
 }
 
 
+void DataofExpr::Accept(ASTVisitor* v)
+{
+    v->VisitDataofExpr(this);
+}
+
+const std::unique_ptr<Expr>& DataofExpr::ContentAsExpr() const
+{
+    if (std::holds_alternative<std::unique_ptr<Expr>>(content_))
+        return std::get<0>(content_);
+    return nullptr;
+}
+
+const std::unique_ptr<Declaration>& DataofExpr::ContentAsDecl() const
+{
+    if (std::holds_alternative<std::unique_ptr<Declaration>>(content_))
+        return std::get<1>(content_);
+    return nullptr;
+}
+
 void EnumConst::Accept(ASTVisitor* v)
 {
     v->VisitEnumConst(this);

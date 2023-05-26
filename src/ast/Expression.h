@@ -167,6 +167,31 @@ private:
 };
 
 
+// sizeof and alignof
+class DataofExpr : public Expr
+{
+public:
+    DataofExpr(std::unique_ptr<Expr> e, Tag t) :
+        content_(std::move(e)), op_(t) {}
+    DataofExpr(std::unique_ptr<Declaration> d, Tag t) :
+        content_(std::move(d)), op_(t) {}
+
+    void Accept(ASTVisitor* v) override;
+    bool IsConstant() const override { return true; }
+
+    bool IsSizeof() const { return op_ == Tag::_sizeof; }
+    bool IsAlignof() const { return op_ == Tag::_alignof; }
+
+    const std::unique_ptr<Expr>& ContentAsExpr() const;
+    const std::unique_ptr<Declaration>& ContentAsDecl() const;
+
+private:
+    std::variant<std::unique_ptr<Expr>,
+        std::unique_ptr<Declaration>> content_{};
+    Tag op_;
+};
+
+
 class EnumConst : public Expr
 {
 public:

@@ -304,6 +304,12 @@ void TypeBuilder::VisitCondExpr(CondExpr* expr)
     expr->Type() = expr->TrueExpr()->Type();
 }
 
+void TypeBuilder::VisitDataofExpr(DataofExpr* expr)
+{
+    if (expr->Type()) return;
+    expr->Type() = std::make_unique<CArithmType>(TypeTag::int32);
+}
+
 void TypeBuilder::VisitEnumConst(EnumConst* expr)
 {
     if (expr->Type()) return;

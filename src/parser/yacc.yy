@@ -71,7 +71,7 @@ private:
 %lex-param { CheckType& checktype }
 
 %token	<std::string> IDENTIFIER I_CONSTANT F_CONSTANT
-STRING_LITERAL FUNC_NAME SIZEOF TYPEDEF_NAME ENUMERATION_CONSTANT
+STRING_LITERAL FUNC_NAME TYPEDEF_NAME ENUMERATION_CONSTANT
 %token	<Tag> PTR_OP INC_OP DEC_OP LEFT_OP RIGHT_OP LE_OP GE_OP EQ_OP NE_OP
 %token	<Tag> AND_OP OR_OP MUL_ASSIGN DIV_ASSIGN MOD_ASSIGN ADD_ASSIGN
 %token	<Tag> SUB_ASSIGN LEFT_ASSIGN RIGHT_ASSIGN AND_ASSIGN
@@ -86,7 +86,7 @@ STRING_LITERAL FUNC_NAME SIZEOF TYPEDEF_NAME ENUMERATION_CONSTANT
 
 %token	<Tag> CASE DEFAULT IF ELSE SWITCH WHILE DO FOR GOTO CONTINUE BREAK RETURN
 
-%token	<Tag> ALIGNAS ALIGNOF GENERIC STATIC_ASSERT THREAD_LOCAL
+%token	<Tag> ALIGNAS ALIGNOF SIZEOF GENERIC STATIC_ASSERT THREAD_LOCAL
 
 
 %type <Tag> unary_operator assignment_operator
@@ -273,16 +273,11 @@ unary_expression
 	| unary_operator cast_expression
     { $$ = std::make_unique<UnaryExpr>($1, std::move($2)); }
 	| SIZEOF unary_expression
-    {
-        if (!$2->Type()->IsComplete())
-        {
-            Error(ErrorId::uncompletetype);
-            YYERROR;
-        }
-        $$ = std::make_unique<ConstExpr>((uint64_t)8);
-    }
-	| SIZEOF '(' type_name ')' // TODO
-	| ALIGNOF '(' type_name ')' // TODO
+    { $$ = std::make_unique<DataofExpr>($1, std::move($2)); }
+	| SIZEOF '(' type_name ')'
+    { $$ = std::make_unique<DataofExpr>($1, std::move($3)); }
+	| ALIGNOF '(' type_name ')'
+    { $$ = std::make_unique<DataofExpr>($1, std::move($3)); }
 	;
 
 unary_operator
