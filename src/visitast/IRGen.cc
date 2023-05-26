@@ -597,11 +597,14 @@ void IRGen::VisitEnumList(EnumList* list)
     {
         first->ValueExpr()->Accept(this);
         first->Val() = first->ValueExpr()->Val();
+        tbud_.VisitEnumConst(first);
     }
     else
+    {
         first->Val() = IntConst::CreateIntConst(
             transunit_.get(), 0);
-    tbud_.VisitEnumConst(first);
+        first->Type() = std::make_shared<CArithmType>(TypeTag::int32);
+    }
 
     for (auto i = list->begin() + 1; i != list->end(); ++i)
     {

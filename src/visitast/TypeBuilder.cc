@@ -225,6 +225,7 @@ void TypeBuilder::VisitPtrDef(PtrDef* def)
 void TypeBuilder::VisitArrayExpr(ArrayExpr* expr)
 {
     if (expr->Type()) return;
+    expr->Identifier()->Accept(this);
 
     auto ty = expr->Identifier()->Type();
     if (ty->Is<CArrayType>())
@@ -243,6 +244,8 @@ void TypeBuilder::VisitArrayExpr(ArrayExpr* expr)
 void TypeBuilder::VisitAssignExpr(AssignExpr* expr)
 {
     if (expr->Type()) return;
+    expr->Left()->Accept(this);
+    expr->Right()->Accept(this);
 
     auto lhs = expr->Left()->Type();
     auto rhs = expr->Right()->Type();
@@ -253,6 +256,8 @@ void TypeBuilder::VisitAssignExpr(AssignExpr* expr)
 void TypeBuilder::VisitBinaryExpr(BinaryExpr* expr)
 {
     if (expr->Type()) return;
+    expr->Left()->Accept(this);
+    expr->Right()->Accept(this);
 
     // the value is calculated by constant folding
     if (expr->IsConstant())
@@ -294,18 +299,23 @@ void TypeBuilder::VisitCallExpr(CallExpr* expr)
 void TypeBuilder::VisitCastExpr(CastExpr* expr)
 {
     if (expr->Type()) return;
+    expr->TypeName()->Accept(this);
     expr->Type() = std::move(expr->TypeName()->Type());
 }
 
 void TypeBuilder::VisitCondExpr(CondExpr* expr)
 {
     if (expr->Type()) return;
+    expr->TrueExpr()->Accept(this);
     expr->Type() = expr->TrueExpr()->Type();
 }
 
 void TypeBuilder::VisitEnumConst(EnumConst* expr)
 {
     if (expr->Type()) return;
+
+    // no need to build recursively here.
+    // ValueExpr in EnumConst always has a type.
     expr->Type() = expr->ValueExpr()->Type();
 }
 
@@ -401,6 +411,7 @@ void TypeBuilder::VisitUnaryExpr(UnaryExpr* expr)
 {
     if (expr->Type()) return;
 
+    expr->Content()->Accept(this);
     if (expr->Op() == Tag::asterisk)
     {
         auto ptr = expr->Content()->Type()->As<CPtrType>();
