@@ -94,7 +94,7 @@ public:
     auto ArrayOf() const { return type_; }
     size_t Count() const { return count_; }
     size_t& Count() { return count_; }
-    bool VarlableLen() const { return variable_; }
+    bool VariableLen() const { return variable_; }
     bool& VariableLen() { return variable_; }
     bool Static() const { return static_; }
     bool& Static() { return static_; }
