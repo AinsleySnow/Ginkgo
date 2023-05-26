@@ -219,8 +219,6 @@ public:
         bool cond, const IROperand* lhs, const IROperand* rhs);
     const Register* InsertPhiInstr(const std::string& result, const IRType* ty);
 
-
-private:
     void MatchArithmType(const IRType*, const IROperand*&);
     void MatchArithmType(const IROperand*&, const IROperand*&);
 };

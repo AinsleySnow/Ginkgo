@@ -472,22 +472,50 @@ void IRGen::VisitCastExpr(CastExpr* cast)
 {
     cast->typename_->Accept(this);
     cast->expr_->Accept(this);
+    tbud_.VisitCastExpr(cast);
 
     auto& ty = cast->typename_->Type();
+    auto& expr = cast->expr_->Type();
     auto expreg = LoadVal(cast->expr_.get());
 
-    // if (ty->IsInteger())
-    // {
-    //     // TODO
-    // }
-    // else if (ty->IsFloat())
-    // {
-    //     // TODO
-    // }
+    auto createint = [this] (const IRType* ty, const IROperand* op) -> const IntConst* {
+        return IntConst::CreateIntConst(
+            this->ibud_.Container(), op->As<IntConst>()->Val(), ty->As<IntType>());
+    };
+
+    if (ty->Is<CPtrType>() && expr->Is<CPtrType>())
+    {
+        if (expreg->Is<Constant>())
+            expreg = createint(ty->ToIRType(ibud_.Container()), expreg);
+        else
+            expreg = ibud_.InsertBitcastInstr(
+                env_.GetRegName(), ty->ToIRType(ibud_.Container()), expreg->As<Register>());
+    }
+    else if (ty->Is<CPtrType>() && expr->Is<CArithmType>())
+    {
+        if (expreg->Is<Constant>())
+            expreg = createint(ty->ToIRType(ibud_.Container()), expreg);
+        else
+            expreg = ibud_.InsertItoPtrInstr(env_.GetRegName(),
+                ty->ToIRType(ibud_.Container())->As<PtrType>(), expreg->As<Register>());
+    }
+    else if (ty->Is<CArithmType>() && expr->Is<CPtrType>())
+    {
+        if (expreg->Is<Constant>())
+            expreg = createint(ty->ToIRType(ibud_.Container()), expreg);
+        else
+            expreg = ibud_.InsertPtrtoIInstr(env_.GetRegName(),
+                ty->ToIRType(ibud_.Container())->As<IntType>(), expreg->As<Register>());
+    }
+    else
+    {
+        // cast->typename_ is arithmetic type
+        // so does the type of cast->expr_
+        ibud_.MatchArithmType(
+            ty->ToIRType(ibud_.Container()), expreg);
+    }
 
     cast->Val() = expreg;
-    auto arithm = static_cast<const CArithmType*>(ty.get());
-    cast->Type() = std::make_unique<CArithmType>(*arithm);
 }
 
 
