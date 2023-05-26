@@ -94,10 +94,10 @@ const IRType* CArithmType::ToIRType(Pool<IRType>*) const
 
 bool CArithmType::Compatible(const CType& other) const
 {
-    auto arithm = other.As<CArithmType>();
-    if (arithm) return size_ == arithm->size_;
-    auto ptr = other.As<CPtrType>();
-    if (ptr) return size_ == ptr->Size();
+    if (other.Is<CArithmType>())
+        return size_ == other.Size();
+    if (other.Is<CPtrType>())
+        return size_ == other.Size();
     return false;
 }
 

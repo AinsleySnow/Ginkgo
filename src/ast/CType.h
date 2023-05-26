@@ -98,6 +98,8 @@ public:
     CTypeId id_ = CTypeId::none;
 
     CType(CTypeId id) : id_(id) {}
+    CType(CTypeId id, size_t s) : id_(id), size_(s) {}
+    CType(CTypeId id, size_t s, size_t a) : id_(id), size_(s), align_(a) {}
 
     virtual const IRType* ToIRType(Pool<IRType>*) const = 0;
     virtual std::string ToString() const = 0;
@@ -115,8 +117,15 @@ public:
     StorageType Storage() const { return storage_; }
     StorageType& Storage() { return storage_; }
 
+    size_t Size() const { return size_; }
+    size_t Align() const { return align_; }
+
     bool operator==(const CType&) const = delete;
     bool operator!=(const CType&) const = delete;
+
+protected:
+    size_t size_{};
+    size_t align_{};
 
 private:
     QualType qual_;
@@ -160,14 +169,11 @@ public:
     bool IsFloat() const { return type_ == TypeTag::flt32 || type_ == TypeTag::flt64; }
     bool IsUnsigned() const { return unsigned(type_) & unsigned(TypeTag::unsign); }
 
-    uint64_t Size() const { return size_; }
-
     bool operator>(const CArithmType&) const;
     bool operator<(const CArithmType&) const;
 
 private:
     TypeTag type_{};
-    uint64_t size_{};
 };
 
 
@@ -198,11 +204,8 @@ public:
     bool& Noreturn() { return noreturn_; }
 
     size_t ParaCount() const { return paramlist_.size(); }
-
     bool IsComplete() const override { return true; }
-
     void AddParam(const CType* t);
-
 
 private:
     int index_{};
@@ -220,17 +223,15 @@ public:
     static bool ClassOf(const CPtrType* const) { return true; }
     static bool ClassOf(const CType* const t) { return t->id_ == CTypeId::pointer; }
 
-    CPtrType() : CType(CTypeId::pointer) {}
+    CPtrType() : CType(CTypeId::pointer, 8) {}
     CPtrType(std::unique_ptr<CType> p) :
-        CType(CTypeId::pointer), point2_(std::move(p)) {}
+        CType(CTypeId::pointer, 8), point2_(std::move(p)) {}
 
     std::string ToString() const override;
     const PtrType* ToIRType(Pool<IRType>*) const override;
 
     bool Compatible(const CType&) const { return false; }
     std::unique_ptr<CType> Clone() const override;
-
-    size_t Size() const { return 8; }
 
     bool IsScalar() const override { return true; }
     bool IsComplete() const override { return true; }
@@ -263,7 +264,7 @@ public:
     std::unique_ptr<CType> Clone() const override;
 
     const auto& ArrayOf() const { return arrayof_; }
-    bool VarlableLen() const { return variable_; }
+    bool VariableLen() const { return variable_; }
     bool& VariableLen() { return variable_; }
     bool Static() const { return static_; }
     bool& Static() { return static_; }

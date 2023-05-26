@@ -36,11 +36,8 @@ std::shared_ptr<CType> TypeBuilder::EnlargeCType(std::shared_ptr<CType> ty, int 
 std::shared_ptr<CType> TypeBuilder::GetCTypeByValue(
     std::shared_ptr<CType> lhs, std::shared_ptr<CType> rhs, uint64_t value)
 {
-    auto larithm = lhs->As<CArithmType>();
-    auto rarithm = rhs->As<CArithmType>();
     auto bigger = MatchCType(lhs, rhs);
-
-    int size = bigger->As<CArithmType>()->Size() * 8;
+    int size = bigger->Size() * 8;
     int pos = 64 - __builtin_clzll(value | 1);
 
     // enlarge the type if it can't hold the value
@@ -56,12 +53,9 @@ std::shared_ptr<CType> TypeBuilder::GetCTypeByValue(
 std::shared_ptr<CType> TypeBuilder::GetCTypeByValue(
     std::shared_ptr<CType> lhs, std::shared_ptr<CType> rhs, double value)
 {
-    auto larithm = lhs->As<CArithmType>();
-    auto rarithm = rhs->As<CArithmType>();
     auto bigger = MatchCType(lhs, rhs);
 
-    if (bigger->As<CArithmType>()->Size() == 4 &&
-        (value > FLT_MAX || value < FLT_MIN))
+    if (bigger->Size() == 4 && (value > FLT_MAX || value < FLT_MIN))
         bigger = std::make_shared<CArithmType>(TypeTag::flt64);
 
     return bigger;
