@@ -25,7 +25,7 @@ IntConst* IntConst::CreateIntConst(Pool<IROperand>* pool, unsigned long ul, cons
 std::string IntConst::ToString() const
 {
     int bits = type_->Size() * 8;
-    bool issigned = type_->ToInteger()->IsSigned();
+    bool issigned = type_->As<IntType>()->IsSigned();
     unsigned long mask = ((unsigned long)(-1ll)) >> (64 - bits);
 
     if (issigned && (1 << (bits - 1)) & num_)

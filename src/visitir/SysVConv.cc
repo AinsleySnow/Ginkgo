@@ -5,11 +5,11 @@
 
 void SysVConv::CheckParamClass(const IRType* t)
 {
-    if (t->IsInt())
+    if (t->Is<IntType>())
         wordclass_.push_back(ParamClass::integer);
-    else if (t->IsFloat() && t->Size() < 16)
+    else if (t->Is<FloatType>() && t->Size() < 16)
         wordclass_.push_back(ParamClass::sse);
-    else if (t->IsFloat())
+    else if (t->Is<FloatType>())
     {
         wordclass_.push_back(ParamClass::x87);
         wordclass_.push_back(ParamClass::x87up);
@@ -20,7 +20,7 @@ void SysVConv::CheckParamClass(const IRType* t)
 
     // We're done if t is not aggregate type
     // array is treated as a pointer
-    if (t->IsArray())
+    if (t->Is<ArrayType>())
         wordclass_.push_back(ParamClass::integer);
 }
 

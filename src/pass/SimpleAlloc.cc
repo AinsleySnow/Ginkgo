@@ -56,7 +56,7 @@ void SimpleAlloc::StackCache::Map2Stack(const Register* reg, long offset)
 
 void SimpleAlloc::Allocate(const Register* reg)
 {
-    auto tag = reg->Type()->IsFloat() ?
+    auto tag = reg->Type()->Is<FloatType>() ?
         stackcache_.SpareFReg() : stackcache_.SpareReg();
 
     if (tag != RegTag::none)

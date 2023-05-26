@@ -213,7 +213,7 @@ void IRGen::VisitObjDef(ObjDef* def)
     scopestack_.PushNewScope(Scope::ScopeType::block);
 
     auto rety = env_.GetFunction()->ReturnType();
-    if (!rety->ToVoid())
+    if (!rety->Is<VoidType>())
     {
         env_.GetFunction()->ReturnValue() =
             ibud_.InsertAllocaInstr(env_.GetRegName(), rety);
@@ -242,7 +242,7 @@ void IRGen::VisitObjDef(ObjDef* def)
     if (!ibud_.Container()->Empty())
         ibud_.SetInsertPoint(bbud_.GetBasicBlock(env_.GetLabelName()));
 
-    if (!rety->ToVoid())
+    if (!rety->Is<VoidType>())
     {
         auto retvalue = ibud_.InsertLoadInstr(
             env_.GetRegName(), env_.GetFunction()->ReturnValue());
@@ -277,7 +277,7 @@ void IRGen::VisitArrayExpr(ArrayExpr* array)
     array->index_->Accept(this);
 
     const Register* addr = LoadAddr(array->identifier_.get());
-    if (addr->Type()->ToPointer()->Point2()->IsPtr())
+    if (addr->Type()->As<PtrType>()->Point2()->Is<PtrType>())
     // tl;dr: if array yields a pointer
         addr = ibud_.InsertLoadInstr(env_.GetRegName(), addr);
 
@@ -308,32 +308,32 @@ void IRGen::VisitAssignExpr(AssignExpr* assign)
     auto regname = env_.GetRegName();
     const Register* result = nullptr;
 
-    if (assign->op_ == Tag::add_assign && lhsty->IsInt())
+    if (assign->op_ == Tag::add_assign && lhsty->Is<IntType>())
         result = ibud_.InsertAddInstr(regname, lhs, rhs);
-    else if (assign->op_ == Tag::add_assign && lhsty->IsFloat())
+    else if (assign->op_ == Tag::add_assign && lhsty->Is<FloatType>())
         result = ibud_.InsertFaddInstr(regname, lhs, rhs);
 
-    else if (assign->op_ == Tag::sub_assign && lhsty->IsInt())
+    else if (assign->op_ == Tag::sub_assign && lhsty->Is<IntType>())
         result = ibud_.InsertSubInstr(regname, lhs, rhs);
-    else if (assign->op_ == Tag::sub_assign && lhsty->IsFloat())
+    else if (assign->op_ == Tag::sub_assign && lhsty->Is<FloatType>())
         result = ibud_.InsertFsubInstr(regname, lhs, rhs);
 
-    else if (assign->op_ == Tag::mul_assign && lhsty->IsInt())
+    else if (assign->op_ == Tag::mul_assign && lhsty->Is<IntType>())
         result = ibud_.InsertMulInstr(regname, lhs, rhs);
-    else if (assign->op_ == Tag::mul_assign && lhsty->IsFloat())
+    else if (assign->op_ == Tag::mul_assign && lhsty->Is<FloatType>())
         result = ibud_.InsertFmulInstr(regname, lhs, rhs);
 
-    else if (assign->op_ == Tag::div_assign && lhsty->IsInt())
+    else if (assign->op_ == Tag::div_assign && lhsty->Is<IntType>())
         result = ibud_.InsertDivInstr(regname, lhs, rhs);
-    else if (assign->op_ == Tag::div_assign && lhsty->IsFloat())
+    else if (assign->op_ == Tag::div_assign && lhsty->Is<FloatType>())
         result = ibud_.InsertFdivInstr(regname, lhs, rhs);
 
-    else if (assign->op_ == Tag::mod_assign && lhsty->IsInt())
+    else if (assign->op_ == Tag::mod_assign && lhsty->Is<IntType>())
         result = ibud_.InsertModInstr(regname, lhs, rhs);
 
     else if (assign->op_ == Tag::left_assign)
         result = ibud_.InsertShlInstr(regname, lhs, rhs);
-    else if (assign->op_ == Tag::right_assign && lhsty->ToInteger()->IsSigned())
+    else if (assign->op_ == Tag::right_assign && lhsty->As<IntType>()->IsSigned())
         result = ibud_.InsertAshrInstr(regname, lhs, rhs);
     else if (assign->op_ == Tag::right_assign)
         result = ibud_.InsertLshrInstr(regname, lhs, rhs);
@@ -369,7 +369,7 @@ void IRGen::VisitBinaryExpr(BinaryExpr* bin)
 
     auto lhs = LoadVal(bin->left_.get()), rhs = LoadVal(bin->right_.get());
     auto lhsty = lhs->Type(), rhsty = rhs->Type();
-    bool hasfloat = lhsty->IsFloat() || rhsty->IsFloat();
+    bool hasfloat = lhsty->Is<FloatType>() || rhsty->Is<FloatType>();
 
     std::string regname = env_.GetRegName();
     const Register* result = nullptr;
@@ -399,7 +399,7 @@ void IRGen::VisitBinaryExpr(BinaryExpr* bin)
 
     else if (bin->op_ == Tag::lshift)
         result = ibud_.InsertShlInstr(regname, lhs, rhs);
-    else if (bin->op_ == Tag::rshift && lhsty->ToInteger()->IsSigned())
+    else if (bin->op_ == Tag::rshift && lhsty->As<IntType>()->IsSigned())
         result = ibud_.InsertAshrInstr(regname, lhs, rhs);
     else if (bin->op_ == Tag::rshift)
         result = ibud_.InsertLshrInstr(regname, lhs, rhs);   
@@ -445,7 +445,7 @@ void IRGen::VisitCallExpr(CallExpr* call)
         if (!func) goto pointercall;
 
         auto functy = transunit_->GetFunction('@' + name)->Type();
-        bool isvoid = functy->ReturnType()->IsVoid();
+        bool isvoid = functy->ReturnType()->Is<VoidType>();
         call->Val() = ibud_.InsertCallInstr(
             isvoid ? "" : env_.GetRegName(), functy, '@' + name);
     }
@@ -454,7 +454,7 @@ void IRGen::VisitCallExpr(CallExpr* call)
 pointercall:
         call->postfix_->Accept(this);
         auto pfunc = LoadVal(call->postfix_.get())->As<Register>();
-        bool isvoid = pfunc->Type()->ToPointer()->Point2()->ToFunction()->ReturnType()->IsVoid();
+        bool isvoid = pfunc->Type()->As<PtrType>()->Point2()->As<FuncType>()->ReturnType()->Is<VoidType>();
         call->Val() = ibud_.InsertCallInstr(
             isvoid ? "" : env_.GetRegName(), pfunc);
     }
@@ -566,11 +566,11 @@ void IRGen::VisitConstant(ConstExpr* constant)
     if (ctype->As<CArithmType>()->IsInteger())
         constant->Val() = IntConst::CreateIntConst(
             container, constant->GetInt(),
-            ctype->ToIRType(transunit_.get())->ToInteger());
+            ctype->ToIRType(transunit_.get())->As<IntType>());
     else
         constant->Val() = FloatConst::CreateFloatConst(
             container, constant->GetFloat(),
-            ctype->ToIRType(transunit_.get())->ToFloatPoint());
+            ctype->ToIRType(transunit_.get())->As<FloatType>());
 }
 
 
@@ -761,7 +761,7 @@ void IRGen::VisitStrExpr(StrExpr* str)
         literal = WashString(utf8::utf8to32(content));
 
     str->Val() = StrConst::CreateStrConst(
-        transunit_.get(), literal, str->Type()->ToIRType(transunit_.get())->ToPointer());
+        transunit_.get(), literal, str->Type()->ToIRType(transunit_.get())->As<PtrType>());
 }
 
 
@@ -805,7 +805,7 @@ void IRGen::VisitUnaryExpr(UnaryExpr* unary)
     else if (unary->op_ == Tag::asterisk)
     {
         auto addreg = LoadAddr(unary->content_.get());
-        if (addreg->Type()->ToPointer()->Point2()->IsArray())
+        if (addreg->Type()->As<PtrType>()->Point2()->Is<ArrayType>())
         {
             auto zero = IntConst::CreateIntConst(ibud_.Container(), 0);
             addreg = ibud_.InsertGetElePtrInstr(env_.GetRegName(), addreg, zero);
@@ -822,7 +822,7 @@ void IRGen::VisitUnaryExpr(UnaryExpr* unary)
     {
         auto rhs = LoadVal(unary->content_.get());
         auto minusone = IntConst::CreateIntConst(
-            ibud_.Container(), ~0ull, rhs->Type()->ToInteger());
+            ibud_.Container(), ~0ull, rhs->Type()->As<IntType>());
         unary->Val() = ibud_.InsertXorInstr(env_.GetRegName(), minusone, rhs);
     }
     else if (unary->op_ == Tag::exclamation)

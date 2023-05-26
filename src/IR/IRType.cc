@@ -112,9 +112,9 @@ bool IRType::operator<(const IRType& rhs) const
 {
     if (!rhs.IsArithm() || !this->IsArithm())
         return false;
-    if (this->IsFloat() && !rhs.IsFloat())
+    if (this->Is<FloatType>() && !rhs.Is<FloatType>())
         return false;
-    if (!this->IsFloat() && rhs.IsFloat())
+    if (!this->Is<FloatType>() && rhs.Is<FloatType>())
         return true;
     return this->Size() < rhs.Size();
 }
@@ -123,20 +123,20 @@ bool IRType::operator>(const IRType& rhs) const
 {
     if (!rhs.IsArithm() || !this->IsArithm())
         return false;
-    if (this->IsFloat() && !rhs.IsFloat())
+    if (this->Is<FloatType>() && !rhs.Is<FloatType>())
         return true;
-    if (!this->IsFloat() && rhs.IsFloat())
+    if (!this->Is<FloatType>() && rhs.Is<FloatType>())
         return false;
     return this->Size() > rhs.Size();
 }
 
 bool IRType::operator==(const IRType& rhs) const
 {
-    if (this->IsFloat() && rhs.IsFloat())
+    if (this->Is<FloatType>() && rhs.Is<FloatType>())
         return this->Size() == rhs.Size();
-    if (this->IsInt() && rhs.IsInt())
+    if (this->Is<IntType>() && rhs.Is<IntType>())
         return this->Size() == rhs.Size() &&
-            this->ToInteger()->IsSigned() == rhs.ToInteger()->IsSigned();
+            this->As<IntType>()->IsSigned() == rhs.As<IntType>()->IsSigned();
     return false;
 }
 

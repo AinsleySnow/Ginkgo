@@ -1,6 +1,7 @@
 #ifndef _IR_TYPE_H_
 #define _IR_TYPE_H_
 
+#include "utils/DynCast.h"
 #include "utils/Pool.h"
 #include <memory>
 #include <string>
@@ -20,33 +21,17 @@ class VoidType;
 class IRType
 {
 public:
+    enum class TypeId { none, _int, fp, array, ptr, func, _struct, _union, _void };
+    static bool ClassOf(const IRType* const) { return true; }
+    TypeId id_ = TypeId::none;
+
+    ENABLE_IS;
+    ENABLE_AS;
+
     virtual ~IRType() {}
     virtual std::string ToString() const { return ""; }
 
-    virtual IntType* ToInteger() { return nullptr; }
-    virtual FloatType* ToFloatPoint() { return nullptr; }
-    virtual FuncType* ToFunction() { return nullptr; }
-    virtual PtrType* ToPointer() { return nullptr; }
-    virtual ArrayType* ToArray() { return nullptr; }
-    virtual StructType* ToStruct() { return nullptr; }
-    virtual UnionType* ToUnion() { return nullptr; }
-    virtual VoidType* ToVoid() { return nullptr; }
-    virtual const IntType* ToInteger() const { return nullptr; }
-    virtual const FloatType* ToFloatPoint() const { return nullptr; }
-    virtual const FuncType* ToFunction() const { return nullptr; }
-    virtual const PtrType* ToPointer() const { return nullptr; }
-    virtual const ArrayType* ToArray() const { return nullptr; }
-    virtual const StructType* ToStruct() const { return nullptr; }
-    virtual const UnionType* ToUnion() const { return nullptr; }
-    virtual const VoidType* ToVoid() const { return nullptr; }
-
-    virtual bool IsArithm() const { return false; }
-    virtual bool IsInt() const { return false; }
-    virtual bool IsFloat() const { return false; }
-    virtual bool IsPtr() const { return false; }
-    virtual bool IsArray() const { return false; }
-    virtual bool IsVoid() const { return false; }
-    virtual bool IsFunc() const { return false; }
+    bool IsArithm() const { return id_ == TypeId::_int || id_ == TypeId::fp; }
 
     size_t Size() const { return size_; }
     size_t Align() const { return align_; }
@@ -64,6 +49,9 @@ protected:
 class IntType : public IRType
 {
 public:
+    static bool ClassOf(const IntType* const) { return true; }
+    static bool ClassOf(const IRType* const i) { return i->id_ == TypeId::_int; }
+
     const static IntType* GetInt8(bool);
     const static IntType* GetInt16(bool);
     const static IntType* GetInt32(bool);
@@ -71,12 +59,6 @@ public:
     IntType(size_t s, bool si) : signed_(si) { size_ = s; }
 
     std::string ToString() const override;
-    IntType* ToInteger() override { return this; }
-    const IntType* ToInteger() const override { return this; }
-
-    bool IsArithm() const override { return true; }
-    bool IsInt() const override { return true; }
-
     bool IsSigned() const { return signed_; }
 
 
@@ -87,30 +69,27 @@ private:
 class FloatType : public IRType
 {
 public:
+    static bool ClassOf(const FloatType* const) { return true; }
+    static bool ClassOf(const IRType* const i) { return i->id_ == TypeId::fp; }
+
     const static FloatType* GetFloat32();
     const static FloatType* GetFloat64();
     FloatType(size_t s) { size_ = s; }
 
     std::string ToString() const override;
-    FloatType* ToFloatPoint() override { return this; }
-    const FloatType* ToFloatPoint() const override { return this; }
-
-    bool IsArithm() const override { return true; }
-    bool IsFloat() const override { return true; }
 };
 
 
 class ArrayType : public IRType
 {
 public:
+    static bool ClassOf(const ArrayType* const) { return true; }
+    static bool ClassOf(const IRType* const i) { return i->id_ == TypeId::array; }
+
     static ArrayType* GetArrayType(Pool<IRType>*, size_t, const IRType*);
     ArrayType(size_t, const IRType*);
 
     std::string ToString() const override;
-    ArrayType* ToArray() override { return this; }
-    const ArrayType* ToArray() const override { return this; }
-
-    bool IsArray() const override { return true; }
 
     auto ArrayOf() const { return type_; }
     size_t Count() const { return count_; }
@@ -131,18 +110,15 @@ private:
 class PtrType : public IntType
 {
 public:
+    static bool ClassOf(const PtrType* const) { return true; }
+    static bool ClassOf(const IRType* const i) { return i->id_ == TypeId::ptr; }
+
     static PtrType* GetPtrType(Pool<IRType>*, const IRType*);
     PtrType(const IRType* t) :
         IntType(8, false), type_(t) {}
 
-    bool IsPtr() const override { return true; }
-
     std::string ToString() const override;
-    PtrType* ToPointer() override { return this; }
-    const PtrType* ToPointer() const override { return this; }
-
     const IRType* Point2() const { return type_; }
-
 
 private:
     const IRType* type_{};
@@ -152,20 +128,18 @@ private:
 class FuncType : public IRType
 {
 public:
+    static bool ClassOf(const FuncType* const) { return true; }
+    static bool ClassOf(const IRType* const i) { return i->id_ == TypeId::func; }
+
     static FuncType* GetFuncType(Pool<IRType>*, const IRType*, bool);
     FuncType(const IRType* ret, bool v) : 
         retype_(std::move(ret)), variadic_(v) { size_ = -1; }
-
-    bool IsFunc() const override { return true; }
 
     auto ReturnType() const { return retype_; }
     const auto& ParamType() const { return param_; }
     void AddParam(const IRType*);
 
     std::string ToString() const override;
-    FuncType* ToFunction() override { return this; }
-    const FuncType* ToFunction() const override { return this; }
-
 
 private:
     const IRType* retype_{};
@@ -177,12 +151,13 @@ private:
 class StructType : public IRType
 {
 public:
+    static bool ClassOf(const StructType* const) { return true; }
+    static bool ClassOf(const IRType* const i) { return i->id_ == TypeId::_struct; }
+
     static StructType* GetStructType(Pool<IRType>*, const std::vector<const IRType*>&);
     StructType(const std::vector<const IRType*>& f) : fields_(f) {}
 
     std::string ToString() const override;
-    StructType* ToStruct() override { return this; }
-    const StructType* ToStruct() const override { return this; }
 
 private:
     std::vector<const IRType*> fields_{};
@@ -192,12 +167,13 @@ private:
 class UnionType : public IRType
 {
 public:
+    static bool ClassOf(const UnionType* const) { return true; }
+    static bool ClassOf(const IRType* const i) { return i->id_ == TypeId::_union; }
+
     static UnionType* GetUnionType(Pool<IRType>*, const std::vector<const IRType*>&);
     UnionType(const std::vector<const IRType*>& f) : fields_(f) {}
 
     std::string ToString() const override;
-    UnionType* ToUnion() override { return this; }
-    const UnionType* ToUnion() const override { return this; }
 
 private:
     std::vector<const IRType*> fields_{};
@@ -207,13 +183,12 @@ private:
 class VoidType : public IRType
 {
 public:
+    static bool ClassOf(const VoidType* const) { return true; }
+    static bool ClassOf(const IRType* const i) { return i->id_ == TypeId::_void; }
+
     static const VoidType* GetVoidType();
 
     std::string ToString() const override { return "void"; }
-    bool IsVoid() const override { return true; }
-
-    VoidType* ToVoid() override { return this; }
-    const VoidType* ToVoid() const override { return this; }
 };
 
 

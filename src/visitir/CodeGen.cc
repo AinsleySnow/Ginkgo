@@ -74,7 +74,7 @@ const x64* CodeGen::MapPossibleFloat(const IROperand* op)
 
 std::pair<const x64*, bool> CodeGen::MapPossiblePointer(const IROperand* op)
 {
-    if (!op->Type()->IsPtr())
+    if (!op->Type()->Is<PtrType>())
         return std::make_pair(alloc_.GetIROpMap(op), false);
 
     auto mappedop = alloc_.GetIROpMap(op);
@@ -577,13 +577,13 @@ void CodeGen::VisitCallInstr(CallInstr* inst)
         asmfile_.EmitCall(inst->FuncName());
     RestoreCallerSaved();
 
-    if (inst->Result() && inst->Result()->Type()->IsInt())
+    if (inst->Result() && inst->Result()->Type()->Is<IntType>())
     {
         auto x64reg = alloc_.GetIROpMap(inst->Result());
         if (!x64reg->Is<x64Reg>() || x64reg->As<x64Reg>()->Tag() != RegTag::rax)
             asmfile_.EmitMov(RegTag::rax, x64reg);
     }
-    else if (inst->Result() && inst->Result()->Type()->IsFloat())
+    else if (inst->Result() && inst->Result()->Type()->Is<FloatType>())
     {
         auto vecreg = alloc_.GetIROpMap(inst->Result());
         if (!vecreg->Is<x64Reg>() || vecreg->As<x64Reg>()->Tag() != RegTag::xmm0)
@@ -619,8 +619,8 @@ void CodeGen::VisitDivInstr(DivInstr* inst)
 
     asmfile_.EmitCxtx(lhs->Size());
 
-    bool issigned = inst->Lhs()->Type()->ToInteger()->IsSigned() ||
-        inst->Rhs()->Type()->ToInteger()->IsSigned();
+    bool issigned = inst->Lhs()->Type()->As<IntType>()->IsSigned() ||
+        inst->Rhs()->Type()->As<IntType>()->IsSigned();
     std::string name = issigned ? "idiv" : "div";
     asmfile_.EmitUnary(name, rhs);
 
@@ -642,8 +642,8 @@ void CodeGen::VisitModInstr(ModInstr* inst)
 
     asmfile_.EmitCxtx(lhs->Size());
 
-    bool issigned = inst->Lhs()->Type()->ToInteger()->IsSigned() ||
-        inst->Rhs()->Type()->ToInteger()->IsSigned();
+    bool issigned = inst->Lhs()->Type()->As<IntType>()->IsSigned() ||
+        inst->Rhs()->Type()->As<IntType>()->IsSigned();
     std::string name = issigned ? "idiv" : "div";
     asmfile_.EmitUnary(name, rhs);
 
@@ -659,7 +659,7 @@ void CodeGen::VisitStoreInstr(StoreInstr* inst)
     auto value = inst->Value();
     auto [mappeddest, poprax] = MapPossiblePointer(dest);
 
-    if (value->Type()->IsFloat())
+    if (value->Type()->Is<FloatType>())
         VecMovEmitHelper(MapPossibleFloat(value), mappeddest);
     else
         MovEmitHelper(alloc_.GetIROpMap(value), mappeddest);
@@ -674,7 +674,7 @@ void CodeGen::VisitLoadInstr(LoadInstr* inst)
     auto pointer = inst->Pointer();
     auto [mappedptr, poprax] = MapPossiblePointer(pointer);
 
-    if (result->Type()->IsFloat())
+    if (result->Type()->Is<FloatType>())
         VecMovEmitHelper(mappedptr, MapPossibleFloat(result));
     else
         MovEmitHelper(mappedptr, alloc_.GetIROpMap(result));
@@ -727,7 +727,7 @@ void CodeGen::VisitTruncInstr(TruncInstr* inst)
     auto from = alloc_.GetIROpMap(inst->Value());
     auto to = alloc_.GetIROpMap(inst->Dest());
 
-    if (inst->Type()->ToInteger()->IsSigned())
+    if (inst->Type()->As<IntType>()->IsSigned())
         MovsEmitHelper(from, to);
     else
         MovzEmitHelper(from, to);
@@ -817,8 +817,8 @@ void CodeGen::VisitIcmpInstr(IcmpInstr* inst)
     auto lhs = alloc_.GetIROpMap(inst->Op1());
     auto rhs = alloc_.GetIROpMap(inst->Op2());
     auto ans = alloc_.GetIROpMap(inst->Result());
-    auto issigned = inst->Op1()->Type()->ToInteger()->IsSigned() ||
-        inst->Op2()->Type()->ToInteger()->IsSigned();
+    auto issigned = inst->Op1()->Type()->As<IntType>()->IsSigned() ||
+        inst->Op2()->Type()->As<IntType>()->IsSigned();
 
     asmfile_.EmitCmp(rhs, lhs);
     asmfile_.EmitSet(Cond2Str(inst->Cond(), issigned), ans);
@@ -846,7 +846,7 @@ void CodeGen::VisitSelectInstr(SelectInstr* inst)
     auto v2 = MapPossibleFloat(inst->Value2());
     auto ans = alloc_.GetIROpMap(inst->Result());
 
-    if (cond->Type()->IsInt())
+    if (cond->Type()->Is<IntType>())
         asmfile_.EmitTest(mappedcond, mappedcond);
     else
     {
@@ -875,7 +875,7 @@ void CodeGen::VisitSelectInstr(SelectInstr* inst)
         }
     }
 
-    if (inst->Result()->Type()->IsInt())
+    if (inst->Result()->Type()->Is<IntType>())
     {
         asmfile_.EmitMov(v1, ans);
         asmfile_.EmitCMov(ty ? "e" : "ne", v2, ans);
@@ -910,9 +910,9 @@ void CodeGen::VisitPhiInstr(PhiInstr* inst)
     {
         asmfile_.SwitchBlock(bb);
 
-        if (op->Type()->IsInt())
+        if (op->Type()->Is<IntType>())
             MovEmitHelper(alloc_.GetIROpMap(op), mappedres);
-        else if (op->Type()->IsFloat())
+        else if (op->Type()->Is<FloatType>())
             VecMovEmitHelper(MapPossibleFloat(op), mappedres);
     }
 

@@ -45,29 +45,29 @@ void InstrBuilder::MatchArithmType(
 {
     if (!val->Is<Register>())
     {
-        if (target->IsFloat() && val->Type()->IsInt())
+        if (target->Is<FloatType>() && val->Type()->Is<IntType>())
         {
             auto integer = static_cast<const IntConst*>(val);
             val = FloatConst::CreateFloatConst(
-                Container(), integer->Val(), target->ToFloatPoint());
+                Container(), integer->Val(), target->As<FloatType>());
         }
-        else if (target->IsInt() && val->Type()->IsFloat())
+        else if (target->Is<IntType>() && val->Type()->Is<FloatType>())
         {
             auto floatpoint = static_cast<const FloatConst*>(val);
             val = IntConst::CreateIntConst(
-                Container(), floatpoint->Val(), target->ToInteger());
+                Container(), floatpoint->Val(), target->As<IntType>());
         }
-        else if (target->IsFloat())
+        else if (target->Is<FloatType>())
         {
             auto floatpoint = static_cast<const FloatConst*>(val);
             val = FloatConst::CreateFloatConst(
-                Container(), floatpoint->Val(), target->ToFloatPoint());
+                Container(), floatpoint->Val(), target->As<FloatType>());
         }
         else
         {
             auto integer = static_cast<const IntConst*>(val);
             val = IntConst::CreateIntConst(
-                Container(), integer->Val(), target->ToInteger());
+                Container(), integer->Val(), target->As<IntType>());
         }
         return;
     }
@@ -76,31 +76,31 @@ void InstrBuilder::MatchArithmType(
     auto regty = reg->Type();
     auto trgname = reg->Name() + '\'';
 
-    if (target->IsFloat() && regty->IsInt())
+    if (target->Is<FloatType>() && regty->Is<IntType>())
     {
-        if (regty->ToInteger()->IsSigned())
-            val = InsertStoFInstr(trgname, target->ToFloatPoint(), reg);
-        else val = InsertUtoFInstr(trgname, target->ToFloatPoint(), reg);
+        if (regty->As<IntType>()->IsSigned())
+            val = InsertStoFInstr(trgname, target->As<FloatType>(), reg);
+        else val = InsertUtoFInstr(trgname, target->As<FloatType>(), reg);
     }
-    else if (target->IsInt() && regty->IsFloat())
+    else if (target->Is<IntType>() && regty->Is<FloatType>())
     {
-        if (target->ToInteger()->IsSigned())
-            val = InsertFtoSInstr(trgname, target->ToInteger(), reg);
-        else val = InsertFtoUInstr(trgname, target->ToInteger(), reg);
+        if (target->As<IntType>()->IsSigned())
+            val = InsertFtoSInstr(trgname, target->As<IntType>(), reg);
+        else val = InsertFtoUInstr(trgname, target->As<IntType>(), reg);
     }
     else if (target->operator>(*regty))
     {
-        if (target->IsFloat())
-            val = InsertFextInstr(trgname, target->ToFloatPoint(), reg);
-        else if (regty->ToInteger()->IsSigned())
-            val = InsertSextInstr(trgname, target->ToInteger(), reg);
-        else val = InsertZextInstr(trgname, target->ToInteger(), reg);
+        if (target->Is<FloatType>())
+            val = InsertFextInstr(trgname, target->As<FloatType>(), reg);
+        else if (regty->As<IntType>()->IsSigned())
+            val = InsertSextInstr(trgname, target->As<IntType>(), reg);
+        else val = InsertZextInstr(trgname, target->As<IntType>(), reg);
     }
     else if (target->operator<(*regty))
     {
-        if (target->IsFloat())
-            val = InsertFtruncInstr(trgname, target->ToFloatPoint(), reg);
-        else val = InsertTruncInstr(trgname, target->ToInteger(), reg);
+        if (target->Is<FloatType>())
+            val = InsertFtruncInstr(trgname, target->As<FloatType>(), reg);
+        else val = InsertTruncInstr(trgname, target->As<IntType>(), reg);
     }
 }
 
@@ -161,8 +161,8 @@ const Register* InstrBuilder::InsertCallInstr(
     const std::string& result, const Register* func)
 {
     // func->Type() must be a pointer in this situation.
-    auto rety = func->Type()->ToPointer()->
-        Point2()->ToFunction()->ReturnType();
+    auto rety = func->Type()->As<PtrType>()->
+        Point2()->As<FuncType>()->ReturnType();
 
     auto preg = result.empty() ?
         nullptr : Register::CreateRegister(Container(), result, rety);
@@ -240,7 +240,7 @@ const Register* InstrBuilder::InsertAllocaInstr(
 
 const Register* InstrBuilder::InsertLoadInstr(const std::string& result, const Register* ptr)
 {
-    auto ans = Register::CreateRegister(Container(), result, ptr->Type()->ToPointer()->Point2());
+    auto ans = Register::CreateRegister(Container(), result, ptr->Type()->As<PtrType>()->Point2());
     Insert(std::make_unique<LoadInstr>(ans, ptr));
     return ans;
 }
@@ -248,7 +248,7 @@ const Register* InstrBuilder::InsertLoadInstr(const std::string& result, const R
 const Register* InstrBuilder::InsertLoadInstr(
     const std::string& result, const Register* ptr, size_t align)
 {
-    auto ans = Register::CreateRegister(Container(), result, ptr->Type()->ToPointer()->Point2());
+    auto ans = Register::CreateRegister(Container(), result, ptr->Type()->As<PtrType>()->Point2());
     Insert(std::make_unique<LoadInstr>(ans, ptr, align));
     return ans;
 }
@@ -256,7 +256,7 @@ const Register* InstrBuilder::InsertLoadInstr(
 const Register* InstrBuilder::InsertLoadInstr(
     const std::string& result, const Register* ptr, size_t align, bool vol)
 {
-    auto ans = Register::CreateRegister(Container(), result, ptr->Type()->ToPointer()->Point2());
+    auto ans = Register::CreateRegister(Container(), result, ptr->Type()->As<PtrType>()->Point2());
     Insert(std::make_unique<LoadInstr>(ans, ptr, align, vol));
     return ans;
 }
@@ -288,11 +288,11 @@ void InstrBuilder::InsertSetValInstr(
 const Register* InstrBuilder::InsertGetElePtrInstr(
     const std::string& result, const Register* val, const IROperand* index)
 {
-    auto point2 = val->Type()->ToPointer()->Point2();
+    auto point2 = val->Type()->As<PtrType>()->Point2();
     const IRType* rety = nullptr;
 
-    if (point2->IsArray())
-        rety = PtrType::GetPtrType(Container(), point2->ToArray()->ArrayOf());
+    if (point2->Is<ArrayType>())
+        rety = PtrType::GetPtrType(Container(), point2->As<ArrayType>()->ArrayOf());
     else rety = PtrType::GetPtrType(Container(), point2);
 
     auto reg = Register::CreateRegister(Container(), result, rety);
@@ -402,7 +402,7 @@ const Register* InstrBuilder::InsertCmpInstr(
     const std::string& result, Condition cond, const IROperand* lhs, const IROperand* rhs)
 {
     MatchArithmType(lhs, rhs);
-    if (lhs->Type()->IsInt())
+    if (lhs->Type()->Is<IntType>())
         return InsertIcmpInstr(result, cond, lhs, rhs);
     else
         return InsertFcmpInstr(result, cond, lhs, rhs);
