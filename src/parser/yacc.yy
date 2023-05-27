@@ -114,6 +114,7 @@ constant initializer initializer_list
 %type <std::unique_ptr<Declaration>> declarator
 direct_declarator function_definition parameter_declaration
 type_name specifier_qualifier_list enum_type_specifier
+direct_abstract_declarator abstract_declarator
 %type <std::unique_ptr<TransUnit>> translation_unit
 
 %type <std::unique_ptr<DeclStmt>> declaration external_declaration
@@ -775,6 +776,7 @@ direct_declarator
     {
         auto def = std::make_unique<ArrayDef>(std::move($5));
         def->Static() = true;
+        def->Qual() = $3;
         $1->InnerMost()->SetChild(std::move(def));
         $$ = std::move($1);
     }
@@ -873,26 +875,119 @@ abstract_declarator
 
 direct_abstract_declarator
 	: '(' abstract_declarator ')'
+    { $$ = std::move($2); }
 	| '[' ']'
+    { $$ = std::make_unique<ArrayDef>(); }
 	| '[' '*' ']'
+    {
+        auto def = std::make_unique<ArrayDef>();
+        def->Variable() = true;
+        $$ = std::move(def);
+    }
 	| '[' STATIC type_qualifier_list assignment_expression ']'
+    {
+        auto def = std::make_unique<ArrayDef>(std::move($4));
+        def->Static() = true;
+        def->Qual() = $3;
+        $$ = std::move(def);
+    }
 	| '[' STATIC assignment_expression ']'
+    {
+        auto def = std::make_unique<ArrayDef>(std::move($3));
+        def->Static() = true;
+        $$ = std::move(def);
+    }
 	| '[' type_qualifier_list STATIC assignment_expression ']'
+    {
+        auto def = std::make_unique<ArrayDef>(std::move($4));
+        def->Static() = true;
+        def->Qual() = $2;
+        $$ = std::move(def);
+    }
 	| '[' type_qualifier_list assignment_expression ']'
+    {
+        auto def = std::make_unique<ArrayDef>(std::move($3));
+        def->Qual() = $2;
+        $$ = std::move(def);
+    }
 	| '[' type_qualifier_list ']'
+    {
+        auto def = std::make_unique<ArrayDef>();
+        def->Qual() = $2;
+        $$ = std::move(def);
+    }
 	| '[' assignment_expression ']'
+    { $$ = std::make_unique<ArrayDef>(std::move($2)); }
 	| direct_abstract_declarator '[' ']'
+    {
+        auto def = std::make_unique<ArrayDef>();
+        $1->InnerMost()->SetChild(std::move(def));
+        $$ = std::move($1);
+    }
 	| direct_abstract_declarator '[' '*' ']'
+    {
+        auto def = std::make_unique<ArrayDef>();
+        def->Variable() = true;
+        $1->InnerMost()->SetChild(std::move(def));
+        $$ = std::move($1);
+    }
 	| direct_abstract_declarator '[' STATIC type_qualifier_list assignment_expression ']'
+    {
+        auto def = std::make_unique<ArrayDef>(std::move($5));
+        def->Static() = true;
+        def->Qual() = $4;
+        $1->InnerMost()->SetChild(std::move(def));
+        $$ = std::move($1);
+    }
 	| direct_abstract_declarator '[' STATIC assignment_expression ']'
+    {
+        auto def = std::make_unique<ArrayDef>(std::move($4));
+        def->Static() = true;
+        $1->InnerMost()->SetChild(std::move(def));
+        $$ = std::move($1);
+    }
 	| direct_abstract_declarator '[' type_qualifier_list assignment_expression ']'
+    {
+        auto def = std::make_unique<ArrayDef>(std::move($4));
+        def->Qual() = $3;
+        $1->InnerMost()->SetChild(std::move(def));
+        $$ = std::move($1);
+    }
 	| direct_abstract_declarator '[' type_qualifier_list STATIC assignment_expression ']'
+    {
+        auto def = std::make_unique<ArrayDef>(std::move($5));
+        def->Static() = true;
+        def->Qual() = $3;
+        $1->InnerMost()->SetChild(std::move(def));
+        $$ = std::move($1);
+    }
 	| direct_abstract_declarator '[' type_qualifier_list ']'
+    {
+        auto def = std::make_unique<ArrayDef>();
+        def->Qual() = $3;
+        $1->InnerMost()->SetChild(std::move(def));
+        $$ = std::move($1);
+    }
 	| direct_abstract_declarator '[' assignment_expression ']'
+    {
+        auto def = std::make_unique<ArrayDef>(std::move($3));
+        $1->InnerMost()->SetChild(std::move(def));
+        $$ = std::move($1);
+    }
 	| '(' ')'
+    { $$ = std::make_unique<FuncDef>(); }
 	| '(' parameter_type_list ')'
+    { $$ = std::make_unique<FuncDef>(std::move($2)); }
 	| direct_abstract_declarator '(' ')'
+    {   
+        $1->InnerMost()->SetChild(std::make_unique<FuncDef>());
+        $$ = std::move($1);
+    }
 	| direct_abstract_declarator '(' parameter_type_list ')'
+    {
+        $1->InnerMost()->SetChild(std::make_unique<FuncDef>(std::move($3)));
+        $$ = std::move($1);
+    }
 	;
 
 initializer
