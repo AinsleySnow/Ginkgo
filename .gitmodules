@@ -1,0 +1,3 @@
+[submodule "gkcpp"]
+	path = gkcpp
+	url = https://github.com/AinsleySnow/gkcpp.git
