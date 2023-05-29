@@ -600,3 +600,62 @@ void integer2pointer()
     int* b = (int*) a;
     assert(b == (int*) 0);
 }
+
+// give me a main function calls all the functions above
+int main()
+{
+    char2short();
+    char2int();
+    char2long();
+    char2float();
+    char2double();
+    //char2ldouble();
+
+    short2char();
+    short2int();
+    short2long();
+    short2float();
+    short2double();
+    //short2ldouble();
+
+    int2char();
+    int2short();
+    int2long();
+    int2float();
+    int2double();
+    //int2ldouble();
+
+    long2char();
+    long2short();
+    long2int();
+    long2float();
+    long2double();
+    //long2ldouble();
+
+    float2char();
+    float2short();
+    float2int();
+    float2long();
+
+    double2char();
+    double2short();
+    double2int();
+    double2long();
+
+    //ldouble2char();
+    //ldouble2short();
+    //ldouble2int();
+    //ldouble2long();
+
+    integer2float();
+    integer2double();
+    //integer2ldouble();
+
+    pointer2pointer();
+    void2pointer();
+    pointer2integer();
+    integer2pointer();
+
+    printf("OK\n");
+    return 0;
+}
