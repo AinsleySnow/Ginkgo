@@ -1,7 +1,7 @@
 #include "tests/test.h"
 
 // auto, typedef and specifiers about linking are
-// tested in auto.c, typedef.c and linkage.c.
+// tested in auto.c, typedef.c, link1.c and link2.c.
 
 void _register()
 {
