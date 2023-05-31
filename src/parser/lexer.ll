@@ -80,15 +80,20 @@ static void comment(void);
 "volatile"				{ yylval->emplace<Tag>() = Tag::_volatile; return YYTOKEN::VOLATILE; }
 "while"					{ yylval->emplace<Tag>() = Tag::_while; return YYTOKEN::WHILE; }
 "_Alignas"              { return YYTOKEN::ALIGNAS; }
+"alignas"               { return YYTOKEN::ALIGNAS; }
 "_Alignof"              { return YYTOKEN::ALIGNOF; }
+"alignof"               { return YYTOKEN::ALIGNOF; }
 "_Atomic"               { yylval->emplace<Tag>() = Tag::_atomic; return YYTOKEN::ATOMIC; }
 "_Bool"                 { yylval->emplace<Tag>() = Tag::_bool; return YYTOKEN::BOOL; }
+"bool"                  { yylval->emplace<Tag>() = Tag::_bool; return YYTOKEN::BOOL; }
 "_Complex"              { return YYTOKEN::COMPLEX; }
 "_Generic"              { return YYTOKEN::GENERIC; }
 "_Imaginary"            { return YYTOKEN::IMAGINARY; }
 "_Noreturn"             { yylval->emplace<Tag>() = Tag::_noreturn; return YYTOKEN::NORETURN; }
 "_Static_assert"        { return YYTOKEN::STATIC_ASSERT; }
+"static_assert"         { return YYTOKEN::STATIC_ASSERT; }
 "_Thread_local"         { return YYTOKEN::THREAD_LOCAL; }
+"thread_local"          { return YYTOKEN::THREAD_LOCAL; }
 "__func__"              { return YYTOKEN::FUNC_NAME; }
 
 "enum"					{
