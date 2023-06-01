@@ -4,6 +4,7 @@
 #include "ast/Tag.h"
 #include "IR/IRType.h"
 #include "utils/DynCast.h"
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -93,7 +94,13 @@ enum class TypeTag
 class CType
 {
 public:
-    enum class CTypeId { none, arithm, pointer, array, function, _enum, _void, error };
+    enum class CTypeId 
+    {
+        none, arithm, bit, pointer,
+        array, function, _enum,
+        _void, error, _struct, _union
+    };
+
     static bool ClassOf(const CType* const) { return true; }
     CTypeId id_ = CTypeId::none;
 
@@ -307,6 +314,71 @@ private:
     std::string name_{};
     std::shared_ptr<CType> underlying_{};
     std::vector<const Member*> members_{};
+};
+
+
+class CHeterType : public CType
+{
+public:
+    static bool ClassOf(const CHeterType* const) { return true; }
+    static bool ClassOf(const CType* const t)
+    { return t->id_ == CTypeId::_struct || t->id_ == CTypeId::_union; }
+
+    CHeterType(CTypeId i) : CType(i) {}
+    CHeterType(CTypeId i, const std::string& n) : CType(i), name_(n) {}
+
+    void Reserve(size_t size) { members_.reserve(size); }
+    void AddMember(const Member* m) { members_[index_++] = m; }
+
+    auto Name() const { return name_; }
+    auto IRName() const { return irname_; }
+    auto& IRName() { return irname_; }
+
+    auto AtIndex(int) const;
+    bool HasMember(const std::string&) const;
+    int IndexOfMember(const std::string&) const;
+
+protected:
+    int index_{};
+    std::string name_{};
+    std::string irname_{};
+    std::vector<const Member*> members_{};
+    // cached results of IndexOfMember().
+    mutable std::map<std::string, int> cache_{};
+};
+
+
+class CStructType : public CHeterType
+{
+public:
+    static bool ClassOf(const CStructType* const) { return true; }
+    static bool ClassOf(const CType* const t) { return t->id_ == CTypeId::_struct; }
+
+    CStructType() : CHeterType(CTypeId::_struct) {}
+    CStructType(const std::string& n) : CHeterType(CTypeId::_struct, n) {}
+
+    std::string ToString() const override { return ""; }
+    const StructType* ToIRType(Pool<IRType>*) const override;
+
+    bool Compatible(const CType&) const override { return false; }
+    std::unique_ptr<CType> Clone() const override { return nullptr; }
+};
+
+
+class CUnionType : public CHeterType
+{
+public:
+    static bool ClassOf(const CUnionType* const) { return true; }
+    static bool ClassOf(const CType* const t) { return t->id_ == CTypeId::_union; }
+
+    CUnionType() : CHeterType(CTypeId::_union) {}
+    CUnionType(const std::string& n) : CHeterType(CTypeId::_union, n) {}
+
+    std::string ToString() const override { return ""; }
+    const UnionType* ToIRType(Pool<IRType>*) const override;
+
+    bool Compatible(const CType&) const override { return false; }
+    std::unique_ptr<CType> Clone() const override { return nullptr; }
 };
 
 

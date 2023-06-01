@@ -1,6 +1,7 @@
 #include "ast/CType.h"
 #include "ast/Declaration.h"
 #include "IR/IRType.h"
+#include "visitast/Identifier.h"
 #include <memory>
 
 
@@ -234,6 +235,67 @@ const IntType* CEnumType::ToIRType(Pool<IRType>* pool) const
 {
     return static_cast<const IntType*>(underlying_->ToIRType(pool));
 }
+
+
+bool CHeterType::HasMember(const std::string& name) const
+{
+    for (auto m : members_)
+    {
+        if (m->GetName().empty())
+            if (m->GetCType()->As<CStructType>()->HasMember(name))
+                return true;
+        else if (m->GetName() == name)
+            return true;        
+    }
+
+    return false;
+}
+
+auto CHeterType::AtIndex(int i) const
+{
+    return members_.at(i);
+}
+
+int CHeterType::IndexOfMember(const std::string& name) const
+{
+    if (cache_.find(name) != cache_.end())
+        return cache_.at(name);
+
+    for (auto i = members_.begin(); i != members_.end(); ++i)
+    {
+        if ((*i)->GetName() == name)
+        {
+            auto index = std::distance(members_.begin(), i);
+            cache_[name] = index;
+            return index;
+        }
+        else if ((*i)->GetName().empty())
+        {
+            if ((*i)->GetCType()->As<CHeterType>()->HasMember(name))
+            {
+                auto index = std::distance(members_.begin(), i);
+                cache_[name] = index;
+                return index;
+            }
+        }
+    }
+
+    return -1;
+}
+
+
+#define TOIRTYPE(name)                              \
+auto ty = name::Get##name(pool, irname_);           \
+for (auto m : members_)                             \
+    ty->AddField(m->GetCType()->ToIRType(pool));    \
+ty->CalcAlign();                                    \
+ty->CalcSize();                                     \
+return ty
+
+const StructType* CStructType::ToIRType(Pool<IRType>* pool) const { TOIRTYPE(StructType); }
+const UnionType* CUnionType::ToIRType(Pool<IRType>* pool) const { TOIRTYPE(UnionType); }
+
+#undef TOIRTYPE
 
 
 const VoidType* CVoidType::ToIRType(Pool<IRType>*) const
