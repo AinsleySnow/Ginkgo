@@ -8,14 +8,6 @@
 #include <vector>
 
 class IntConst;
-class IntType;
-class FloatType;
-class FuncType;
-class PtrType;
-class ArrayType;
-class StructType;
-class UnionType;
-class VoidType;
 
 
 class IRType
@@ -28,7 +20,8 @@ public:
     ENABLE_IS;
     ENABLE_AS;
 
-    virtual ~IRType() {}
+    IRType(TypeId i) : id_(i) {}
+
     virtual std::string ToString() const { return ""; }
 
     bool IsArithm() const { return id_ == TypeId::_int || id_ == TypeId::fp; }
@@ -56,7 +49,8 @@ public:
     const static IntType* GetInt16(bool);
     const static IntType* GetInt32(bool);
     const static IntType* GetInt64(bool);
-    IntType(size_t s, bool si) : signed_(si) { size_ = s; }
+    IntType() : IRType(TypeId::ptr), signed_(false) { size_ = 8; }
+    IntType(size_t s, bool si) : IRType(TypeId::_int), signed_(si) { size_ = s; }
 
     std::string ToString() const override;
     bool IsSigned() const { return signed_; }
@@ -74,7 +68,7 @@ public:
 
     const static FloatType* GetFloat32();
     const static FloatType* GetFloat64();
-    FloatType(size_t s) { size_ = s; }
+    FloatType(size_t s) : IRType(TypeId::fp) { size_ = s; }
 
     std::string ToString() const override;
 };
@@ -133,7 +127,7 @@ public:
 
     static FuncType* GetFuncType(Pool<IRType>*, const IRType*, bool);
     FuncType(const IRType* ret, bool v) : 
-        retype_(std::move(ret)), variadic_(v) { size_ = -1; }
+        IRType(TypeId::func), retype_(std::move(ret)), variadic_(v) { size_ = -1; }
 
     auto ReturnType() const { return retype_; }
     const auto& ParamType() const { return param_; }
@@ -148,35 +142,55 @@ private:
 };
 
 
-class StructType : public IRType
+// 'Heter' is short for 'heterogeneous'
+class HeterType : public IRType
+{
+public:
+    static bool ClassOf(const HeterType* const) { return true; }
+    static bool ClassOf(const IRType* const i)
+    { return i->id_ == TypeId::_struct || i->id_ == TypeId::_union; }
+
+    HeterType(TypeId i, const std::string& n) : IRType(i), name_(n) {}
+
+    auto Name() const { return name_; }
+    void AddField(const IRType* t) { fields_.push_back(t); }
+    auto At(int i) const { return fields_.at(i); }
+
+    size_t CalcAlign();
+
+protected:
+    void AlignSizeBy(size_t);
+
+    std::string name_{};
+    std::vector<const IRType*> fields_{};
+};
+
+
+class StructType : public HeterType
 {
 public:
     static bool ClassOf(const StructType* const) { return true; }
     static bool ClassOf(const IRType* const i) { return i->id_ == TypeId::_struct; }
 
-    static StructType* GetStructType(Pool<IRType>*, const std::vector<const IRType*>&);
-    StructType(const std::vector<const IRType*>& f) : fields_(f) {}
+    static StructType* GetStructType(Pool<IRType>*, const std::string&);
+    StructType(const std::string& n) : HeterType(TypeId::_struct, n) {}
 
+    size_t CalcSize();
     std::string ToString() const override;
-
-private:
-    std::vector<const IRType*> fields_{};
 };
 
 
-class UnionType : public IRType
+class UnionType : public HeterType
 {
 public:
     static bool ClassOf(const UnionType* const) { return true; }
     static bool ClassOf(const IRType* const i) { return i->id_ == TypeId::_union; }
 
-    static UnionType* GetUnionType(Pool<IRType>*, const std::vector<const IRType*>&);
-    UnionType(const std::vector<const IRType*>& f) : fields_(f) {}
+    static UnionType* GetUnionType(Pool<IRType>*, const std::string&);
+    UnionType(const std::string& n) : HeterType(TypeId::_union, n) {}
 
+    size_t CalcSize();
     std::string ToString() const override;
-
-private:
-    std::vector<const IRType*> fields_{};
 };
 
 
@@ -187,6 +201,7 @@ public:
     static bool ClassOf(const IRType* const i) { return i->id_ == TypeId::_void; }
 
     static const VoidType* GetVoidType();
+    VoidType() : IRType(TypeId::_void) {}
 
     std::string ToString() const override { return "void"; }
 };
