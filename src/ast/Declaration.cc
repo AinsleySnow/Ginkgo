@@ -27,9 +27,9 @@ const EnumSpec* DeclSpec::GetEnumSpec() const
         speclist_.front().get());
 }
 
-const StructUnionSpec* DeclSpec::GetStructUnion() const
+const HeterSpec* DeclSpec::GetHeterSpec() const
 {
-    return static_cast<const StructUnionSpec*>(
+    return static_cast<const HeterSpec*>(
         speclist_.front().get());
 }
 

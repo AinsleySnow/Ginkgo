@@ -57,10 +57,28 @@ private:
     Tag spec_{};
 };
 
-class StructUnionSpec : public TypeSpec
+
+using HeterList = std::vector<std::unique_ptr<HeterDecl>>;
+
+struct HeterDecl
 {
-    // TODO
+    std::unique_ptr<DeclSpec> spec_{};
+    std::unique_ptr<DeclList> decl_{};
 };
+
+class HeterSpec : public TypeSpec
+{
+public:
+    HeterSpec(Tag t) : TypeSpec(t) {}
+    HeterSpec(Tag t, const std::string& n) : TypeSpec(t), name_(n) {}
+
+    void LoadHeterList(HeterList&& list) { list_ = list; }
+
+private:
+    std::string name_{};
+    HeterList list_{};
+};
+
 
 class EnumSpec : public TypeSpec
 {
@@ -111,7 +129,7 @@ public:
 
     void AddTypeSpec(std::unique_ptr<::TypeSpec> ts);
     const EnumSpec* GetEnumSpec() const;
-    const StructUnionSpec* GetStructUnion() const;
+    const HeterSpec* GetHeterSpec() const;
 
     TypeTag GetTypeTag();
     QualType Qual();
@@ -259,6 +277,19 @@ private:
     friend class IRGen;
     friend class TypeBuilder;
     std::unique_ptr<ParamList> paramlist_{};
+};
+
+
+class BitFieldDef : public Declaration
+{
+public:
+    BitFieldDef(std::unique_ptr<Expr> e) : expr_(std::move(e)) {}
+    BitFieldDef(std::unique_ptr<Declaration> d, std::unique_ptr<Expr> e) :
+        decl_(std::move(d)), expr_(std::move(e)) {}
+
+private:
+    std::unique_ptr<Declaration> decl_{};
+    std::unique_ptr<Expr> expr_{};
 };
 
 

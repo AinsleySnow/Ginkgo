@@ -13,7 +13,7 @@
 
 class Declaration;
 class EnumSpec;
-class StructUnionSpec;
+class HeterSpec;
 class IROperand;
 class IRType;
 class Statement;
