@@ -271,6 +271,26 @@ void IRGen::VisitPtrDef(PtrDef* def)
 }
 
 
+void IRGen::VisitAccessExpr(AccessExpr* access)
+{
+    access->Postfix()->Accept(this);
+    tbud_.VisitAccessExpr(access);
+    auto& heterty = *access->Type()->As<CHeterType>();
+    auto val = access->Postfix()->Val()->As<Register>();
+
+    while (true)
+    {
+        auto index = heterty[access->Field()];
+        auto [field, ty] = heterty[index];
+        if (access->Op() == Tag::dot)
+            val = ibud_.InsertGetValInstr(env_.GetRegName(), val, index);
+        else
+            val = ibud_.InsertGetElePtrInstr(env_.GetRegName(), val, index);
+        if (!field.empty()) break;
+    }
+}
+
+
 void IRGen::VisitArrayExpr(ArrayExpr* array)
 {
     array->identifier_->Accept(this);

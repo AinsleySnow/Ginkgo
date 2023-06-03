@@ -6,6 +6,7 @@
 #include <memory>
 
 class EnumSpec;
+class HeterSpec;
 class ScopeStack;
 
 
@@ -19,6 +20,7 @@ public:
     void VisitObjDef(ObjDef*) override;
     void VisitPtrDef(PtrDef*) override;
     void VisitArrayDef(ArrayDef*) override;
+    void VisitHeterList(HeterList*) override;
 
     void VisitArrayExpr(ArrayExpr*) override;
     void VisitAssignExpr(AssignExpr*) override;
@@ -36,6 +38,8 @@ public:
 
 private:
     std::unique_ptr<CEnumType> EnumHelper(const EnumSpec*);
+    template <class T> std::unique_ptr<T> HeterHelper(const HeterSpec*);
+
     std::shared_ptr<CType> EnlargeCType(std::shared_ptr<CType>, int);
     std::shared_ptr<CType> GetCTypeByValue(std::shared_ptr<CType>, std::shared_ptr<CType>, uint64_t);
     std::shared_ptr<CType> GetCTypeByValue(std::shared_ptr<CType>, std::shared_ptr<CType>, double);

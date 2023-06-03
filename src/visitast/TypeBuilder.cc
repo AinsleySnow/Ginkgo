@@ -120,8 +120,7 @@ std::unique_ptr<CEnumType> TypeBuilder::EnumHelper(const EnumSpec* spec)
     {
         auto enumty = scopestack_.SearchCustomed(spec->Name());
         auto enumcty = enumty->GetCType();
-        return std::make_unique<CEnumType>(
-            *static_cast<const CEnumType*>(enumcty));
+        return std::make_unique<CEnumType>(*enumcty->As<CEnumType>());
     }
 
     // not empty; we're declaring a new enum
@@ -153,6 +152,63 @@ std::unique_ptr<CEnumType> TypeBuilder::EnumHelper(const EnumSpec* spec)
     return std::move(ty);
 }
 
+template <class T>
+std::unique_ptr<T> TypeBuilder::HeterHelper(const HeterSpec* spec)
+{
+    auto& fields = spec->GetHeterFields();
+
+    // if the struct is declared else where
+    if (fields.empty())
+    {
+        auto ty = scopestack_.SearchCustomed(spec->Name());
+        auto cty = ty->GetCType()->As<T>();
+        return std::make_unique<T>(*cty);
+    }
+
+    int fieldindex = 0;
+    auto ty = std::make_unique<T>();
+    scopestack_.LoadNewScope(const_cast<HeterSpec*>(spec)->GetScope());
+    for (auto& decl : fields)
+    {
+        decl->Accept(this);
+        // decl is either a HeterList or a DeclSpec, as guaranteed in yacc actions.
+        // If decl is HeterList, then we generate type and add things to the
+        // scope in the VisitHeterList method. Otherwise, if type of decl is
+        // a new struct or union, then we add the type to the scope stack;
+        // if decl is a anonymous type, copy all the fields in its scope to
+        // the current scope.
+        if (decl->IsHeterList())
+        {
+            for (auto& var : *decl->ToHeterList())
+                ty->AddMember(var->ToObjDef()->Name(), var->RawType(), fieldindex++);
+        }
+        else if (decl->Type()->Is<CHeterType>())
+        {
+            // Hmm, since now decl must be DeclSpec...
+            auto hs = decl->ToDeclSpec()->GetHeterSpec();
+            // not anoymous; let it be
+            if (!hs->Name().empty())
+            {
+                scopestack_.Top().AddCustomed(hs->Name(), decl->RawType());
+                continue;
+            }
+            // merge two scope
+            scopestack_.Top().Extend(*hs->GetScope());
+            // and then add members to ty
+            for (auto& [n, i] : *hs->GetScope())
+                if (i->GetIdentType() == Identifier::IdentType::member)
+                    ty->AddMember(n, i->GetCType(), fieldindex);
+            fieldindex += 1;
+        }
+    }
+    const_cast<HeterSpec*>(spec)->LoadScope(scopestack_.RestoreScope());
+
+    if (!spec->Name().empty())
+        scopestack_.Top().AddCustomed(spec->Name(), ty.get());
+    return std::move(ty);
+}
+
+
 void TypeBuilder::VisitDeclSpec(DeclSpec* spec)
 {
     auto tag = spec->GetTypeTag();
@@ -168,6 +224,24 @@ void TypeBuilder::VisitDeclSpec(DeclSpec* spec)
     else if (tag == TypeTag::_enum)
     {
         auto ty = EnumHelper(spec->GetEnumSpec());
+        ty->Qual() = spec->Qual();
+        ty->Storage() = spec->Storage();
+
+        scopestack_.Top().AddCustomed(ty->Name(), ty.get());
+        spec->Type() = std::move(ty);
+    }
+    else if (tag == TypeTag::_struct)
+    {
+        auto ty = HeterHelper<CStructType>(spec->GetHeterSpec());
+        ty->Qual() = spec->Qual();
+        ty->Storage() = spec->Storage();
+
+        scopestack_.Top().AddCustomed(ty->Name(), ty.get());
+        spec->Type() = std::move(ty);
+    }
+    else if (tag == TypeTag::_union)
+    {
+        auto ty = HeterHelper<CUnionType>(spec->GetHeterSpec());
         ty->Qual() = spec->Qual();
         ty->Storage() = spec->Storage();
 
@@ -213,6 +287,17 @@ void TypeBuilder::VisitPtrDef(PtrDef* def)
     def->Type() = std::make_unique<CPtrType>(
         std::move(def->Child()->Type()));
     def->Type()->Qual() = def->qual_;
+}
+
+
+void TypeBuilder::VisitHeterList(HeterList* list)
+{
+    for (auto& d : *list)
+    {
+        d->Accept(this);
+        list->InScope()->AddMember(
+            d->ToObjDef()->Name(), d->RawType());
+    }
 }
 
 

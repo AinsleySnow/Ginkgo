@@ -34,6 +34,7 @@ public:
     void VisitParamList(ParamList*) override;
     void VisitPtrDef(PtrDef*) override;
 
+    void VisitAccessExpr(AccessExpr*) override;
     void VisitArrayExpr(ArrayExpr*) override;
     void VisitAssignExpr(AssignExpr*) override;
     void VisitBinaryExpr(BinaryExpr*) override;
