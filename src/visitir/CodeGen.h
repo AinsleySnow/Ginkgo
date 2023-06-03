@@ -59,7 +59,7 @@ public:
     void VisitStoreInstr(StoreInstr*) override;
 
     // commented; since we don't have struct now
-    // void VisitExtractValInstr(ExtractValInstr*) override;
+    // void VisitGetValInstr(GetValInstr*) override;
     // void VisitSetValInstr(SetValInstr*) override;
 
     void VisitGetElePtrInstr(GetElePtrInstr*) override;

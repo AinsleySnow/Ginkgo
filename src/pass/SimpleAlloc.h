@@ -86,7 +86,7 @@ private:
     void VisitAllocaInstr(AllocaInstr*) override;
     void VisitLoadInstr(LoadInstr*) override;
     void VisitStoreInstr(StoreInstr*) override;
-    // void VisitExtractValInstr(ExtractValInstr*) override;
+    // void VisitGetValInstr(GetValInstr*) override;
     // void VisitSetValInstr(SetValInstr*) override;
     void VisitGetElePtrInstr(GetElePtrInstr*) override;
 

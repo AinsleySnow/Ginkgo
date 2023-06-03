@@ -19,7 +19,7 @@ class AndInstr;     class OrInstr;
 class XorInstr;
 
 class AllocaInstr;  class LoadInstr;
-class StoreInstr;   class ExtractValInstr;
+class StoreInstr;   class GetValInstr;
 class SetValInstr;  class GetElePtrInstr;
 
 class TruncInstr;   class FtruncInstr;
@@ -65,7 +65,7 @@ public:
     virtual void VisitAllocaInstr(AllocaInstr*) {}
     virtual void VisitLoadInstr(LoadInstr*) {}
     virtual void VisitStoreInstr(StoreInstr*) {}
-    virtual void VisitExtractValInstr(ExtractValInstr*) {}
+    virtual void VisitGetValInstr(GetValInstr*) {}
     virtual void VisitSetValInstr(SetValInstr*) {}
     virtual void VisitGetElePtrInstr(GetElePtrInstr*) {}
 
