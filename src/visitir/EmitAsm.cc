@@ -166,7 +166,7 @@ void EmitAsm::EmitVcvt(const x64* op1, const x64* dest)
     auto sdest = dest->ToString();
 
     Output(fmt::format(INDENT "vcvtsi2{}{}{}, {}, {}\n",
-        t2, suffix, op1->ToString(), dest, dest));
+        t2, suffix, op1->ToString(), sdest, sdest));
 }
 
 void EmitAsm::EmitVcvt(const x64* op1, RegTag op2)

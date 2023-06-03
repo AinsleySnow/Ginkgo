@@ -62,7 +62,7 @@ public:
     void PushNewScope(Scope::ScopeType);
     void PopScope();
     void LoadNewScope(std::unique_ptr<Scope>);
-    auto&& RestoreScope();
+    std::unique_ptr<Scope> RestoreScope();
 
     Scope& Top();
     Scope& File();

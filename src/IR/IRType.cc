@@ -178,6 +178,20 @@ std::string FuncType::ToString() const
 }
 
 
+static size_t FindLCM(size_t a, size_t b)
+{
+    size_t max = (a > b) ? a : b;
+    size_t min = (a < b) ? a : b;
+    for (size_t i = 1; i <= min; i++)
+    {
+        size_t multiple = max * i;
+        if (multiple % min == 0)
+            return multiple;
+    }
+    return min; // make the compiler happy
+}
+
+
 void HeterType::AlignSizeBy(size_t align)
 {
     if (size_ % align == 0)
@@ -191,19 +205,6 @@ size_t HeterType::CalcAlign()
     for (int i = 1; i < fields_.size(); ++i)
         align_ = FindLCM(align_, fields_[i]->Align());
     return align_;
-}
-
-
-static size_t FindLCM(size_t a, size_t b)
-{
-    size_t max = (a > b) ? a : b;
-    size_t min = (a < b) ? a : b;
-    for (size_t i = 1; i <= min; i++)
-    {
-        size_t multiple = max * i;
-        if (multiple % min == 0)
-            return multiple;
-    }
 }
 
 
@@ -234,12 +235,13 @@ std::string StructType::ToString() const
 
 size_t UnionType::CalcSize()
 {
-    if (size_) return;
+    if (size_) return size_;
 
     for (auto f : fields_)
         if (f->Size() > size_)
             size_ = f->Size();
     AlignSizeBy(align_);
+    return size_;
 }
 
 std::string UnionType::ToString() const

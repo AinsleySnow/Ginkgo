@@ -8,6 +8,7 @@
 #include <unordered_map>
 
 class BinaryInstr;
+class ConvertInstr;
 class Register;
 
 

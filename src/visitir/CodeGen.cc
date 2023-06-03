@@ -260,9 +260,9 @@ void CodeGen::MovEmitHelper(const x64* from, const x64* to)
 
 // the destination of movz or movs must be a register
 #define MOVZ_MOVS_HELPER(name)                                  \
-if (to->Is<Register>())                                         \
+if (to->Is<x64Reg>())                                           \
 {                                                               \
-    asmfile_.##name(from, to);                                  \
+    asmfile_.name(from, to);                                    \
     return;                                                     \
 }                                                               \
                                                                 \
@@ -271,14 +271,14 @@ if (notused.empty())                                            \
 {                                                               \
     x64Reg rax{ RegTag::rax, to->Size() };                      \
     PushEmitHelper(RegTag::rax, 8);                             \
-    asmfile_.##name(from, &rax);                                \
+    asmfile_.name(from, &rax);                                  \
     asmfile_.EmitMov(&rax, to);                                 \
     PopEmitHelper(RegTag::rax, 8);                              \
 }                                                               \
 else                                                            \
 {                                                               \
     x64Reg reg{ X64Phys2RegTag(*notused.begin()), to->Size() }; \
-    asmfile_.##name(from, &reg);                                \
+    asmfile_.name(from, &reg);                                  \
     asmfile_.EmitMov(&reg, to);                                 \
 }
 
@@ -290,7 +290,7 @@ void CodeGen::MovsEmitHelper(const x64* from, const x64* to) { MOVZ_MOVS_HELPER(
 #define MOVZ_MOVS_HELPER(name)                              \
 if (op->Is<x64Reg>())                                       \
 {                                                           \
-    asmfile_.##name(from, to, op);                          \
+    asmfile_.name(from, to, op);                            \
     return;                                                 \
 }                                                           \
                                                             \
@@ -300,7 +300,7 @@ if (notused.empty())                                        \
     x64Reg rax{ RegTag::rax, from };                        \
     PushEmitHelper(RegTag::rax, 8);                         \
     asmfile_.EmitMov(op, &rax);                             \
-    asmfile_.##name(from, to, &rax);                        \
+    asmfile_.name(from, to, &rax);                          \
     asmfile_.EmitMov(&rax, op);                             \
     PopEmitHelper(RegTag::rax, 8);                          \
 }                                                           \
@@ -308,7 +308,7 @@ else                                                        \
 {                                                           \
     x64Reg reg{ X64Phys2RegTag(*notused.begin()), from };   \
     asmfile_.EmitMov(op, &reg);                             \
-    asmfile_.##name(from, to, &reg);                        \
+    asmfile_.name(from, to, &reg);                          \
     asmfile_.EmitMov(&reg, op);                             \
 }
 
@@ -688,7 +688,7 @@ void CodeGen::VisitGetElePtrInstr(GetElePtrInstr* inst)
 {
     auto size = inst->Result()->Type()->Size();
     auto [pointer, poprax] = MapPossiblePointer(inst->Pointer());
-    auto index = alloc_.GetIROpMap(inst->Index());
+    auto index = alloc_.GetIROpMap(inst->OpIndex());
     auto poprbx = false;
     auto indexreg = RegTag::none;
     auto offset = 0;

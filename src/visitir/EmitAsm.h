@@ -12,6 +12,8 @@ class BasicBlock;
 class x64;
 class x64Reg;
 
+enum class RegTag;
+
 
 class EmitAsm
 {

@@ -525,7 +525,8 @@ public:
 
     auto Result() const { return result_; }
     auto Pointer() const { return pointer_; }
-    auto Index() const { return index_; }
+    auto IntIndex() const { return std::get<1>(index_); }
+    auto OpIndex() const { return std::get<0>(index_); }
 
 private:
     const Register* result_{};

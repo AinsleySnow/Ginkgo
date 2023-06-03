@@ -201,7 +201,7 @@ std::unique_ptr<T> TypeBuilder::HeterHelper(const HeterSpec* spec)
             fieldindex += 1;
         }
     }
-    const_cast<HeterSpec*>(spec)->LoadScope(scopestack_.RestoreScope());
+    const_cast<HeterSpec*>(spec)->LoadScope(std::move(scopestack_.RestoreScope()));
 
     if (!spec->Name().empty())
         scopestack_.Top().AddCustomed(spec->Name(), ty.get());

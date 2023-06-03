@@ -14,6 +14,7 @@
 class DeclSpec;
 class ObjDef;
 class FuncDef;
+class HeterList;
 class Register;
 class ASTVisitor;
 

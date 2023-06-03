@@ -167,7 +167,7 @@ constant
             break; // since the block will be copied into a switch body
         }
 
-        str.erase(std::remove(str.begin(), str.end(), '\''), str.end());
+        $1.erase(std::remove($1.begin(), $1.end(), '\''), $1.end());
 
         auto index = $1.find_first_of("ulUL");
         std::string suffix = "";
@@ -619,12 +619,12 @@ struct_or_union_specifier
 	: struct_or_union '{' struct_declaration_list '}'
     {
         $$ = std::make_unique<HeterSpec>($1);
-        $$->LoadHeterList(std::move($3));
+        $$->LoadHeterFields(std::move($3));
     }
 	| struct_or_union IDENTIFIER '{' struct_declaration_list '}'
     {
         $$ = std::make_unique<HeterSpec>($1, $2);
-        $$->LoadHeterList(std::move($4));
+        $$->LoadHeterFields(std::move($4));
     }
 	| struct_or_union IDENTIFIER
     { $$ = std::make_unique<HeterSpec>($1, $2); }
@@ -915,19 +915,34 @@ parameter_declaration
         $$ = std::move($2);
     }
 	| declaration_specifiers abstract_declarator
+    {
+        $2->InnerMost()->SetChild(std::move($1));
+        $$ = std::move($2);
+    }
 	| declaration_specifiers
     { $$ = std::move($1); }
 	;
 
 type_name
-	: specifier_qualifier_list abstract_declarator  { $$ = nullptr; }
-	| specifier_qualifier_list                      { $$ = nullptr; }
+	: specifier_qualifier_list abstract_declarator
+    {
+        $2->InnerMost()->SetChild(std::move($1));
+        $$ = std::move($2);
+    }
+	| specifier_qualifier_list
+    { $$ = std::move($1); }
 	;
 
 abstract_declarator
 	: pointer direct_abstract_declarator
+    {
+        $2->InnerMost()->SetChild(std::move($1));
+        $$ = std::move($2);
+    }
 	| pointer
+    { $$ = std::move($1); }
 	| direct_abstract_declarator
+    { $$ = std::move($1); }
 	;
 
 direct_abstract_declarator

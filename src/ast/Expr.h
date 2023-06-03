@@ -7,6 +7,7 @@
 class ArrayExpr;
 class ConstExpr;
 class IdentExpr;
+class UnaryExpr;
 class IROperand;
 class ASTVisitor;
 

@@ -12,7 +12,7 @@ CArithmType CodeChk::MatchArithmType(const CArithmType* lhs, const CArithmType* 
         return *lhs;
     else if (lhs->operator<(*rhs))
         return *rhs;
-    else if (lhs->Is<FloatType>())      
+    else if (lhs->IsFloat())      
         return *lhs;
     else
     {

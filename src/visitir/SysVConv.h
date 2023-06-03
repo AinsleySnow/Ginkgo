@@ -7,6 +7,7 @@
 #include <vector>
 
 class IROperand;
+class IRType;
 class FuncType;
 
 

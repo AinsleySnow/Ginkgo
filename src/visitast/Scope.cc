@@ -12,8 +12,8 @@ Identifier* Scope::FindingHelper(const std::string& name, Identifier::IdentType 
 
 void Scope::Extend(const Scope& scope)
 {
-    identmap_.insert(
-        scope.identmap_.begin(), scope.identmap_.end());
+    for (auto& [name, ident] : scope.identmap_)
+        identmap_.emplace(name, ident->Clone());
 }
 
 const Object* Scope::GetObject(const std::string& name) const
@@ -249,7 +249,7 @@ void ScopeStack::LoadNewScope(std::unique_ptr<Scope> scope)
     stack_.push_back(std::move(scope));
 }
 
-auto&& ScopeStack::RestoreScope()
+std::unique_ptr<Scope> ScopeStack::RestoreScope()
 {
     auto back = std::move(stack_.back());
     stack_.pop_back();

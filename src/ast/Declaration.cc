@@ -12,7 +12,7 @@ Declaration* Declaration::InnerMost()
 
 void HeterSpec::LoadHeterFields(HeterFields&& f)
 {
-    fields_ = f;
+    fields_ = std::move(f);
     for (auto& f : fields_)
         if (f->IsHeterList())
             f->ToHeterList()->InScope() = scope_.get();

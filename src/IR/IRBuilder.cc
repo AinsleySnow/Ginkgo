@@ -272,10 +272,10 @@ void InstrBuilder::InsertStoreInstr(const IROperand* val, const Register* ptr, b
 const Register* InstrBuilder::InsertGetValInstr(
     const std::string& result, const Register* val, std::variant<const IROperand*, int> index)
 {
-    auto pgetval = std::make_unique<GetValInstr>(result, val, index);
-    Insert(std::move(pgetval));
-    return Register::CreateRegister(Container(), result,
+    auto reg = Register::CreateRegister(Container(), result,
         val->Type()->As<HeterType>()->At(std::get<int>(index)));
+    Insert(std::move(std::make_unique<GetValInstr>(reg, val, index)));
+    return reg;
 }
 
 void InstrBuilder::InsertSetValInstr(

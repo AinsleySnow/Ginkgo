@@ -190,10 +190,10 @@ private:
 class DataofExpr : public Expr
 {
 public:
-    DataofExpr(std::unique_ptr<Expr> e, Tag t) :
-        content_(std::move(e)), op_(t) {}
-    DataofExpr(std::unique_ptr<Declaration> d, Tag t) :
-        content_(std::move(d)), op_(t) {}
+    DataofExpr(Tag t, std::unique_ptr<Expr> e) :
+        op_(t), content_(std::move(e)) {}
+    DataofExpr(Tag t, std::unique_ptr<Declaration> d) :
+        op_(t), content_(std::move(d)) {}
 
     void Accept(ASTVisitor* v) override;
     bool IsConstant() const override { return true; }
@@ -201,13 +201,13 @@ public:
     bool IsSizeof() const { return op_ == Tag::_sizeof; }
     bool IsAlignof() const { return op_ == Tag::_alignof; }
 
-    const std::unique_ptr<Expr>& ContentAsExpr() const;
-    const std::unique_ptr<Declaration>& ContentAsDecl() const;
+    Expr* ContentAsExpr();
+    Declaration* ContentAsDecl();
 
 private:
+    Tag op_;
     std::variant<std::unique_ptr<Expr>,
         std::unique_ptr<Declaration>> content_{};
-    Tag op_;
 };
 
 

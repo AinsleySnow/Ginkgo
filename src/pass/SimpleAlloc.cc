@@ -218,8 +218,8 @@ void SimpleAlloc::VisitStoreInstr(StoreInstr* i)
 
 void SimpleAlloc::VisitGetElePtrInstr(GetElePtrInstr* i)
 {
-    if (!MapConstAndGlobalVar(i->Index()))
-        stackcache_.Access(i->Index()->As<Register>());
+    if (!MapConstAndGlobalVar(i->OpIndex()))
+        stackcache_.Access(i->OpIndex()->As<Register>());
     if (!MapConstAndGlobalVar(i->Pointer()))
         stackcache_.Access(i->Pointer()->As<Register>());
     Allocate(i->Result()->As<Register>());
