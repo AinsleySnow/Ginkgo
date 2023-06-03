@@ -70,6 +70,10 @@ int wcsncmp(const wchar_t *s1, const wchar_t *s2, size_t n);
 size_t wcsxfrm(wchar_t * restrict s1, const wchar_t * restrict s2, size_t n);
 int wmemcmp(const wchar_t *s1, const wchar_t *s2, size_t n);
 
+// In the C23 standard, the types of return value and the 1st
+// argument of wcschr, wcspbrk, wcsrchr, wcsstr and wmemchr is
+// QWchar_t. However, in wchar.h of GCC, the types are all wchar_t.
+// Anyway, I'll just use wchar_t like GCC.
 wchar_t *wcschr(wchar_t *s, wchar_t c);
 size_t wcscspn(const wchar_t *s1, const wchar_t *s2);
 wchar_t *wcspbrk(wchar_t *s1, const wchar_t *s2);
