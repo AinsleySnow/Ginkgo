@@ -102,18 +102,20 @@ conditional_expression assignment_expression expression constant_expression
 constant initializer initializer_list
 
 %type <std::unique_ptr<DeclList>> init_declarator_list
+%type <std::unique_ptr<HeterList>> struct_declarator_list
+%type <HeterFields> struct_declaration_list
 %type <std::unique_ptr<InitDecl>> init_declarator
 %type <std::unique_ptr<ParamList>> parameter_type_list parameter_list
 
 %type <std::string> enumeration_constant string
-%type <Tag> type_qualifier storage_class_specifier function_specifier
+%type <Tag> type_qualifier storage_class_specifier function_specifier struct_or_union
 %type <QualType> type_qualifier_list
-%type <std::unique_ptr<TypeSpec>> type_specifier enum_specifier struct_or_union_specifier
-%type <std::unique_ptr<DeclSpec>> declaration_specifiers
+%type <std::unique_ptr<TypeSpec>> type_specifier enum_specifier
+%type <std::unique_ptr<HeterSpec>> struct_or_union_specifier
+%type <std::unique_ptr<DeclSpec>> declaration_specifiers specifier_qualifier_list
 %type <std::unique_ptr<PtrDef>> pointer
-%type <std::unique_ptr<Declaration>> declarator
-direct_declarator function_definition parameter_declaration
-type_name specifier_qualifier_list enum_type_specifier
+%type <std::unique_ptr<Declaration>> declarator direct_declarator function_definition
+parameter_declaration type_name enum_type_specifier struct_declarator struct_declaration
 direct_abstract_declarator abstract_declarator
 %type <std::unique_ptr<TransUnit>> translation_unit
 
@@ -229,10 +231,14 @@ postfix_expression
     { $$ = std::make_unique<CallExpr>(std::move($1)); }
 	| postfix_expression '(' argument_expression_list ')'
     { $$ = std::make_unique<CallExpr>(std::move($1), std::move($3)); }
-	| postfix_expression '.' IDENTIFIER { $$ = nullptr; }
-	| postfix_expression PTR_OP IDENTIFIER { $$ = nullptr; }
-	| postfix_expression INC_OP { $$ = std::make_unique<UnaryExpr>(Tag::postfix_inc, std::move($1)); }
-	| postfix_expression DEC_OP { $$ = std::make_unique<UnaryExpr>(Tag::postfix_dec, std::move($1)); }
+	| postfix_expression '.' IDENTIFIER
+    { $$ = std::make_unique<AccessExpr>(std::move($1), Tag::dot, $3); }
+	| postfix_expression PTR_OP IDENTIFIER
+    { $$ = std::make_unique<AccessExpr>(std::move($1), $2, $3); }
+	| postfix_expression INC_OP
+    { $$ = std::make_unique<UnaryExpr>(Tag::postfix_inc, std::move($1)); }
+	| postfix_expression DEC_OP
+    { $$ = std::make_unique<UnaryExpr>(Tag::postfix_dec, std::move($1)); }
 	| '(' type_name ')' '{' initializer_list '}' { $$ = nullptr; }
 	| '(' type_name ')' '{' initializer_list ',' '}' { $$ = nullptr; }
 	;
@@ -611,42 +617,93 @@ type_specifier
 
 struct_or_union_specifier
 	: struct_or_union '{' struct_declaration_list '}'
+    {
+        $$ = std::make_unique<HeterSpec>($1);
+        $$->LoadHeterList(std::move($3));
+    }
 	| struct_or_union IDENTIFIER '{' struct_declaration_list '}'
+    {
+        $$ = std::make_unique<HeterSpec>($1, $2);
+        $$->LoadHeterList(std::move($4));
+    }
 	| struct_or_union IDENTIFIER
+    { $$ = std::make_unique<HeterSpec>($1, $2); }
 	;
 
 struct_or_union
-	: STRUCT
-	| UNION
+	: STRUCT    // fall through
+	| UNION     // fall through
 	;
 
 struct_declaration_list
 	: struct_declaration
+    {
+        $$ = HeterFields();
+        $$.push_back(std::move($1));
+    }
 	| struct_declaration_list struct_declaration
+    {
+        $1.push_back(std::move($2));
+        $$ = std::move($1);
+    }
 	;
 
 struct_declaration
 	: specifier_qualifier_list ';'	/* for anonymous struct/union */
+    { $$ = std::make_unique<DeclSpec>(); }
 	| specifier_qualifier_list struct_declarator_list ';'
-	| static_assert_declaration
+    {
+        std::shared_ptr<DeclSpec> ds = std::move($1);
+        for (auto& decl : *$2)
+            decl->InnerMost()->SetChild(ds);
+        $$ = std::move($2);
+    }
+	| static_assert_declaration { $$ = nullptr; } // TODO
 	;
 
 specifier_qualifier_list
 	: type_specifier specifier_qualifier_list   %prec LOWER_THAN_SPEC
+    {
+        $2->AddTypeSpec(std::move($1));
+        $$ = std::move($2);
+    }
 	| type_specifier                            %prec LOWER_THAN_SPEC
+    {
+        $$ = std::make_unique<DeclSpec>();
+        $$->AddTypeSpec(std::move($1));
+    }
 	| type_qualifier specifier_qualifier_list   %prec LOWER_THAN_SPEC
+    {
+        $2->SetQual($1);
+        $$ = std::move($2);
+    }
 	| type_qualifier                            %prec LOWER_THAN_SPEC
+    {
+        $$ = std::make_unique<DeclSpec>();
+        $$->SetQual($1);
+    }
 	;
 
 struct_declarator_list
 	: struct_declarator
+    {
+        $$ = std::make_unique<HeterList>();
+        $$->Append(std::move($1));
+    }
 	| struct_declarator_list ',' struct_declarator
+    {
+        $1->Append(std::move($3));
+        $$ = std::move($1);
+    }
 	;
 
 struct_declarator
 	: ':' constant_expression
+    { $$ = std::make_unique<BitFieldDef>(std::move($2)); }
 	| declarator ':' constant_expression
+    { $$ = std::make_unique<BitFieldDef>(std::move($1), std::move($3)); }
 	| declarator
+    { $$ = std::move($1); }
 	;
 
 enum_specifier

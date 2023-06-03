@@ -20,6 +20,10 @@ public:
     Scope(ScopeType s) : scopetype_(s) {}
 
     ScopeType GetScopeType() const { return scopetype_; }
+    void Extend(const Scope&);
+
+    auto begin() { return identmap_.begin(); }
+    auto end() { return identmap_.end(); }
 
     const Object* GetObject(const std::string&) const;
     const Func* GetFunc(const std::string&) const;
@@ -57,6 +61,8 @@ public:
 
     void PushNewScope(Scope::ScopeType);
     void PopScope();
+    void LoadNewScope(std::unique_ptr<Scope>);
+    auto&& RestoreScope();
 
     Scope& Top();
     Scope& File();

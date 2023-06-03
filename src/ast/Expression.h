@@ -15,6 +15,25 @@ class Register;
 class ASTVisitor;
 
 
+class AccessExpr : public Expr
+{
+public:
+    AccessExpr(std::unique_ptr<Expr> e, Tag t, const std::string& f) :
+        expr_(std::move(e)), tag_(t), field_(f) {}
+
+    void Accept(ASTVisitor* v) override;
+
+    const auto& Postfix() const { return expr_; }
+    Tag Op() const { return tag_; }
+    const auto& Field() const { return field_; }
+
+private:
+    std::unique_ptr<Expr> expr_{};
+    Tag tag_{};
+    std::string field_{};
+};
+
+
 class ArrayExpr : public Expr
 {
 public:

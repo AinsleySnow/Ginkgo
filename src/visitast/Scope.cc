@@ -10,6 +10,12 @@ Identifier* Scope::FindingHelper(const std::string& name, Identifier::IdentType 
     return nullptr;
 }
 
+void Scope::Extend(const Scope& scope)
+{
+    identmap_.insert(
+        scope.identmap_.begin(), scope.identmap_.end());
+}
+
 const Object* Scope::GetObject(const std::string& name) const
 {
     Identifier* ident = FindingHelper(name, Identifier::IdentType::obj);
@@ -236,6 +242,18 @@ void ScopeStack::PopScope()
     else if (stack_.back().get() == blockscope_)
         blockscope_ = nullptr;
     stack_.pop_back();
+}
+
+void ScopeStack::LoadNewScope(std::unique_ptr<Scope> scope)
+{
+    stack_.push_back(std::move(scope));
+}
+
+auto&& ScopeStack::RestoreScope()
+{
+    auto back = std::move(stack_.back());
+    stack_.pop_back();
+    return std::move(back);
 }
 
 

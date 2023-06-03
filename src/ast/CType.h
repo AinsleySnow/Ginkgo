@@ -184,6 +184,12 @@ private:
 };
 
 
+class CBitType : public CType
+{
+
+};
+
+
 class CFuncType : public CType
 {
 public:
@@ -327,24 +333,21 @@ public:
     CHeterType(CTypeId i) : CType(i) {}
     CHeterType(CTypeId i, const std::string& n) : CType(i), name_(n) {}
 
-    void Reserve(size_t size) { members_.reserve(size); }
-    void AddMember(const Member* m) { members_[index_++] = m; }
-
     auto Name() const { return name_; }
     auto IRName() const { return irname_; }
     auto& IRName() { return irname_; }
 
-    auto AtIndex(int) const;
-    bool HasMember(const std::string&) const;
-    int IndexOfMember(const std::string&) const;
+    void AddMember(const std::string& n, const CType* t, int i);
+    bool HasMember(const std::string& n) const
+    { return fieldindex_.find(n) != fieldindex_.end(); }
+    auto operator[](int i) const { return members_[i]; }
+    auto operator[](const std::string& n) { return fieldindex_.at(n); }
 
 protected:
-    int index_{};
     std::string name_{};
     std::string irname_{};
-    std::vector<const Member*> members_{};
-    // cached results of IndexOfMember().
-    mutable std::map<std::string, int> cache_{};
+    std::vector<std::pair<std::string, const CType*>> members_{};
+    std::map<std::string, int> fieldindex_{};
 };
 
 

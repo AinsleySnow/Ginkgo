@@ -6,10 +6,12 @@ class Declaration;
 class DeclList;
 class DeclSpec;
 class FuncDef;
+class HeterList;
 class ObjDef;
 class ParamList;
 class PtrDef;
 
+class AccessExpr;
 class ArrayExpr;
 class AssignExpr;
 class BinaryExpr;
@@ -52,10 +54,12 @@ public:
     virtual void VisitDeclList(DeclList*) {}
     virtual void VisitDeclSpec(DeclSpec*) {}
     virtual void VisitFuncDef(FuncDef*) {}
+    virtual void VisitHeterList(HeterList*) {}
     virtual void VisitObjDef(ObjDef*) {}
     virtual void VisitParamList(ParamList*) {}
     virtual void VisitPtrDef(PtrDef*) {}
 
+    virtual void VisitAccessExpr(AccessExpr*) {}
     virtual void VisitArrayExpr(ArrayExpr*) {}
     virtual void VisitAssignExpr(AssignExpr*) {}
     virtual void VisitBinaryExpr(BinaryExpr*) {}

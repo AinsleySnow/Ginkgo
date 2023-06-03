@@ -237,57 +237,17 @@ const IntType* CEnumType::ToIRType(Pool<IRType>* pool) const
 }
 
 
-bool CHeterType::HasMember(const std::string& name) const
+void CHeterType::AddMember(const std::string& n, const CType* t, int i)
 {
-    for (auto m : members_)
-    {
-        if (m->GetName().empty())
-            if (m->GetCType()->As<CStructType>()->HasMember(name))
-                return true;
-        else if (m->GetName() == name)
-            return true;        
-    }
-
-    return false;
-}
-
-auto CHeterType::AtIndex(int i) const
-{
-    return members_.at(i);
-}
-
-int CHeterType::IndexOfMember(const std::string& name) const
-{
-    if (cache_.find(name) != cache_.end())
-        return cache_.at(name);
-
-    for (auto i = members_.begin(); i != members_.end(); ++i)
-    {
-        if ((*i)->GetName() == name)
-        {
-            auto index = std::distance(members_.begin(), i);
-            cache_[name] = index;
-            return index;
-        }
-        else if ((*i)->GetName().empty())
-        {
-            if ((*i)->GetCType()->As<CHeterType>()->HasMember(name))
-            {
-                auto index = std::distance(members_.begin(), i);
-                cache_[name] = index;
-                return index;
-            }
-        }
-    }
-
-    return -1;
+    members_.push_back(std::make_pair(n, t));
+    fieldindex_[n] = i;
 }
 
 
 #define TOIRTYPE(name)                              \
 auto ty = name::Get##name(pool, irname_);           \
-for (auto m : members_)                             \
-    ty->AddField(m->GetCType()->ToIRType(pool));    \
+for (auto& [_, t] : members_)                       \
+    ty->AddField(t->ToIRType(pool));                \
 ty->CalcAlign();                                    \
 ty->CalcSize();                                     \
 return ty

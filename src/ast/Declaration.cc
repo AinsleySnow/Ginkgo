@@ -10,6 +10,15 @@ Declaration* Declaration::InnerMost()
 }
 
 
+void HeterSpec::LoadHeterFields(HeterFields&& f)
+{
+    fields_ = f;
+    for (auto& f : fields_)
+        if (f->IsHeterList())
+            f->ToHeterList()->InScope() = scope_.get();
+}
+
+
 void DeclSpec::Accept(ASTVisitor* v)
 {
     v->VisitDeclSpec(this);
@@ -148,6 +157,17 @@ bool DeclSpec::SetRawSpec(Tag t)
     else return false;
 
     return true;
+}
+
+
+void HeterList::Accept(ASTVisitor* v)
+{
+    v->VisitHeterList(this);
+}
+
+void HeterList::Append(std::unique_ptr<Declaration> decl)
+{
+    decllist_.push_back(std::move(decl));
 }
 
 

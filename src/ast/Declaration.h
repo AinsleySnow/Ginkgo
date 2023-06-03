@@ -5,6 +5,7 @@
 #include "ast/Expr.h"
 #include "ast/Expression.h"
 #include "ast/Statement.h"
+#include "visitast/Scope.h"
 #include <list>
 #include <memory>
 #include <string>
@@ -28,12 +29,15 @@ public:
     virtual bool IsDeclSpec() const { return false; }
     virtual bool IsObjDef() const { return false; }
     virtual bool IsFuncDef() const { return false; }
+    virtual bool IsHeterList() const { return false; }
     virtual DeclSpec* ToDeclSpec() { return nullptr; }
     virtual ObjDef* ToObjDef() { return nullptr; }
     virtual FuncDef* ToFuncDef() { return nullptr; }
+    virtual HeterList* ToHeterList() { return nullptr; }
     virtual const DeclSpec* ToDeclSpec() const { return nullptr; }
     virtual const ObjDef* ToObjDef() const { return nullptr; }
     virtual const FuncDef* ToFuncDef() const { return nullptr; }
+    virtual const HeterList* ToHeterList() const { return nullptr; }
 
     Declaration* Child() { return child_.get(); }
     const Declaration* Child() const { return child_.get(); }
@@ -58,13 +62,7 @@ private:
 };
 
 
-using HeterList = std::vector<std::unique_ptr<HeterDecl>>;
-
-struct HeterDecl
-{
-    std::unique_ptr<DeclSpec> spec_{};
-    std::unique_ptr<DeclList> decl_{};
-};
+using HeterFields = std::vector<std::unique_ptr<Declaration>>;
 
 class HeterSpec : public TypeSpec
 {
@@ -72,11 +70,21 @@ public:
     HeterSpec(Tag t) : TypeSpec(t) {}
     HeterSpec(Tag t, const std::string& n) : TypeSpec(t), name_(n) {}
 
-    void LoadHeterList(HeterList&& list) { list_ = list; }
+    void LoadHeterFields(HeterFields&& f);
+    const auto& GetHeterFields() const { return fields_; }
+
+    auto&& GetScope() { return std::move(scope_); }
+    const auto& GetScope() const { return scope_; }
+    void LoadScope(std::unique_ptr<Scope> s) { scope_ = std::move(s); }
+
+    std::string Name() const { return name_; }
 
 private:
+    std::unique_ptr<Scope> scope_{
+        std::make_unique<Scope>(Scope::ScopeType::block) };
+
     std::string name_{};
-    HeterList list_{};
+    HeterFields fields_{};
 };
 
 
@@ -145,6 +153,28 @@ private:
     std::list<Tag> storagelist_{};
     std::list<Tag> quallist_{};
     std::list<Tag> funcspeclist_{};
+};
+
+
+class HeterList : public Declaration
+{
+public:
+    void Accept(ASTVisitor* v) override;
+
+    bool IsHeterList() const override { return true; }
+    HeterList* ToHeterList() override { return this; }
+    const HeterList* ToHeterList() const override { return this; }
+
+    void Append(std::unique_ptr<Declaration>);
+    auto begin() { return decllist_.begin(); }
+    auto end() { return decllist_.end(); }
+
+    auto& InScope() { return inscope_; }
+    const Scope* InScope() const { return inscope_; }
+
+private:
+    Scope* inscope_{};
+    std::vector<std::unique_ptr<Declaration>> decllist_{};
 };
 
 

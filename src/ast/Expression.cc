@@ -9,6 +9,11 @@
 #include <utf8.h>
 
 
+void AccessExpr::Accept(ASTVisitor* v)
+{
+    v->VisitAccessExpr(this);
+}
+
 void ArrayExpr::Accept(ASTVisitor* v)
 {
     v->VisitArrayExpr(this);
