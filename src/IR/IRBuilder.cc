@@ -269,31 +269,35 @@ void InstrBuilder::InsertStoreInstr(const IROperand* val, const Register* ptr, b
 }
 
 
-const Register* InstrBuilder::InsertExtractValInstr(
-    const std::string& result, const Register* val, const IROperand* index)
+const Register* InstrBuilder::InsertGetValInstr(
+    const std::string& result, const Register* val, std::variant<const IROperand*, int> index)
 {
-    auto pexval = std::make_unique<ExtractValInstr>(result, val, index);
-    Insert(std::move(pexval));
-    // FIXME : register's type shouldn't be "val->Type()"
-    return Register::CreateRegister(Container(), result, val->Type());
+    auto pgetval = std::make_unique<GetValInstr>(result, val, index);
+    Insert(std::move(pgetval));
+    return Register::CreateRegister(Container(), result,
+        val->Type()->As<HeterType>()->At(std::get<int>(index)));
 }
 
 void InstrBuilder::InsertSetValInstr(
-    const IROperand* newval, const Register* val, const IROperand* index)
+    const IROperand* newval, const Register* val, std::variant<const IROperand*, int> index)
 {
     auto psetval = std::make_unique<SetValInstr>(newval, val, index);
     Insert(std::move(psetval));
 }
 
 const Register* InstrBuilder::InsertGetElePtrInstr(
-    const std::string& result, const Register* val, const IROperand* index)
+    const std::string& result, const Register* val, std::variant<const IROperand*, int> index)
 {
     auto point2 = val->Type()->As<PtrType>()->Point2();
     const IRType* rety = nullptr;
 
     if (point2->Is<ArrayType>())
         rety = PtrType::GetPtrType(Container(), point2->As<ArrayType>()->ArrayOf());
-    else rety = PtrType::GetPtrType(Container(), point2);
+    else
+    {
+        rety = PtrType::GetPtrType(Container(),
+            point2->As<HeterType>()->At(std::get<int>(index)));
+    }
 
     auto reg = Register::CreateRegister(Container(), result, rety);
     Insert(std::make_unique<GetElePtrInstr>(reg, val, index));

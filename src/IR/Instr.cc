@@ -123,22 +123,25 @@ std::string StoreInstr::ToString() const
 }
 
 
-std::string ExtractValInstr::ToString() const
+std::string GetValInstr::ToString() const
 {
-    return result_ + " = extractval " + pointer_->ToString() +
-        '[' + index_->ToString() + ']';
+    return result_->Name() + " = getval " + pointer_->ToString() +
+        '[' + (std::holds_alternative<int>(index_) ?
+            std::to_string(std::get<1>(index_)) : std::get<0>(index_)->ToString()) + ']';
 }
 
 std::string SetValInstr::ToString() const
 {
     return "setval " + newval_->ToString() + ", " +
-        pointer_->ToString() + '[' + index_->ToString() + ']';
+        pointer_->ToString() + '[' +  (std::holds_alternative<int>(index_) ?
+            std::to_string(std::get<1>(index_)) : std::get<0>(index_)->ToString()) + ']';
 }
 
 std::string GetElePtrInstr::ToString() const
 {
     return result_->Name() + " = geteleptr " + pointer_->ToString() +
-        " [" + index_->ToString() + ']';
+        " [" +  (std::holds_alternative<int>(index_) ?
+            std::to_string(std::get<1>(index_)) : std::get<0>(index_)->ToString()) + ']';
 }
 
 

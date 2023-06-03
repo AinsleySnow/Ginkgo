@@ -3,6 +3,7 @@
 
 #include "IR/Instr.h"
 #include "IR/Value.h"
+#include <variant>
 
 
 template <class CNT, class ELE>
@@ -173,12 +174,12 @@ public:
 
     void InsertStoreInstr(const IROperand* val, const Register* ptr, bool vol);
     
-    const Register* InsertExtractValInstr(
-        const std::string& result, const Register* val, const IROperand* index);
+    const Register* InsertGetValInstr(
+        const std::string& result, const Register* val, std::variant<const IROperand*, int> index);
     void InsertSetValInstr(
-        const IROperand* newval, const Register* val, const IROperand* index);
+        const IROperand* newval, const Register* val, std::variant<const IROperand*, int> index);
     const Register* InsertGetElePtrInstr(
-        const std::string& result, const Register* val, const IROperand* index);
+        const std::string& result, const Register* val, std::variant<const IROperand*, int> index);
 
 
     const Register* InsertTruncInstr(

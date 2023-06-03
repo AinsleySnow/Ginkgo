@@ -6,6 +6,7 @@
 #include "utils/DynCast.h"
 #include <memory>
 #include <string>
+#include <variant>
 
 class BasicBlock;
 class IRVisitor;
@@ -22,7 +23,7 @@ public:
         fadd, fsub, fmul, fdiv,
         shl, lshr, ashr, btand, btor, btxor,
 
-        alloca, load, store, exval, setval, geteleptr,
+        alloca, load, store, getval, setval, geteleptr,
 
         trunc, ftrunc, zext, sext, fext,
         ftou, ftos, utof, stof, ptrtoi, itoptr, bitcast,
@@ -475,21 +476,21 @@ private:
 };
 
 
-class ExtractValInstr : public Instr
+class GetValInstr : public Instr
 {
 public:
-    static bool ClassOf(const ExtractValInstr* const) { return true; }
-    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::exval; }
+    static bool ClassOf(const GetValInstr* const) { return true; }
+    static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::getval; }
 
-    ExtractValInstr(const std::string& r, const Register* p, const IROperand* i) :
-        Instr(InstrId::exval), result_(r), pointer_(p), index_(i) {}
+    GetValInstr(const Register* r, const Register* p, std::variant<const IROperand*, int> i) :
+        Instr(InstrId::getval), result_(r), pointer_(p), index_(i) {}
 
     std::string ToString() const override;
 
 private:
-    std::string result_{};
+    const Register* result_{};
     const Register* pointer_{};
-    const IROperand* index_{};
+    std::variant<const IROperand*, int> index_{};
 };
 
 
@@ -499,7 +500,7 @@ public:
     static bool ClassOf(const SetValInstr* const) { return true; }
     static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::setval; }
 
-    SetValInstr(const IROperand* nv, const Register* p, const IROperand* i) :
+    SetValInstr(const IROperand* nv, const Register* p, std::variant<const IROperand*, int> i) :
         Instr(InstrId::setval), newval_(nv), pointer_(p), index_(i) {}
 
     std::string ToString() const override;
@@ -507,7 +508,7 @@ public:
 private:
     const IROperand* newval_{};
     const Register* pointer_{};
-    const IROperand* index_{};
+    std::variant<const IROperand*, int> index_{};
 };
 
 
@@ -517,7 +518,7 @@ public:
     static bool ClassOf(const GetElePtrInstr* const) { return true; }
     static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::geteleptr; }
 
-    GetElePtrInstr(const Register* r, const Register* p, const IROperand* i) :
+    GetElePtrInstr(const Register* r, const Register* p, std::variant<const IROperand*, int> i) :
         Instr(InstrId::geteleptr), result_(r), pointer_(p), index_(i) {}
 
     std::string ToString() const override;
@@ -529,7 +530,7 @@ public:
 private:
     const Register* result_{};
     const Register* pointer_{};
-    const IROperand* index_{};
+    std::variant<const IROperand*, int> index_{};
 };
 
 
