@@ -172,6 +172,13 @@ const IROperand* Evaluator::EvalBinary(Pool<IROperand>* pool, Tag op, const IROp
         }
         else if (!lsigned && !rsigned)
             result = Calc<unsigned long, unsigned long, unsigned long>(op, left, right);
+
+        // Otherwise, things like (1 << 31) >> 1 will yield 1 but not -1.
+        if (op == Tag::rshift &&
+            lhs->Type()->As<IntType>()->IsSigned() &&
+            (left & (1 << (lhs->Type()->Size() * 8 - 1))))
+            result |= (unsigned long)(-1ll >> (64 - lhs->Type()->Size() * 8 + right - 1));
+
         return IntConst::CreateIntConst(pool, result, ty);
     }
 }

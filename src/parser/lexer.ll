@@ -31,6 +31,7 @@ U8  [\xc2-\xdf][\x80-\xbf]|\xe0[\xa0-\xbf][\x80-\xbf]|[\xe1-\xec][\x80-\xbf][\x8
 
 
 %{
+#include <cstdio>
 #include <cstdlib>
 #include <string>
 #include <memory>
@@ -128,7 +129,7 @@ static void comment(void);
 
 {HP}{HS}{IS}?				  { yylval->emplace<std::string>() = yytext; return YYTOKEN::I_CONSTANT; }
 {NZ}{DS}?{IS}?				  { yylval->emplace<std::string>() = yytext; return YYTOKEN::I_CONSTANT; }
-"0"{OS}{IS}?				  { yylval->emplace<std::string>() = yytext; return YYTOKEN::I_CONSTANT; }
+"0"{OS}*{IS}?				  { yylval->emplace<std::string>() = yytext; return YYTOKEN::I_CONSTANT; }
 {CP}?"'"([^'\\\n]|{ES})+"'"	  { yylval->emplace<std::string>() = yytext; return YYTOKEN::I_CONSTANT; }
 
 {DS}{E}{FS}?				  { yylval->emplace<std::string>() = yytext; return YYTOKEN::F_CONSTANT; }

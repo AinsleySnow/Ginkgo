@@ -18,9 +18,9 @@ void IRGen::CurrentEnv::Epilogue(BasicBlock* bb)
     for (auto gotopair : gotomap_)
         FillNullBlk(gotopair.first, labelmap_[gotopair.second]);
 
-    for (auto bb : *GetFunction())
-        if (!bb->LastInstr()->IsControlInstr())
-            bb->Append(std::make_unique<BrInstr>(bb));
+    for (auto blk : *GetFunction())
+        if (!blk->LastInstr()->IsControlInstr())
+            blk->Append(std::make_unique<BrInstr>(bb));
 }
 
 
@@ -82,7 +82,7 @@ const IROperand* IRGen::LoadVal(Expr* expr)
     if (expr->IsIdentifier())
     {
         auto ident = expr->ToIdentifier();
-        if (ident->Type()->As<CPtrType>()->Point2()->Is<CArrayType>())
+        if (ident->Addr()->Type()->As<PtrType>()->Point2()->Is<ArrayType>())
         // tl;dr: if ident is a pointer to some array
         {
             auto zero = IntConst::CreateIntConst(ibud_.Container(), 0);
