@@ -99,10 +99,10 @@ const IROperand* IRGen::LoadVal(Expr* expr)
             env_.GetRegName(), expr->ToSubscript()->Addr());
         return expr->Val();
     }
-    else if (expr->IsUnary() && expr->ToUnary()->Op() == Tag::_and)
+    else if (expr->IsUnary() && expr->ToUnary()->Op() == Tag::asterisk)
     {
         expr->Val() = ibud_.InsertLoadInstr(
-            env_.GetRegName(), expr->ToUnary()->Val()->As<Register>());
+            env_.GetRegName(), expr->Val()->As<Register>());
         return expr->Val();
     }
     else return expr->Val();
@@ -306,6 +306,11 @@ void IRGen::VisitArrayExpr(ArrayExpr* array)
 }
 
 
+#define IS_ARITHM(op)   op->Type()->Is<CArithmType>()
+#define IS_PTR(op)      op->Type()->Is<CPtrType>()
+#define IS_ARRAY(op)    op->Type()->Is<CArrayType>()
+#define AS_REG(op)      op->Val()->As<Register>()
+
 void IRGen::VisitAssignExpr(AssignExpr* assign)
 {
     assign->left_->Accept(this);
@@ -328,7 +333,18 @@ void IRGen::VisitAssignExpr(AssignExpr* assign)
     auto regname = env_.GetRegName();
     const Register* result = nullptr;
 
-    if (assign->op_ == Tag::add_assign && lhsty->Is<IntType>())
+    if (IS_PTR(assign->left_) && IS_ARITHM(assign->right_) && assign->op_ == Tag::add_assign)
+        result = ibud_.InsertGetElePtrInstr(regname, lhs->As<Register>(), rhs);
+    else if (IS_PTR(assign->left_) && IS_ARITHM(assign->right_) && assign->op_ == Tag::sub_assign)
+    {
+        auto zero = IntConst::CreateIntConst(
+            ibud_.Container(), 0, assign->right_->Val()->Type()->As<IntType>());
+        auto minus = ibud_.InsertSubInstr(
+            env_.GetRegName(), zero, assign->right_->Val());
+        result = ibud_.InsertGetElePtrInstr(regname, lhs->As<Register>(), minus);
+    }
+
+    else if (assign->op_ == Tag::add_assign && lhsty->Is<IntType>())
         result = ibud_.InsertAddInstr(regname, lhs, rhs);
     else if (assign->op_ == Tag::add_assign && lhsty->Is<FloatType>())
         result = ibud_.InsertFaddInstr(regname, lhs, rhs);
@@ -394,7 +410,17 @@ void IRGen::VisitBinaryExpr(BinaryExpr* bin)
     std::string regname = env_.GetRegName();
     const Register* result = nullptr;
 
-    if (bin->op_ == Tag::plus && !hasfloat)
+    if (IS_ARITHM(bin->left_) && IS_PTR(bin->right_))
+        result = ibud_.InsertGetElePtrInstr(regname, AS_REG(bin->right_), bin->left_->Val()); 
+    else if (IS_PTR(bin->left_) && IS_ARITHM(bin->right_))
+        result = ibud_.InsertGetElePtrInstr(regname, AS_REG(bin->left_), bin->right_->Val());
+
+    else if (IS_ARITHM(bin->left_) && IS_ARRAY(bin->right_))
+        result = ibud_.InsertGetElePtrInstr(regname, AS_REG(bin->right_), bin->left_->Val());
+    else if (IS_ARRAY(bin->left_) && IS_ARITHM(bin->right_))
+        result = ibud_.InsertGetElePtrInstr(regname, AS_REG(bin->left_), bin->right_->Val());
+
+    else if (bin->op_ == Tag::plus && !hasfloat)
         result = ibud_.InsertAddInstr(regname, lhs, rhs);
     else if (bin->op_ == Tag::plus)
         result = ibud_.InsertFaddInstr(regname, lhs, rhs);
@@ -446,6 +472,11 @@ void IRGen::VisitBinaryExpr(BinaryExpr* bin)
 
     bin->Val() = result;
 }
+
+#undef IS_ARITHM
+#undef IS_PTR
+#undef IS_ARRAY
+#undef AS_REG
 
 
 void IRGen::VisitCallExpr(CallExpr* call)
@@ -877,7 +908,7 @@ void IRGen::VisitUnaryExpr(UnaryExpr* unary)
             auto zero = IntConst::CreateIntConst(ibud_.Container(), 0);
             addreg = ibud_.InsertGetElePtrInstr(env_.GetRegName(), addreg, zero);
         }
-        unary->Val() = ibud_.InsertLoadInstr(env_.GetRegName(), addreg);
+        unary->Val() = addreg;
     }
     else if (unary->op_ == Tag::minus)
     {

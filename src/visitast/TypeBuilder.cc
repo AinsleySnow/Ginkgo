@@ -65,6 +65,16 @@ std::shared_ptr<CType> TypeBuilder::GetCTypeByValue(
 std::shared_ptr<CType> TypeBuilder::MatchCType(
     std::shared_ptr<CType> lhs, std::shared_ptr<CType> rhs)
 {
+    // for things like int* + 2
+    if (lhs->Is<CPtrType>() && rhs->Is<CArithmType>())
+        return lhs;
+    else if (lhs->Is<CArithmType>() && rhs->Is<CPtrType>())
+        return rhs;
+    else if (lhs->Is<CArrayType>() && rhs->Is<CArithmType>())
+        return std::make_unique<CPtrType>(lhs->As<CArrayType>()->ArrayOf()->Clone());
+    else if (lhs->Is<CArithmType>() && rhs->Is<CArrayType>())
+        return std::make_unique<CPtrType>(rhs->As<CArrayType>()->ArrayOf()->Clone());    
+
     auto la = lhs->As<CArithmType>();
     auto ra = rhs->As<CArithmType>();
 
@@ -338,18 +348,6 @@ void TypeBuilder::VisitBinaryExpr(BinaryExpr* expr)
     expr->Left()->Accept(this);
     expr->Right()->Accept(this);
 
-    // the value is calculated by constant folding
-    if (expr->IsConstant())
-    {
-        if (expr->Val()->Is<IntConst>())
-            expr->Type() = GetCTypeByValue(
-                expr->Left()->Type(), expr->Right()->Type(), expr->Val()->As<IntConst>()->Val());
-        else if (expr->Val()->Is<FloatConst>())
-            expr->Type() = GetCTypeByValue(
-                expr->Left()->Type(), expr->Right()->Type(), expr->Val()->As<FloatConst>()->Val());
-        return;
-    }
-
     auto lhs = expr->Left()->Type();
     auto rhs = expr->Right()->Type();
     expr->Type() = MatchCType(lhs, rhs);
@@ -401,7 +399,11 @@ void TypeBuilder::VisitEnumConst(EnumConst* expr)
 
     // no need to build recursively here.
     // ValueExpr in EnumConst always has a type.
-    expr->Type() = expr->ValueExpr()->Type();
+    if (expr->ValueExpr())
+        expr->Type() = expr->ValueExpr()->Type();
+    // what if ValueExpr() is empty?
+    else
+        expr->Type() = std::make_shared<CArithmType>(TypeTag::int32);
 }
 
 
@@ -432,7 +434,15 @@ void TypeBuilder::VisitIdentExpr(IdentExpr* expr)
 {
     if (expr->Type()) return;
     auto decl = scopestack_.SearchObject(expr->Name());
-    expr->Type() = std::move(decl->GetCType()->Clone());
+    if (decl)
+    {
+        expr->Type() = std::move(decl->GetCType()->Clone());
+        return;
+    }
+
+    // then... what if decl denotes a function?
+    auto func = scopestack_.SearchFunc(expr->Name());
+    expr->Type() = std::move(func->GetCType()->Clone());
 }
 
 
@@ -499,8 +509,11 @@ void TypeBuilder::VisitUnaryExpr(UnaryExpr* expr)
     expr->Content()->Accept(this);
     if (expr->Op() == Tag::asterisk)
     {
-        auto ptr = expr->Content()->Type()->As<CPtrType>();
-        expr->Type() = ptr->Point2()->Clone();
+        auto ptr = expr->Content()->Type();
+        if (ptr->Is<CPtrType>())
+            expr->Type() = ptr->As<CPtrType>()->Point2()->Clone();
+        else if (ptr->Is<CArrayType>())
+            expr->Type() = ptr->As<CArrayType>()->ArrayOf()->Clone();
     }
     else if (expr->Op() == Tag::_and)
     {

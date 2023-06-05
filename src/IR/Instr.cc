@@ -43,7 +43,7 @@ std::string CallInstr::ToString() const
             call += (*arg)->ToString() + ", ";
         call += arglist_.back()->ToString();
     }
-    return result_ ? call + ')' : result_->Name() + " = " + call + ')';
+    return result_ ? result_->Name() + " = " + call + ')' : call + ')';
 }
 
 
@@ -100,8 +100,11 @@ std::string AllocaInstr::ToString() const
         " = alloca " + type_->ToString();
     if (num_ > 1)
         line += "i64 " + std::to_string(num_);
+    line += ", align ";
     if (align_ > 1)
-        line += ", align " + std::to_string(align_);
+        line += std::to_string(align_);
+    else
+        line += std::to_string(type_->Align());
     return line;
 }
 
@@ -111,7 +114,7 @@ std::string LoadInstr::ToString() const
         (volatile_ ? "volatile load " : "load ");
     line += pointer_->ToString();
     if (align_ > 1)
-        line += ", align" + std::to_string(align_);
+        line += ", align " + std::to_string(align_);
     return line;
 }
 

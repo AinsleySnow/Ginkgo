@@ -74,7 +74,7 @@ void InstrBuilder::MatchArithmType(
 
     auto reg = static_cast<const Register*>(val);
     auto regty = reg->Type();
-    auto trgname = reg->Name() + '\'';
+    auto trgname = reg->Name() + "cvt";
 
     if (target->Is<FloatType>() && regty->Is<IntType>())
     {
@@ -293,13 +293,25 @@ const Register* InstrBuilder::InsertGetElePtrInstr(
 
     if (point2->Is<ArrayType>())
         rety = PtrType::GetPtrType(Container(), point2->As<ArrayType>()->ArrayOf());
-    else
+    else if (point2->Is<HeterType>())
     {
         rety = PtrType::GetPtrType(Container(),
             point2->As<HeterType>()->At(std::get<int>(index)));
     }
+    else
+        rety = PtrType::GetPtrType(Container(), point2);
 
-    auto reg = Register::CreateRegister(Container(), result, rety);
+    const auto* reg = Register::CreateRegister(Container(), result, rety);
+    if (index.index() == 0 && std::get<0>(index)->Type()->Size() != 8)
+    {
+        auto i = std::get<0>(index);
+        if (i->Type()->As<IntType>()->IsSigned())
+            MatchArithmType(IntType::GetInt64(true), i);
+        else
+            MatchArithmType(IntType::GetInt64(false), i);
+        index = i;
+    }
+
     Insert(std::make_unique<GetElePtrInstr>(reg, val, index));
     return reg;
 }

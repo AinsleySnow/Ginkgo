@@ -79,7 +79,8 @@ public:
     const static FloatType* GetFloat32(Pool<IRType>*, size_t);
     const static FloatType* GetFloat64(Pool<IRType>*, size_t);
 
-    FloatType(size_t s) : IRType(TypeId::fp) { size_ = s; }
+    FloatType(size_t s) : IRType(TypeId::fp) { size_ = s; align_ = s; }
+    FloatType(size_t s, size_t a) : IRType(TypeId::fp) { size_ = s; align_ = a; }
 
     std::string ToString() const override;
 };
