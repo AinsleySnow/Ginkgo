@@ -125,7 +125,11 @@ public:
     StorageType& Storage() { return storage_; }
 
     size_t Size() const { return size_; }
-    size_t Align() const { return align_; }
+    // for arithmic type (int, long and so on), if align_ is not set,
+    // return the default alignment of the type (always same as size).
+    // for heterogenerous type and array type, their align_ are set
+    // in the constructors, so no default alignment for them.
+    size_t Align() const { return align_ ? align_ : size_; }
 
     bool operator==(const CType&) const = delete;
     bool operator!=(const CType&) const = delete;

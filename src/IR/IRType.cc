@@ -39,6 +39,20 @@ const IntType* IntType::GetInt64(bool s)
     return &uint64;
 }
 
+#define GET_INT_HELPER(size)                            \
+auto ptr = std::make_unique<IntType>(size, align, s);   \
+auto raw = ptr.get();                                   \
+pool->Add(std::move(ptr));                              \
+return raw
+
+const IntType* IntType::GetInt8(Pool<IRType>* pool, size_t align, bool s) { GET_INT_HELPER(1); }
+const IntType* IntType::GetInt16(Pool<IRType>* pool, size_t align, bool s) { GET_INT_HELPER(2); }
+const IntType* IntType::GetInt32(Pool<IRType>* pool, size_t align, bool s) { GET_INT_HELPER(4); }
+const IntType* IntType::GetInt64(Pool<IRType>* pool, size_t align, bool s) { GET_INT_HELPER(8); }
+
+#undef GET_INT_HELPER
+
+
 const FloatType* FloatType::GetFloat32()
 {
     return &float32;
@@ -48,6 +62,17 @@ const FloatType* FloatType::GetFloat64()
 {
     return &float64;
 }
+
+#define GET_FLOAT_HELPER(size)                          \
+auto ptr = std::make_unique<FloatType>(size, align);    \
+auto raw = ptr.get();                                   \
+pool->Add(std::move(ptr));                              \
+return raw
+
+const FloatType* FloatType::GetFloat32(Pool<IRType>* pool, size_t align) { GET_FLOAT_HELPER(4); }
+const FloatType* FloatType::GetFloat64(Pool<IRType>* pool, size_t align) { GET_FLOAT_HELPER(8); }
+
+#undef GET_FLOAT_HELPER
 
 
 FuncType* FuncType::GetFuncType(
@@ -73,6 +98,13 @@ PtrType* PtrType::GetPtrType(Pool<IRType>* pool, const IRType* point2)
     return addr;
 }
 
+PtrType* PtrType::GetPtrType(Pool<IRType>* pool, size_t align, const IRType* point2)
+{
+    auto ptr = GetPtrType(pool, point2);
+    ptr->align_ = align;
+    return ptr;
+}
+
 
 ArrayType* ArrayType::GetArrayType(
     Pool<IRType>* pool, size_t count, const IRType* elety)
@@ -83,13 +115,29 @@ ArrayType* ArrayType::GetArrayType(
     return addr;
 }
 
+ArrayType* ArrayType::GetArrayType(
+    Pool<IRType>* pool, size_t count, size_t align, const IRType* elety)
+{
+    auto array = GetArrayType(pool, count, elety);
+    array->align_ = align;
+    return array;
+}
+
 ArrayType::ArrayType(size_t count, const IRType* t) :
     IRType(TypeId::array), type_(t)
 {
     size_ = count * t->Size();
+    align_ = t->Align();
     count_ = count;
 }
 
+ArrayType::ArrayType(size_t count, size_t align, const IRType* t) :
+    IRType(TypeId::array), type_(t)
+{
+    size_ = count * t->Size();
+    align_ = align;
+    count_ = count;
+}
 
 StructType* StructType::GetStructType(Pool<IRType>* pool, const std::string& name)
 {
@@ -142,7 +190,8 @@ bool IRType::operator==(const IRType& rhs) const
 
 std::string IntType::ToString() const
 {
-    return 'i' + std::to_string(size_ * 8);
+    auto size = std::to_string(size_ * 8);
+    return signed_ ? 'i' + size : 'u' + size;
 }
 
 std::string FloatType::ToString() const

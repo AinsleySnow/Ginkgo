@@ -43,14 +43,22 @@ class IntType : public IRType
 {
 public:
     static bool ClassOf(const IntType* const) { return true; }
-    static bool ClassOf(const IRType* const i) { return i->id_ == TypeId::_int; }
+    static bool ClassOf(const IRType* const i)
+    { return i->id_ == TypeId::_int || i->id_ == TypeId::ptr; }
 
     const static IntType* GetInt8(bool);
     const static IntType* GetInt16(bool);
     const static IntType* GetInt32(bool);
     const static IntType* GetInt64(bool);
-    IntType() : IRType(TypeId::ptr), signed_(false) { size_ = 8; }
-    IntType(size_t s, bool si) : IRType(TypeId::_int), signed_(si) { size_ = s; }
+    const static IntType* GetInt8(Pool<IRType>*, size_t, bool);
+    const static IntType* GetInt16(Pool<IRType>*, size_t, bool);
+    const static IntType* GetInt32(Pool<IRType>*, size_t, bool);
+    const static IntType* GetInt64(Pool<IRType>*, size_t, bool);
+
+    IntType(size_t s, bool si) :
+        IRType(TypeId::_int), signed_(si) { size_ = s; align_ = s; }
+    IntType(size_t s, size_t a, bool si) :
+        IRType(TypeId::_int), signed_(si) { size_ = s; align_ = a; }
 
     std::string ToString() const override;
     bool IsSigned() const { return signed_; }
@@ -68,6 +76,9 @@ public:
 
     const static FloatType* GetFloat32();
     const static FloatType* GetFloat64();
+    const static FloatType* GetFloat32(Pool<IRType>*, size_t);
+    const static FloatType* GetFloat64(Pool<IRType>*, size_t);
+
     FloatType(size_t s) : IRType(TypeId::fp) { size_ = s; }
 
     std::string ToString() const override;
@@ -81,7 +92,10 @@ public:
     static bool ClassOf(const IRType* const i) { return i->id_ == TypeId::array; }
 
     static ArrayType* GetArrayType(Pool<IRType>*, size_t, const IRType*);
+    static ArrayType* GetArrayType(Pool<IRType>*, size_t, size_t, const IRType*);
+
     ArrayType(size_t, const IRType*);
+    ArrayType(size_t, size_t, const IRType*);
 
     std::string ToString() const override;
 
@@ -108,8 +122,10 @@ public:
     static bool ClassOf(const IRType* const i) { return i->id_ == TypeId::ptr; }
 
     static PtrType* GetPtrType(Pool<IRType>*, const IRType*);
-    PtrType(const IRType* t) :
-        IntType(8, false), type_(t) {}
+    static PtrType* GetPtrType(Pool<IRType>*, size_t, const IRType*);
+
+    PtrType(const IRType* t) : IntType(8, false), type_(t) { id_ = TypeId::ptr; }
+    PtrType(size_t a, const IRType* t) : IntType(8, a, false), type_(t) { id_ = TypeId::ptr; }
 
     std::string ToString() const override;
     const IRType* Point2() const { return type_; }

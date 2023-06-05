@@ -75,20 +75,40 @@ CArithmType::CArithmType(TypeTag tt) : CType(CTypeId::arithm), type_(tt)
     }
 }
 
-const IRType* CArithmType::ToIRType(Pool<IRType>*) const
+const IRType* CArithmType::ToIRType(Pool<IRType>* pool) const
 {
     switch (type_)
     {
-    case TypeTag::int8: return IntType::GetInt8(true);
-    case TypeTag::int16: return IntType::GetInt16(true);
-    case TypeTag::int32: return IntType::GetInt32(true);
-    case TypeTag::int64: return IntType::GetInt64(true);
-    case TypeTag::uint8: return IntType::GetInt8(false);
-    case TypeTag::uint16: return IntType::GetInt16(false);
-    case TypeTag::uint32: return IntType::GetInt32(false);
-    case TypeTag::uint64: return IntType::GetInt64(false);
-    case TypeTag::flt32: return FloatType::GetFloat32();
-    case TypeTag::flt64: return FloatType::GetFloat64();
+    case TypeTag::int8:
+        if (align_) return IntType::GetInt8(pool, Align(), true);
+        else        return IntType::GetInt8(true);
+    case TypeTag::int16:
+        if (align_) return IntType::GetInt16(pool, Align(), true);
+        else        return IntType::GetInt16(true);
+    case TypeTag::int32:
+        if (align_) return IntType::GetInt32(pool, Align(), true);
+        else        return IntType::GetInt32(true);
+    case TypeTag::int64:
+        if (align_) return IntType::GetInt64(pool, Align(), true);
+        else        return IntType::GetInt64(true);
+    case TypeTag::uint8:
+        if (align_) return IntType::GetInt8(pool, Align(), false);
+        else        return IntType::GetInt8(false);
+    case TypeTag::uint16:
+        if (align_) return IntType::GetInt16(pool, Align(), false);
+        else        return IntType::GetInt16(false);
+    case TypeTag::uint32:
+        if (align_) return IntType::GetInt32(pool, Align(), false);
+        else        return IntType::GetInt32(false);
+    case TypeTag::uint64:
+        if (align_) return IntType::GetInt64(pool, Align(), false);
+        else        return IntType::GetInt64(false);
+    case TypeTag::flt32:
+        if (align_) return FloatType::GetFloat32(pool, Align());
+        else        return FloatType::GetFloat32();
+    case TypeTag::flt64:
+        if (align_) return FloatType::GetFloat64(pool, Align());
+        else        return FloatType::GetFloat64();
     }
     return nullptr;
 }
@@ -166,9 +186,8 @@ const FuncType* CFuncType::ToIRType(Pool<IRType>* pool) const
 
 std::unique_ptr<CType> CFuncType::Clone() const
 {
-    auto func = std::make_unique<CFuncType>();
-    func->Qual() = Qual();
-    func->Storage() = Storage();
+    auto func = std::make_unique<CFuncType>(
+        *static_cast<const CType*>(this));
     func->variadic_ = variadic_;
     func->inline_ = inline_;
     func->noreturn_ = noreturn_;
@@ -186,14 +205,15 @@ std::string CPtrType::ToString() const
 const PtrType* CPtrType::ToIRType(Pool<IRType>* pool) const
 {
     auto point2 = point2_->ToIRType(pool);
-    return PtrType::GetPtrType(pool, point2);
+    return align_ ?
+        PtrType::GetPtrType(pool, align_, point2) :
+        PtrType::GetPtrType(pool, point2);
 }
 
 std::unique_ptr<CType> CPtrType::Clone() const
 {
-    auto ptr = std::make_unique<CPtrType>();
-    ptr->Qual() = Qual();
-    ptr->Storage() = Storage();
+    auto ptr = std::make_unique<CPtrType>(
+        *static_cast<const CType*>(this));
     ptr->point2_ = std::move(point2_->Clone());
     return std::move(ptr);
 }
@@ -202,7 +222,10 @@ std::unique_ptr<CType> CPtrType::Clone() const
 const ArrayType* CArrayType::ToIRType(Pool<IRType>* pool) const
 {
     auto arrayof = arrayof_->ToIRType(pool);
-    auto array = ArrayType::GetArrayType(pool, count_, arrayof);
+    auto array = align_ ?
+        ArrayType::GetArrayType(pool, count_, align_, arrayof) :
+        ArrayType::GetArrayType(pool, count_, arrayof);
+
     array->VariableLen() = variable_;
     array->Static() = static_;
     return array;
@@ -215,9 +238,8 @@ std::string CArrayType::ToString() const
 
 std::unique_ptr<CType> CArrayType::Clone() const
 {
-    auto array = std::make_unique<CArrayType>();
-    array->Qual() = Qual();
-    array->Storage() = Storage();
+    auto array = std::make_unique<CArrayType>(
+        *static_cast<const CType*>(this));
     array->arrayof_ = std::move(arrayof_->Clone());
     array->count_ = count_;
     array->variable_ = variable_;

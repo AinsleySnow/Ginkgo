@@ -109,6 +109,7 @@ constant initializer initializer_list
 
 %type <std::string> enumeration_constant string
 %type <Tag> type_qualifier storage_class_specifier function_specifier struct_or_union
+%type <AlignSpec> alignment_specifier
 %type <QualType> type_qualifier_list
 %type <std::unique_ptr<TypeSpec>> type_specifier enum_specifier
 %type <std::unique_ptr<HeterSpec>> struct_or_union_specifier
@@ -490,7 +491,15 @@ declaration_specifiers
         $$->SetFuncSpec($1);
     }
 	| alignment_specifier declaration_specifiers
+    {
+        $2->SetAlignSpec(std::move($1));
+        $$ = std::move($2);
+    }
 	| alignment_specifier
+    {
+        $$ = std::make_unique<DeclSpec>();
+        $$->SetAlignSpec(std::move($1));
+    }
 	;
 
 init_declarator_list
@@ -777,7 +786,9 @@ function_specifier
 
 alignment_specifier
 	: ALIGNAS '(' type_name ')'
+    { $$ = std::move($3); }
 	| ALIGNAS '(' constant_expression ')'
+    { $$ = std::move($3); }
 	;
 
 declarator

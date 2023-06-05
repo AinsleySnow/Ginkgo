@@ -9,6 +9,7 @@
 #include <list>
 #include <memory>
 #include <string>
+#include <variant>
 #include <vector>
 
 class DeclSpec;
@@ -123,6 +124,8 @@ class TypedefSpec : public TypeSpec
 };
 
 
+using AlignSpec = std::variant<std::unique_ptr<Declaration>, std::unique_ptr<Expr>>;
+
 class DeclSpec : public Declaration
 {
 public:
@@ -135,6 +138,7 @@ public:
     void SetStorage(Tag t) { storagelist_.push_back(t); }
     void SetQual(Tag t) { quallist_.push_back(t); }
     void SetFuncSpec(Tag t) { funcspeclist_.push_back(t); }
+    void SetAlignSpec(AlignSpec a) { align_ = std::move(a); }
 
     void AddTypeSpec(std::unique_ptr<::TypeSpec> ts);
     const EnumSpec* GetEnumSpec() const;
@@ -154,6 +158,7 @@ private:
     std::list<Tag> storagelist_{};
     std::list<Tag> quallist_{};
     std::list<Tag> funcspeclist_{};
+    AlignSpec align_{};
 };
 
 
