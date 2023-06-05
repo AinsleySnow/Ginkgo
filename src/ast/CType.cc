@@ -186,8 +186,12 @@ const FuncType* CFuncType::ToIRType(Pool<IRType>* pool) const
 
 std::unique_ptr<CType> CFuncType::Clone() const
 {
-    auto func = std::make_unique<CFuncType>(
-        *static_cast<const CType*>(this));
+    auto func = std::make_unique<CFuncType>();
+
+    // Alignment and size for function types are always 0.
+
+    func->Qual() = Qual();
+    func->Storage() = Storage();
     func->variadic_ = variadic_;
     func->inline_ = inline_;
     func->noreturn_ = noreturn_;
@@ -212,8 +216,11 @@ const PtrType* CPtrType::ToIRType(Pool<IRType>* pool) const
 
 std::unique_ptr<CType> CPtrType::Clone() const
 {
-    auto ptr = std::make_unique<CPtrType>(
-        *static_cast<const CType*>(this));
+    auto ptr = std::make_unique<CPtrType>();
+    ptr->size_ = Size();
+    ptr->align_ = Align();
+    ptr->Qual() = Qual();
+    ptr->Storage() = Storage();
     ptr->point2_ = std::move(point2_->Clone());
     return std::move(ptr);
 }
@@ -238,8 +245,11 @@ std::string CArrayType::ToString() const
 
 std::unique_ptr<CType> CArrayType::Clone() const
 {
-    auto array = std::make_unique<CArrayType>(
-        *static_cast<const CType*>(this));
+    auto array = std::make_unique<CArrayType>();
+    array->size_ = Size();
+    array->align_ = Align();
+    array->Qual() = Qual();
+    array->Storage() = Storage();
     array->arrayof_ = std::move(arrayof_->Clone());
     array->count_ = count_;
     array->variable_ = variable_;
