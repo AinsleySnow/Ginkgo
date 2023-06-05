@@ -1,6 +1,8 @@
 #ifndef __GINKGO_LIMITS_H
 #define __GINKGO_LIMITS_H
 
+#define __STDC_VERSION_LIMITS_H__ 202311L
+
 #define BOOL_WIDTH      1
 #define BOOL_MAX        1
 
