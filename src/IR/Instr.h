@@ -417,7 +417,7 @@ private:
     const Register* result_{};
     const IRType* type_{};
     size_t num_{ 1 };
-    size_t align_{ type_->Size() };
+    size_t align_{ type_->Align() };
 };
 
 

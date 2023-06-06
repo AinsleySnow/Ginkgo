@@ -295,6 +295,7 @@ void IRGen::VisitArrayExpr(ArrayExpr* array)
 {
     array->identifier_->Accept(this);
     array->index_->Accept(this);
+    tbud_.VisitArrayExpr(array);
 
     const Register* addr = LoadAddr(array->identifier_.get());
     if (addr->Type()->As<PtrType>()->Point2()->Is<PtrType>())
@@ -315,6 +316,7 @@ void IRGen::VisitAssignExpr(AssignExpr* assign)
 {
     assign->left_->Accept(this);
     assign->right_->Accept(this);
+    tbud_.VisitAssignExpr(assign);
 
     auto rhs = LoadVal(assign->right_.get());
     const Register* addr = LoadAddr(assign->left_.get());
@@ -516,6 +518,8 @@ pointercall:
         for (auto& argv : *call->argvlist_)
             callinstr->AddArgv(argv->Val());
     }
+
+    tbud_.VisitCallExpr(call);
 }
 
 

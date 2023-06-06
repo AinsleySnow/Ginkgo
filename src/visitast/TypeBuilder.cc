@@ -65,15 +65,21 @@ std::shared_ptr<CType> TypeBuilder::GetCTypeByValue(
 std::shared_ptr<CType> TypeBuilder::MatchCType(
     std::shared_ptr<CType> lhs, std::shared_ptr<CType> rhs)
 {
-    // for things like int* + 2
+    // for things like int* + 2, int* = 2
     if (lhs->Is<CPtrType>() && rhs->Is<CArithmType>())
         return lhs;
     else if (lhs->Is<CArithmType>() && rhs->Is<CPtrType>())
         return rhs;
+    // for things like ArrayName = 2, ArrayName[2]
     else if (lhs->Is<CArrayType>() && rhs->Is<CArithmType>())
         return std::make_unique<CPtrType>(lhs->As<CArrayType>()->ArrayOf()->Clone());
     else if (lhs->Is<CArithmType>() && rhs->Is<CArrayType>())
-        return std::make_unique<CPtrType>(rhs->As<CArrayType>()->ArrayOf()->Clone());    
+        return std::make_unique<CPtrType>(rhs->As<CArrayType>()->ArrayOf()->Clone());
+    // for things like FuncPtr = FuncName
+    else if (lhs->Is<CPtrType>() && rhs->Is<CFuncType>())
+        return lhs;
+    else if (lhs->Is<CFuncType>() && rhs->Is<CPtrType>())
+        return rhs;
 
     auto la = lhs->As<CArithmType>();
     auto ra = rhs->As<CArithmType>();
