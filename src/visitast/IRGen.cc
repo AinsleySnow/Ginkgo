@@ -33,11 +33,9 @@ const Register* IRGen::AllocaObject(const CType* raw, const std::string& name)
         auto var = GlobalVar::CreateGlobalVar(transunit_.get(), regname, ty);
 
         env_ = CurrentEnv(var);
-        ibud_.SetInsertPoint(
-            BasicBlock::CreateBasicBlock(var, ""));
         auto reg = Register::CreateRegister(
-            ibud_.Container(), regname,
-            PtrType::GetPtrType(ibud_.Container(), ty));
+            env_.GetGlobalVar(), regname,
+            PtrType::GetPtrType(env_.GetGlobalVar(), ty));
 
         var->Addr() = reg;
         scopestack_.Top().AddObject(name, raw, reg);
@@ -169,9 +167,17 @@ void IRGen::VisitDeclList(DeclList* list)
             if (initdecl->initalizer_)
             {
                 initdecl->initalizer_->Accept(this);
-                ibud_.InsertStoreInstr(
-                    LoadVal(initdecl->initalizer_.get()),
-                    initdecl->base_, false);
+                // only insert store instr when we're translating
+                // a function. the expr tree will be directly add
+                // to the tree.
+                if (env_.InFunction())
+                {
+                    ibud_.InsertStoreInstr(
+                        LoadVal(initdecl->initalizer_.get()),
+                        initdecl->base_, false);
+                }
+                else
+                    env_.GetGlobalVar()->Dump2Tree();
             }
         }
     }
@@ -398,10 +404,27 @@ void IRGen::VisitBinaryExpr(BinaryExpr* bin)
     if (bin->left_->IsConstant() && bin->right_->IsConstant())
     {
         Pool<IROperand>* container = nullptr;
-        if (ibud_.Container()) container = ibud_.Container();
-        else    container = transunit_.get();
+        // if we're evaluating a global variable
+        if (env_.InGlobalVar())
+            container = env_.GetGlobalVar();
+        else if (ibud_.Container())
+            container = ibud_.Container();
+        else
+            container = transunit_.get();
+
         bin->Val() = Evaluator::EvalBinary(
             container, bin->op_, bin->left_->Val(), bin->right_->Val());
+        if (env_.InGlobalVar())
+            env_.GetGlobalVar()->AddOpNode(bin->Val(), 2);
+        return;
+    }
+
+    // In a global var and the expression has not been folded?
+    // Then bin->op_ must be eithor plus or minus
+    if (env_.InGlobalVar())
+    {
+        env_.GetGlobalVar()->MergeNode(
+            bin->op_ == Tag::plus ? Instr::InstrId::add : Instr::InstrId::sub);
         return;
     }
 
@@ -489,6 +512,8 @@ void IRGen::VisitCallExpr(CallExpr* call)
         for (auto& argv : *call->argvlist_)
             LoadVal(argv.get());
     }
+
+    call->postfix_->Accept(&tbud_);
 
     if (call->postfix_->IsIdentifier())
     {
@@ -643,8 +668,12 @@ void IRGen::VisitConstant(ConstExpr* constant)
 {
     auto ctype = constant->RawType();
     Pool<IROperand>* container = nullptr;
-    if (ibud_.Container()) container = ibud_.Container();
-    else container = transunit_.get();
+    if (env_.InGlobalVar())
+        container = env_.GetGlobalVar();
+    else if (ibud_.Container())
+        container = ibud_.Container();
+    else
+        container = transunit_.get();
 
     if (ctype->As<CArithmType>()->IsInteger())
         constant->Val() = IntConst::CreateIntConst(
@@ -654,6 +683,9 @@ void IRGen::VisitConstant(ConstExpr* constant)
         constant->Val() = FloatConst::CreateFloatConst(
             container, constant->GetFloat(),
             ctype->ToIRType(transunit_.get())->As<FloatType>());
+
+    if (env_.InGlobalVar())
+        env_.GetGlobalVar()->AddOpNode(constant->Val());
 }
 
 
@@ -875,11 +907,18 @@ void IRGen::VisitUnaryExpr(UnaryExpr* unary)
     if (unary->content_->IsConstant())
     {
         Pool<IROperand>* container = nullptr;
-        if (!ibud_.Container()) container = transunit_.get();
-        else    container = ibud_.Container();
+        if (env_.InGlobalVar())
+            container = env_.GetGlobalVar();
+        else if (!ibud_.Container())
+            container = transunit_.get();
+        else
+            container = ibud_.Container();
 
         unary->Val() = Evaluator::EvalUnary(
             container, unary->op_, unary->content_->Val());
+
+        if (env_.InGlobalVar())
+            env_.GetGlobalVar()->AddOpNode(unary->Val(), 1);
         return;
     }
 
@@ -903,7 +942,11 @@ void IRGen::VisitUnaryExpr(UnaryExpr* unary)
     else if (unary->op_ == Tag::plus)
         unary->Val() = LoadVal(unary->content_.get());
     else if (unary->op_ == Tag::_and)
+    {
         unary->Val() = LoadAddr(unary->content_.get());
+        if (env_.InGlobalVar())
+            env_.GetGlobalVar()->MergeNode(Instr::InstrId::geteleptr);
+    }
     else if (unary->op_ == Tag::asterisk)
     {
         auto addreg = LoadAddr(unary->content_.get());

@@ -95,6 +95,7 @@ public:
         literal_(s), IROperand(OpId::str, ty) {}
 
     std::string ToString() const override { return literal_; }
+    auto Literal() const { return '"' + literal_ + '"'; }
 
 private:
     std::string literal_{};

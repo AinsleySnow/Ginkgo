@@ -9,6 +9,7 @@
 #include "utils/Pool.h"
 #include <algorithm>
 #include <memory>
+#include <stack>
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -116,7 +117,7 @@ private:
 };
 
 
-class GlobalVar : public Value
+class GlobalVar : public Value, public Pool<IROperand>, public Pool<IRType>
 {
 public:
     static bool ClassOf(const Module* const) { return true; }
@@ -133,14 +134,18 @@ public:
     auto& Addr() { return addr_; }
     const auto Addr() const { return addr_; }
 
-    void SetBasicBlock(std::unique_ptr<BasicBlock>);
-    BasicBlock* GetBasicBlock() { return blk_.get(); }
+    void Dump2Tree() { tree_ = std::move(stack_.top()); stack_.pop(); }
+    Node* GetTree() { return tree_.get(); }
+    void MergeNode(Instr::InstrId);
+    void AddOpNode(const IROperand*, int);
+    void AddOpNode(const IROperand*);
 
 
 private:
     const IRType* type_{};
     const Register* addr_{};
-    std::unique_ptr<BasicBlock> blk_{};
+    std::unique_ptr<Node> tree_{};
+    static std::stack<std::unique_ptr<Node>> stack_;
 };
 
 
@@ -152,7 +157,6 @@ public:
     static bool ClassOf(const Value* const v) { return v->ID() == ValueId::basicblock; }
 
     static BasicBlock* CreateBasicBlock(Function*, const std::string&);
-    static BasicBlock* CreateBasicBlock(GlobalVar*, const std::string&);
     BasicBlock(const std::string& n) : Value(n) { id_ = ValueId::basicblock; }
 
     std::string ToString() const override;

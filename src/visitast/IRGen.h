@@ -77,6 +77,9 @@ private:
         CurrentEnv() {}
         CurrentEnv(std::variant<Function*, GlobalVar*> v) : env_(v) {}
 
+        bool InFunction() const { return std::holds_alternative<Function*>(env_); }
+        bool InGlobalVar() const { return std::holds_alternative<GlobalVar*>(env_); }
+
         Function* GetFunction() { return std::get<0>(env_); }
         GlobalVar* GetGlobalVar() { return std::get<1>(env_); }
 

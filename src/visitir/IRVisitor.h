@@ -6,6 +6,10 @@ class GlobalVar;
 class Function;
 class BasicBlock;
 
+struct OpNode;
+struct BinaryNode;
+struct UnaryNode;
+
 class RetInstr;    class BrInstr;
 class SwitchInstr; class CallInstr;
 
@@ -40,6 +44,10 @@ public:
     virtual void VisitGlobalVar(GlobalVar*) {}
     virtual void VisitFunction(Function*) {}
     virtual void VisitBasicBlock(BasicBlock*) {}
+
+    virtual void VisitNode(OpNode*) {}
+    virtual void VisitNode(BinaryNode*) {}
+    virtual void VisitNode(UnaryNode*) {}
 
     virtual void VisitRetInstr(RetInstr*) {}
     virtual void VisitBrInstr(BrInstr*) {}

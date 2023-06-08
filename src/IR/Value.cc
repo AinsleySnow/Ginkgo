@@ -138,8 +138,8 @@ GlobalVar* GlobalVar::CreateGlobalVar(Module* mod, const std::string& name, cons
 
 std::string GlobalVar::ToString() const
 {
-    auto var = type_->ToString() + ' ' + Name() + ":\n";
-    var += blk_->ToString();
+    auto var = type_->ToString() + ' ' + Name() + " = ";
+    var += tree_->ToString() + ';';
     return var;
 }
 
@@ -148,9 +148,40 @@ void GlobalVar::Accept(IRVisitor* v)
     v->VisitGlobalVar(this);
 }
 
-void GlobalVar::SetBasicBlock(std::unique_ptr<BasicBlock> bb)
+std::stack<std::unique_ptr<Node>> GlobalVar::stack_;
+
+void GlobalVar::MergeNode(Instr::InstrId op)
 {
-    blk_ = std::move(bb);
+    if (op == Instr::InstrId::geteleptr)
+    {
+        auto oper = std::move(stack_.top());
+        stack_.pop();
+        stack_.push(std::make_unique<UnaryNode>(op, std::move(oper)));
+    }
+    else
+    {
+        auto right = std::move(stack_.top());
+        stack_.pop();
+        auto left = std::move(stack_.top());
+        stack_.pop();
+        stack_.push(std::make_unique<BinaryNode>(
+            std::move(left), op, std::move(right)));
+    }
+}
+
+void GlobalVar::AddOpNode(const IROperand* op, int pop)
+{
+    // pop one element if pop == 1,
+    // two if pop == 2.
+    stack_.pop();
+    if (pop == 2)
+        stack_.pop();
+    stack_.push(std::make_unique<OpNode>(op));
+}
+
+void GlobalVar::AddOpNode(const IROperand* op)
+{
+    stack_.push(std::make_unique<OpNode>(op));
 }
 
 
@@ -159,14 +190,6 @@ BasicBlock* BasicBlock::CreateBasicBlock(Function* func, const std::string& name
     std::unique_ptr<BasicBlock> bb = std::make_unique<BasicBlock>(name);
     auto raw = bb.get();
     func->Append(std::move(bb));
-    return raw;
-}
-
-BasicBlock* BasicBlock::CreateBasicBlock(GlobalVar* global, const std::string& name)
-{
-    std::unique_ptr<BasicBlock> bb = std::make_unique<BasicBlock>(name);
-    auto raw = bb.get();
-    global->SetBasicBlock(std::move(bb));
     return raw;
 }
 

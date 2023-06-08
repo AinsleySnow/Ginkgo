@@ -5,6 +5,23 @@
 #include <cfloat>
 
 
+void OpNode::Accept(IRVisitor* v) { v->VisitNode(this); }
+void BinaryNode::Accept(IRVisitor* v) { v->VisitNode(this); }
+void UnaryNode::Accept(IRVisitor* v) { v->VisitNode(this); }
+
+std::string OpNode::ToString() const { return op_->ToString(); }
+std::string BinaryNode::ToString() const
+{
+    return left_->ToString() +
+        (id_ == Instr::InstrId::add ? '+' : '-') +
+        right_->ToString();
+}
+std::string UnaryNode::ToString() const
+{
+    return "(getaddr " + op_->ToString() + ')';
+}
+
+
 std::string RetInstr::ToString() const
 {
     if (retval_) return "ret " + retval_->ToString();

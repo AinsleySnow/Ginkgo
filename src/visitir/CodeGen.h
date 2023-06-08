@@ -31,6 +31,10 @@ public:
     void VisitFunction(Function*) override;
     void VisitBasicBlock(BasicBlock*) override;
 
+    void VisitNode(OpNode*) override;
+    void VisitNode(BinaryNode*) override;
+    void VisitNode(UnaryNode*) override;
+
     void VisitRetInstr(RetInstr*) override;
     void VisitBrInstr(BrInstr*) override;
     void VisitSwitchInstr(SwitchInstr*) override;
@@ -142,25 +146,5 @@ private:
     EmitAsm asmfile_{ "" };
 };
 
-
-class GlobalVarVisitor : public IRVisitor
-{
-public:
-    GlobalVarVisitor(EmitAsm& f) : asmfile_(f) {}
-
-    void VisitBasicBlock(BasicBlock*) override;
-    void VisitStoreInstr(StoreInstr*) override;
-    void VisitAddInstr(AddInstr*) override;
-    void VisitSubInstr(SubInstr*) override;
-
-    std::string GetExpr(const std::string& name) const { return map_.at(name); }
-
-private:
-    std::string Find(const std::string&) const;
-    std::string Op2Str(const IROperand* op) const;
-
-    std::unordered_map<std::string, std::string> map_{};
-    EmitAsm& asmfile_;
-};
 
 #endif // _CODE_GEN_H_

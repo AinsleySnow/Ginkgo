@@ -488,20 +488,18 @@ void CodeGen::VisitModule(Module* mod)
 
 void CodeGen::VisitGlobalVar(GlobalVar* var)
 {
-    GlobalVarVisitor visitor{ asmfile_ };
-    visitor.VisitBasicBlock(var->GetBasicBlock());
-
     // stripping the leading '@'
     auto name = var->Name().substr(1);
     auto size = std::to_string(var->Type()->Size());
 
+    var->GetTree()->Accept(this);
     asmfile_.EmitPseudoInstr(".data");
     asmfile_.EmitPseudoInstr(".globl", { name });
     asmfile_.EmitPseudoInstr(".align", { size });
     asmfile_.EmitPseudoInstr(".type", { name, "@object" });
     asmfile_.EmitPseudoInstr(".size", { name, size });
     asmfile_.EmitLabel(name);
-    asmfile_.EmitPseudoInstr(".long", { visitor.GetExpr(name) });
+    asmfile_.EmitPseudoInstr(".long", { var->GetTree()->repr_ });
 }
 
 void CodeGen::VisitFunction(Function* func)
@@ -526,6 +524,37 @@ void CodeGen::VisitBasicBlock(BasicBlock* bb)
     asmfile_.EmitLabel(bb->Name());
     for (auto inst : *bb)
         inst->Accept(this);
+}
+
+
+void CodeGen::VisitNode(OpNode* op)
+{
+    if (op->op_->Is<IntConst>())
+        op->repr_ = std::to_string(op->op_->As<IntConst>()->Val());
+    else if (op->op_->Is<FloatConst>())
+        op->repr_ = std::to_string(op->op_->As<FloatConst>()->Val());
+    else if (op->op_->Is<StrConst>())
+        op->repr_ = op->op_->As<StrConst>()->Literal();
+    else // strip the leading '@'
+        op->repr_ = op->op_->As<Register>()->Name().substr(1);
+}
+
+void CodeGen::VisitNode(BinaryNode* bin)
+{
+    bin->left_->Accept(this);
+    bin->right_->Accept(this);
+
+    if (bin->id_ == Instr::InstrId::add)
+        bin->repr_ = std::move(bin->left_->repr_) + '+' + std::move(bin->right_->repr_);
+    else if (bin->id_ == Instr::InstrId::sub)
+        bin->repr_ = std::move(bin->left_->repr_) + '-' + std::move(bin->right_->repr_);
+}
+
+void CodeGen::VisitNode(UnaryNode* un)
+{
+    un->op_->Accept(this);
+    if (un->id_ == Instr::InstrId::geteleptr)
+        un->repr_ = std::move(un->op_->repr_);
 }
 
 
@@ -938,45 +967,4 @@ static std::string Strip(const std::string& s)
     if (s[0] == '@' || s[0] == '%')
         return s.substr(1);
     else return s;
-}
-
-std::string GlobalVarVisitor::Find(const std::string& s) const
-{
-    if (map_.find(s) != map_.end())
-        return map_.at(s);
-    else return s;
-}
-
-std::string GlobalVarVisitor::Op2Str(const IROperand* op) const
-{
-    if (op->Is<Constant>())
-        return Const2Str(op->As<Constant>());
-    else
-        return Find(Strip(op->As<Register>()->Name()));
-}
-
-void GlobalVarVisitor::VisitBasicBlock(BasicBlock* bb)
-{
-    for (auto i : *bb)
-        i->Accept(this);
-}
-
-void GlobalVarVisitor::VisitStoreInstr(StoreInstr* store)
-{
-    auto dest = Strip(store->Dest()->Name());
-    map_[dest] = Op2Str(store->Value());
-}
-
-void GlobalVarVisitor::VisitAddInstr(AddInstr* add)
-{
-    auto lhs = Op2Str(add->Lhs());
-    auto rhs = Op2Str(add->Rhs());
-    map_[Strip(add->Result()->As<Register>()->Name())] = lhs + '+' + rhs;
-}
-
-void GlobalVarVisitor::VisitSubInstr(SubInstr* sub)
-{
-    auto lhs = Op2Str(sub->Lhs());
-    auto rhs = Op2Str(sub->Rhs());
-    map_[Strip(sub->Result()->As<Register>()->Name())] = lhs + '-' + rhs;
 }

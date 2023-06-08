@@ -53,6 +53,49 @@ public:
 };
 
 
+struct Node
+{
+    virtual void Accept(IRVisitor*) = 0;
+    virtual std::string ToString() const = 0;
+    std::string repr_{};
+};
+
+struct OpNode : public Node
+{
+    OpNode(const IROperand* o) : op_(o) {}
+
+    void Accept(IRVisitor*) override;
+    std::string ToString() const override;
+
+    const IROperand* op_{};
+};
+
+struct BinaryNode : public Node
+{
+    BinaryNode(std::unique_ptr<Node> l, Instr::InstrId i, std::unique_ptr<Node> r) :
+        left_(std::move(l)), id_(i), right_(std::move(r)) {}
+
+    void Accept(IRVisitor*) override;
+    std::string ToString() const override;
+
+    std::unique_ptr<Node> left_{};
+    Instr::InstrId id_{};
+    std::unique_ptr<Node> right_{};
+};
+
+struct UnaryNode : public Node
+{
+    UnaryNode(Instr::InstrId i, std::unique_ptr<Node> o) :
+        id_(i), op_(std::move(o)) {}
+
+    void Accept(IRVisitor*) override;
+    std::string ToString() const override;
+
+    Instr::InstrId id_{};
+    std::unique_ptr<Node> op_{};
+};
+
+
 class RetInstr : public Instr
 {
 public:
