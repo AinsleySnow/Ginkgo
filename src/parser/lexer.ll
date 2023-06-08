@@ -130,11 +130,11 @@ static void comment(void);
     return ty;
 }
 
-{BP}{BS}{IS}?                 { yylval->emplace<std::string>() = yytext; return YYTOKEN::I_CONSTANT; }
-{HP}{HS}{IS}?				  { yylval->emplace<std::string>() = yytext; return YYTOKEN::I_CONSTANT; }
-{NZ}{DS}?{IS}?				  { yylval->emplace<std::string>() = yytext; return YYTOKEN::I_CONSTANT; }
-"0"{OS}*{IS}?				  { yylval->emplace<std::string>() = yytext; return YYTOKEN::I_CONSTANT; }
-{CP}?"'"([^'\\\n]|{ES})+"'"	  { yylval->emplace<std::string>() = yytext; return YYTOKEN::I_CONSTANT; }
+{BP}{BS}{IS}?                       { yylval->emplace<std::string>() = yytext; return YYTOKEN::I_CONSTANT; }
+{HP}{HS}{IS}?                       { yylval->emplace<std::string>() = yytext; return YYTOKEN::I_CONSTANT; }
+{NZ}{DS}?{IS}?                      { yylval->emplace<std::string>() = yytext; return YYTOKEN::I_CONSTANT; }
+"0"{OS}*{IS}?                       { yylval->emplace<std::string>() = yytext; return YYTOKEN::I_CONSTANT; }
+{CP}?"'"([^'\\\n]|{ES}|{U8})+"'"    { yylval->emplace<std::string>() = yytext; return YYTOKEN::I_CONSTANT; }
 
 {DS}{E}{FS}?				  { yylval->emplace<std::string>() = yytext; return YYTOKEN::F_CONSTANT; }
 {DS}?"."{D}+{E}?{FS}?		  { yylval->emplace<std::string>() = yytext; return YYTOKEN::F_CONSTANT; }
@@ -143,7 +143,7 @@ static void comment(void);
 {HP}{HS}?"."{HS}{P}{FS}?	  { yylval->emplace<std::string>() = yytext; return YYTOKEN::F_CONSTANT; }
 {HP}{HS}"."{P}{FS}?			  { yylval->emplace<std::string>() = yytext; return YYTOKEN::F_CONSTANT; }
 
-({SP}?\"([^"\\\n]|{ES})*\"{WS}*)+	{ return YYTOKEN::STRING_LITERAL; }
+({SP}?\"([^"\\\n]|{ES}|{U8})*\"{WS}*)+	{ return YYTOKEN::STRING_LITERAL; }
 
 "..."					{ return YYTOKEN::ELLIPSIS; }
 ">>="					{ yylval->emplace<Tag>() = Tag::right_assign; return YYTOKEN::RIGHT_ASSIGN; }

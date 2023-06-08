@@ -69,8 +69,53 @@ ConstExpr::ConstExpr(bool b) : val_(b)
     type_ = std::make_unique<CArithmType>(TypeTag::int8);
 }
 
-ConstExpr::ConstExpr(const std::string& s)
+static void WashEscape(std::string& s)
 {
+    int start = s.find_first_of('\'');
+    if (s[++start] != '\\')
+        return;
+
+    auto replace = [&s, &start](char c){
+        //       start
+        //         v
+        // u 8 ' \ a '
+        //       |
+        //--lhs--+-rhs--
+        auto lhs = s.substr(0, start - 1);
+        s = lhs + c + '\'';
+    };
+
+    switch (s[++start])
+    {
+    case 'a': replace('\a'); break; case 'b': replace('\b'); break;
+    case 'f': replace('\f'); break; case 'n': replace('\n'); break;
+    case 'r': replace('\r'); break; case 't': replace('\t'); break;
+    case 'v': replace('\v'); break; case '\'': replace('\''); break;
+    case '"': replace('\"'); break; case '\\': replace('\\'); break;
+    case '\?': replace('?'); break;
+    case 'x':
+        {
+            start += 1;
+            auto c = static_cast<char>(std::stoi(
+                s.substr(start, s.length() - start - 1), nullptr, 16));
+            s = s.substr(0, start - 2) + c + '\'';
+            break;
+        }
+    default: // an oct number
+        {
+            auto c = static_cast<char>(std::stoi(
+                s.substr(start, s.length() - start - 1), nullptr, 8));
+            s = s.substr(0, start - 1) + c + '\'';
+            break;
+        }
+    }
+}
+
+ConstExpr::ConstExpr(const std::string& cs)
+{
+    auto s = cs;
+    WashEscape(s);
+
     // no prefix or the prefix is u8
     if (s[0] == '\'' || s[0] == 'u' && s[1] == '8')
     {
@@ -80,7 +125,7 @@ ConstExpr::ConstExpr(const std::string& s)
     else if (s[0] == 'u')
     {
         auto copy = s;
-        copy.erase(copy.begin());
+        copy.erase(copy.begin(), copy.begin() + 2);
         copy.pop_back();
         auto temp = utf8::utf8to16(copy);
         val_ = static_cast<uint64_t>(temp[0]);
@@ -89,7 +134,7 @@ ConstExpr::ConstExpr(const std::string& s)
     else // the prefix is U or L; wchar_t has width of 32, as defined in stddef.h
     {
         auto copy = s;
-        copy.erase(copy.begin());
+        copy.erase(copy.begin(), copy.begin() + 2);
         copy.pop_back();
         auto temp = utf8::utf8to32(copy);
         val_ = static_cast<uint64_t>(temp[0]);
