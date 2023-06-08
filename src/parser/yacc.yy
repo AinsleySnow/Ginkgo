@@ -174,14 +174,31 @@ constant
         std::string suffix = "";
         if (index != std::string::npos)
             suffix = $1.substr(index, $1.length() - index);
-        
+
         int base = 10;
-        if ($1.length() > 1 && $1[0] == '0' && 
-            ($1[1] == 'x' || $1[1] == 'X')) base = 16;
-        else if ($1.length() > 1 && $1[0] == '0') base = 8;
- 
-        $$ = std::make_unique<ConstExpr>(
-            std::stoull($1.substr(0, $1.length() - suffix.length())), base, suffix);
+        if ($1.length() > 1 && $1[0] == '0' && ($1[1] == 'x' || $1[1] == 'X'))
+            base = 16;
+        else if ($1.length() > 1 && $1[0] == '0' && ($1[1] == 'b' || $1[1] == 'B'))
+            base = 2;
+        else if ($1.length() > 1 && $1[0] == '0')
+            base = 8;
+
+        unsigned long num = 0;
+        if (base == 2)
+        {
+            for (int i = 2; i < $1.length(); i++)
+            {
+                num <<= 1;
+                if ($1[i] == '1')
+                    num |= 1;
+            }
+        }
+        else
+        {
+            num = std::stoull($1.substr(
+                0, $1.length() - suffix.length()), nullptr, base);
+        }
+        $$ = std::make_unique<ConstExpr>(num, base, suffix);
     }
     /* includes character_constant */
 	| F_CONSTANT

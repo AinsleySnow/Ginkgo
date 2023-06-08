@@ -5,13 +5,16 @@
 %a  1213
 %o  1117
 
+B   [01]
 O   [0-7]
 D   [0-9]
 NZ  [1-9]
 L   [a-zA-Z_]
 A   [a-zA-Z_0-9]
 H   [a-fA-F0-9]
+BP  (0[bB])
 HP  (0[xX])
+BS  ({B}({B}|('{B}))*)
 OS  ({O}({O}|('{O}))*)
 DS  ({D}({D}|('{D}))*)
 HS  ({H}({H}|('{H}))*)
@@ -127,6 +130,7 @@ static void comment(void);
     return ty;
 }
 
+{BP}{BS}{IS}?                 { yylval->emplace<std::string>() = yytext; return YYTOKEN::I_CONSTANT; }
 {HP}{HS}{IS}?				  { yylval->emplace<std::string>() = yytext; return YYTOKEN::I_CONSTANT; }
 {NZ}{DS}?{IS}?				  { yylval->emplace<std::string>() = yytext; return YYTOKEN::I_CONSTANT; }
 "0"{OS}*{IS}?				  { yylval->emplace<std::string>() = yytext; return YYTOKEN::I_CONSTANT; }
