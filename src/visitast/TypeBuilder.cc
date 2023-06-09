@@ -469,9 +469,9 @@ void TypeBuilder::VisitStrExpr(StrExpr* str)
         width = w;
     };
 
-    int i = 0;
+    int i = -1;
     while ((i = str->Content().
-        find_first_of('"', i)) != std::string::npos)
+        find_first_of('"', i + 1)) != std::string::npos)
     {
         if (i == 0) continue;
 
@@ -479,13 +479,14 @@ void TypeBuilder::VisitStrExpr(StrExpr* str)
         if (prefix == '8') setwidth(1);
         else if (prefix == 'u') setwidth(2);
         else if (prefix == 'U' || prefix == 'L') setwidth(4);
-    
+
         // now i is inside a string
+        i -= 1;
         while ((i = str->Content().
-            find_first_of('"', i)) != std::string::npos)
+            find_first_of('"', i + 1)) != std::string::npos)
             if (str->Content()[i - 1] != '\\')
                 break;
-        
+
         i += 1;
     }
 

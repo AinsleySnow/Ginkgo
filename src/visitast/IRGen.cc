@@ -863,18 +863,31 @@ void IRGen::VisitLogicalExpr(LogicalExpr* logical)
 
 
 template <typename T>
-std::string WashString(T str)
+std::string WashString(const T& str)
 {
     std::string result = "";
+    constexpr auto size = sizeof(typename T::value_type);
+    constexpr auto mask = ((unsigned int)(-1)) >> (32 - size * 8);
 
-    for (auto i = str.begin(); i != str.end(); ++i)
+    int start = str.find_first_of('"') + 1;
+    int end = str.find_last_of('"');
+
+    for (auto i = str.begin() + start; i != str.begin() + end; ++i)
     {
-        if (isprint(*i)) result += static_cast<char>(*i);
-        else
+        if (*i == '"')
         {
-            result += "\\x";
-            result += fmt::format("{:0x}", static_cast<int>(*i));
+            if (*(i - 1) == '\\')
+                goto print;
+            i += 1;
+            while (*i != '"')
+                i += 1;
+            continue;
         }
+        else if (isascii(*i))
+    print:
+            result += static_cast<typename T::value_type>(*i);
+        else
+            result += fmt::format("\\x{:0x}", static_cast<unsigned int>((*i) & mask));
     }
 
     return result;
