@@ -90,12 +90,12 @@ public:
     static bool ClassOf(const StrConst* const) { return true; }
     static bool ClassOf(const IROperand* const op) { return op->id_ == OpId::str; }
 
-    static StrConst* CreateStrConst(Pool<IROperand>*, const std::string&, const PtrType*);
-    StrConst(const std::string& s, const PtrType* ty) :
+    static StrConst* CreateStrConst(Pool<IROperand>*, const std::string&, const ArrayType*);
+    StrConst(const std::string& s, const ArrayType* ty) :
         literal_(s), IROperand(OpId::str, ty) {}
 
-    std::string ToString() const override { return literal_; }
-    auto Literal() const { return '"' + literal_ + '"'; }
+    std::string ToString() const override { return '"' + literal_ + '"'; }
+    auto Literal() const { return literal_; }
 
 private:
     std::string literal_{};

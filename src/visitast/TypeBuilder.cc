@@ -80,6 +80,9 @@ std::shared_ptr<CType> TypeBuilder::MatchCType(
         return lhs;
     else if (lhs->Is<CFuncType>() && rhs->Is<CPtrType>())
         return rhs;
+    // for things like PtrName = ArrayName
+    else if (lhs->Is<CPtrType>() && rhs->Is<CArrayType>())
+        return lhs;
 
     auto la = lhs->As<CArithmType>();
     auto ra = rhs->As<CArithmType>();
@@ -465,8 +468,8 @@ void TypeBuilder::VisitStrExpr(StrExpr* str)
 
     int width = 0;
     auto setwidth = [&width] (int w) {
-        if (width) width = -1;
-        width = w;
+        if (width)  width = -1;
+        else        width = w;
     };
 
     int i = -1;
@@ -495,16 +498,16 @@ void TypeBuilder::VisitStrExpr(StrExpr* str)
     // Differently-perfixed wide string will be treated as
     // a character string literal. (6.4.5[5] in the C23 standard)
     if (width == 0 || width == -1)
-        str->Type() = std::make_unique<CPtrType>(
+        str->Type() = std::make_unique<CArrayType>(
             std::make_unique<CArithmType>(TypeTag::int8));
     else if (width == 1)
-        str->Type() = std::make_unique<CPtrType>(
+        str->Type() = std::make_unique<CArrayType>(
             std::make_unique<CArithmType>(TypeTag::uint8));
     else if (width == 2)
-        str->Type() = std::make_unique<CPtrType>(
+        str->Type() = std::make_unique<CArrayType>(
             std::make_unique<CArithmType>(TypeTag::uint16));
     else if (width == 4)
-        str->Type() = std::make_unique<CPtrType>(
+        str->Type() = std::make_unique<CArrayType>(
             std::make_unique<CArithmType>(TypeTag::uint32));
 }
 

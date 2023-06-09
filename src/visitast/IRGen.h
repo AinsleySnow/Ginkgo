@@ -85,6 +85,7 @@ private:
 
         std::string GetRegName() { return '%' + std::to_string(index_++); }
         std::string GetLabelName() { return std::to_string(index_++); }
+        std::string GetStrName() { return "@.str" + std::to_string(index_++); }
 
         void PushStmt(Statement* s) { brkcntn_.push(s); }
         void PopStmt() { brkcntn_.pop(); }

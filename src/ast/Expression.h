@@ -309,6 +309,10 @@ public:
     StrExpr(const std::string& s) : content_(s) {}
 
     void Accept(ASTVisitor* v) override;
+    bool IsStrExpr() const override { return true; }
+    StrExpr* ToStrExpr() override { return this; }
+    const StrExpr* ToStrExpr() const override { return this; }
+
     const auto& Content() const { return content_; }
     auto& Width() { return width_; }
     const auto Width() const { return width_; }

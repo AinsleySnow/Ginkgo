@@ -103,6 +103,12 @@ const IROperand* IRGen::LoadVal(Expr* expr)
             env_.GetRegName(), expr->Val()->As<Register>());
         return expr->Val();
     }
+    else if (expr->IsStrExpr())
+    {
+        expr->Val() = ibud_.InsertGetElePtrInstr(
+            env_.GetRegName(), expr->Val()->As<Register>(), 0);
+        return expr->Val();
+    }
     else return expr->Val();
 }
 
@@ -863,7 +869,7 @@ void IRGen::VisitLogicalExpr(LogicalExpr* logical)
 
 
 template <typename T>
-std::string WashString(const T& str)
+std::string WashString(const T& str, size_t& count)
 {
     std::string result = "";
     constexpr auto size = sizeof(typename T::value_type);
@@ -884,13 +890,21 @@ std::string WashString(const T& str)
             continue;
         }
         else if (isascii(*i))
+        {
     print:
+            if (*i != '\\' || (*i == '\\' && *(i - 1) == '\\'))
+                count += 1;
             result += static_cast<typename T::value_type>(*i);
+        }
         else
+        {
+            count += 1;
             result += fmt::format("\\x{:0x}", static_cast<unsigned int>((*i) & mask));
+        }
     }
 
-    return result;
+    count += 1;
+    return result + "\\00";
 }
 
 void IRGen::VisitStrExpr(StrExpr* str)
@@ -900,15 +914,25 @@ void IRGen::VisitStrExpr(StrExpr* str)
     auto content = str->Content();
     std::string literal = "";
 
+    size_t count = 0;
     if (str->Width() == 1)
-        literal = WashString(content);
+        literal = WashString(content, count);
     else if (str->Width() == 2)
-        literal = WashString(utf8::utf8to16(content));
+        literal = WashString(utf8::utf8to16(content), count);
     else if (str->Width() == 4)
-        literal = WashString(utf8::utf8to32(content));
+        literal = WashString(utf8::utf8to32(content), count);
 
-    str->Val() = StrConst::CreateStrConst(
-        transunit_.get(), literal, str->Type()->ToIRType(transunit_.get())->As<PtrType>());
+    str->Type()->As<CArrayType>()->Count() = count;
+    auto array = str->Type()->ToIRType(transunit_.get())->As<ArrayType>();
+    auto global = GlobalVar::CreateGlobalVar(
+        transunit_.get(), env_.GetStrName(), array);
+    global->AddOpNode(
+        StrConst::CreateStrConst(transunit_.get(), literal, array));
+    global->Dump2Tree();
+
+    global->Addr() = Register::CreateRegister(
+        global, global->Name(), PtrType::GetPtrType(global, array));
+    str->Val() = global->Addr();
 }
 
 

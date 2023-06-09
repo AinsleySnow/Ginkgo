@@ -7,6 +7,7 @@
 class ArrayExpr;
 class ConstExpr;
 class IdentExpr;
+class StrExpr;
 class UnaryExpr;
 class IROperand;
 class ASTVisitor;
@@ -21,16 +22,19 @@ public:
     virtual bool IsLVal() const { return false; }
     virtual bool IsConstant() const { return false; }
     virtual bool IsIdentifier() const { return false; }
+    virtual bool IsStrExpr() const { return false; }
     virtual bool IsSubscript() const { return false; }
     virtual bool IsUnary() const { return false; }
 
     virtual ConstExpr* ToConstant() { return nullptr; }
     virtual IdentExpr* ToIdentifier() { return nullptr; }
     virtual ArrayExpr* ToSubscript() { return nullptr; }
+    virtual StrExpr* ToStrExpr() { return nullptr; }
     virtual UnaryExpr* ToUnary() { return nullptr; }
     virtual const ConstExpr* ToConstant() const { return nullptr; }
     virtual const IdentExpr* ToIdentifier() const { return nullptr; }
     virtual const ArrayExpr* ToSubscript() const { return nullptr; }
+    virtual const StrExpr* ToStrExpr() const { return nullptr; }
     virtual const UnaryExpr* ToUnary() const { return nullptr; }
 
     const auto& Type() const { return type_; }

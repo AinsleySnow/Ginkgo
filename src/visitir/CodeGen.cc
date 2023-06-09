@@ -534,7 +534,7 @@ void CodeGen::VisitNode(OpNode* op)
     else if (op->op_->Is<FloatConst>())
         op->repr_ = std::to_string(op->op_->As<FloatConst>()->Val());
     else if (op->op_->Is<StrConst>())
-        op->repr_ = op->op_->As<StrConst>()->Literal();
+        op->repr_ = op->op_->As<StrConst>()->ToString();
     else // strip the leading '@'
         op->repr_ = op->op_->As<Register>()->Name().substr(1);
 }

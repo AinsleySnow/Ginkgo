@@ -280,6 +280,9 @@ public:
     bool Compatible(const CType&) const { return false; }
     std::unique_ptr<CType> Clone() const override;
 
+    auto& Count() { return count_; }
+    auto Count() const { return count_; }
+
     const auto& ArrayOf() const { return arrayof_; }
     bool VariableLen() const { return variable_; }
     bool& VariableLen() { return variable_; }
