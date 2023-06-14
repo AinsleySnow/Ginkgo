@@ -44,9 +44,9 @@ static void *__va_arg_fp(__va_elem *ap, int sz, int align)
 }
 
 
-#define va_arg(ap, ty) __Ginkgo_va_arg(ap, ty)
-#define va_copy(from, to) ((from)[0] = (to)[0])
-#define va_end(ap)
+#define va_arg(ap, ty)      (*(ty*)__Ginkgo_va_arg(ap, ty))
+#define va_copy(from, to)   ((from)[0] = (to)[0])
+#define va_end(ap)          __Ginkgo_va_end(ap)
 #define va_start(ap, param) __Ginkgo_va_start(ap, param)
 
 #endif // __GINKGO_STDARG_H
