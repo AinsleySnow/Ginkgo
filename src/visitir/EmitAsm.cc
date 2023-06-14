@@ -215,6 +215,14 @@ void EmitAsm::EmitMov(RegTag tag, const x64* dest)
         GetIntTag(dest), src.ToString(), dest->ToString()));
 }
 
+void EmitAsm::EmitMov(RegTag tag, long offset)
+{
+    auto src = x64Reg(tag, 8);
+    auto rsp = x64Mem(8, offset, RegTag::rsp, RegTag::none, 0);
+    Output(fmt::format(
+        INDENT "movq {}, {}\n", src.ToString(), rsp.ToString()));
+}
+
 void EmitAsm::EmitMovz(const x64* src, const x64* dest)
 {
     char from = GetIntTag(src);
@@ -304,6 +312,13 @@ void EmitAsm::EmitVmovap(RegTag src, const x64Reg* dest)
 {
     x64Reg reg{ src, dest->Size() };
     EmitVmovap(&reg, dest);
+}
+
+void EmitAsm::EmitVmov(RegTag src, long offset)
+{
+    x64Reg reg{ src, 8 };
+    auto rsp = x64Mem(8, offset, RegTag::rsp, RegTag::none, 0);
+    EmitVmov(&reg, &rsp);
 }
 
 

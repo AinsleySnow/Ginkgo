@@ -149,6 +149,7 @@ public:
     auto ReturnType() const { return retype_; }
     const auto& ParamType() const { return param_; }
     void AddParam(const IRType*);
+    bool Variadic() const { return variadic_; }
 
     std::string ToString() const override;
 

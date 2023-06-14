@@ -108,7 +108,7 @@ std::pair<const x64*, bool> CodeGen::MapPossiblePointer(const IROperand* op)
 }
 
 
-void CodeGen::AlignRspAs(size_t align)
+void CodeGen::AlignRspBy(size_t align)
 {
     if (stacksize_ % align == 0)
         return;
@@ -505,8 +505,38 @@ void CodeGen::VisitGlobalVar(GlobalVar* var)
 void CodeGen::VisitFunction(Function* func)
 {
     alloc_.EnterFunction(func);
+    stacksize_ = alloc_.RspOffset();
     asmfile_.EmitPseudoInstr(".text");
     asmfile_.EmitLabel(func->Name());
+
+    if (func->Variadic())
+    {
+        AlignRspBy(8);
+        auto baseline = stacksize_;
+        AdjustRsp(-176);
+        asmfile_.EmitMov(RegTag::rdi, baseline);
+        asmfile_.EmitMov(RegTag::rsi, baseline + 8);
+        asmfile_.EmitMov(RegTag::rdx, baseline + 16);
+        asmfile_.EmitMov(RegTag::rcx, baseline + 24);
+        asmfile_.EmitMov(RegTag::r8, baseline + 32);
+        asmfile_.EmitMov(RegTag::r9, baseline + 40);
+
+        auto rax = x64Reg(RegTag::rax, 1);
+        auto label = GetTempLabel();
+        asmfile_.EmitTest(&rax, &rax);
+        asmfile_.EmitJmp("e", label);
+
+        asmfile_.EmitVmov(RegTag::xmm0, baseline + 48);
+        asmfile_.EmitVmov(RegTag::xmm1, baseline + 64);
+        asmfile_.EmitVmov(RegTag::xmm2, baseline + 80);
+        asmfile_.EmitVmov(RegTag::xmm3, baseline + 96);
+        asmfile_.EmitVmov(RegTag::xmm4, baseline + 112);
+        asmfile_.EmitVmov(RegTag::xmm5, baseline + 128);
+        asmfile_.EmitVmov(RegTag::xmm6, baseline + 144);
+        asmfile_.EmitVmov(RegTag::xmm7, baseline + 160);
+
+        asmfile_.EmitLabel(label);
+    }
 
     SaveCalleeSaved();
     asmfile_.Write2Mem();
@@ -598,7 +628,7 @@ void CodeGen::VisitCallInstr(CallInstr* inst)
 {
     SaveCallerSaved();
     PassParam(inst->Proto(), inst->ArgvList());
-    AlignRspAs(16);
+    AlignRspBy(16);
 
     if (inst->FuncAddr())
         asmfile_.EmitCall(alloc_.GetIROpMap(inst->FuncAddr()));
@@ -946,25 +976,4 @@ void CodeGen::VisitPhiInstr(PhiInstr* inst)
     }
 
     asmfile_.SwitchBlock(curbb);
-}
-
-
-
-static std::string Const2Str(const Constant* c)
-{
-    if (c->Is<IntConst>())
-        return std::to_string(c->As<IntConst>()->Val());
-    double val = c->As<FloatConst>()->Val();
-
-    unsigned long repr = 0;
-    std::memcpy(reinterpret_cast<char*>(&repr),
-        reinterpret_cast<char*>(&val), sizeof(unsigned long));
-    return std::to_string(repr);
-}
-
-static std::string Strip(const std::string& s)
-{
-    if (s[0] == '@' || s[0] == '%')
-        return s.substr(1);
-    else return s;
 }

@@ -102,7 +102,7 @@ private:
     // it points to. MapPossiblePointer tackle with this problem.
     std::pair<const x64*, bool> MapPossiblePointer(const IROperand*); 
 
-    void AlignRspAs(size_t);
+    void AlignRspBy(size_t);
     void AdjustRsp(long);
     void DeallocFrame();
 

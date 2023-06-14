@@ -60,6 +60,7 @@ public:
     void EmitMov(const x64* src, const x64* dest);
     void EmitMov(RegTag, const x64* dest);
     void EmitMov(const x64* src, RegTag);
+    void EmitMov(RegTag, long offset);
     void EmitMovz(const x64* src, const x64* dest);
     void EmitMovz(size_t from, size_t to, const x64* op);
     void EmitMovs(const x64* src, const x64* dest);
@@ -68,6 +69,7 @@ public:
     void EmitVmov(const x64* src, const x64* dest);
     void EmitVmov(const x64* src, RegTag);
     void EmitVmov(RegTag, const x64* dest);
+    void EmitVmov(RegTag, long offset);
     void EmitVmovap(const x64Reg* src, const x64Reg* dest);
     void EmitVmovap(const x64Reg* src, RegTag dest);
     void EmitVmovap(RegTag, const x64Reg*);

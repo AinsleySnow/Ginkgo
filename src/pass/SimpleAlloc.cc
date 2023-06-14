@@ -80,11 +80,13 @@ long SimpleAlloc::AllocateOnX64Stack(x64Stack& info, size_t size, size_t align)
         info.allocated_ = MakeAlign(info.allocated_, align);
         base = info.allocated_;
         info.allocated_ += size;
+        info.rspoffset_ = info.allocated_;
     }
     // leaf; use both red zone and zone above rsp.
     else if (info.belowrsp_ + size <= 128)
     {
         // meet strict alignment requirements.
+        // here, the offset of rsp is always zero.
         info.belowrsp_ = MakeAlign(info.belowrsp_, align);
         base = -info.belowrsp_;
         info.belowrsp_ += size;

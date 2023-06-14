@@ -63,6 +63,7 @@ public:
     }
 
     const x64* GetIROpMap(const IROperand* op) const;
+    long RspOffset() const { return ArchInfo().rspoffset_; }
 
     RegSet UsedCallerSaved() const;
     RegSet UsedCalleeSaved() const;

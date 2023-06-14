@@ -99,6 +99,7 @@ public:
     bool& Inline() { return inline_; }
     bool Noreturn() const { return noreturn_; }
     bool& Noreturn() { return noreturn_; }
+    bool Variadic() { return functype_->Variadic(); }
 
     auto ReturnValue() const { return returnvalue_; }
     auto& ReturnValue() { return returnvalue_; }
