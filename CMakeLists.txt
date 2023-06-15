@@ -28,6 +28,17 @@ set(GINKGO_THIRD_PARTY_INCLUDE_DIR
     ${PROJECT_SOURCE_DIR}/third_party/utfcpp/source)
 include_directories(${GINKGO_SRC_INCLUDE_DIR} ${GINKGO_THIRD_PARTY_INCLUDE_DIR})
 
+include(ExternalProject)
+ExternalProject_Add(
+    gkcpp
+    SOURCE_DIR ${PROJECT_SOURCE_DIR}/gkcpp
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND
+        make -C <SOURCE_DIR> && mv <SOURCE_DIR>/gkcpp ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+    BUILD_IN_SOURCE FALSE
+    INSTALL_COMMAND ""
+)
+
 add_subdirectory(src)
 add_subdirectory(third_party)
 
