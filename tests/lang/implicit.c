@@ -1,4 +1,4 @@
-#include "tests/test.h"
+#include "test.h"
 
 // implicit conversion from narrower to wider type
 // a.k.a. integer promotion

@@ -1,4 +1,4 @@
-#include "tests/test.h"
+#include "test.h"
 
 char a = '1';
 char b = L'你';

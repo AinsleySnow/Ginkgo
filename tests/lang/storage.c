@@ -1,4 +1,4 @@
-#include "tests/test.h"
+#include "test.h"
 
 // auto, typedef and specifiers about linking are
 // tested in auto.c, typedef.c, link1.c and link2.c.

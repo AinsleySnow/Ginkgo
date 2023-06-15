@@ -1,4 +1,4 @@
-#include "tests/test.h"
+#include "test.h"
 
 union u
 {
