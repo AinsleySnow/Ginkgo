@@ -2,15 +2,13 @@
 #define _PIPELINE_H_
 
 #include "pass/Pass.h"
-#include <memory>
 #include <vector>
 
 
 class Pipeline
 {
 public:
-    Pipeline(std::vector<std::unique_ptr<Pass>> p) :
-        passes_(std::move(p)) {}
+    Pipeline(std::vector<Pass*> p) : passes_(std::move(p)) {}
 
     void ExecuteAll()
     {
@@ -19,7 +17,7 @@ public:
     }
 
 private:
-    std::vector<std::unique_ptr<Pass>> passes_{};
+    std::vector<Pass*> passes_{};
 };
 
 #endif // _PIPELINE_H_
