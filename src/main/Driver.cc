@@ -21,8 +21,8 @@ static std::string StripExtension(const std::string& name)
     return name.substr(0, index);
 }
 
-Driver::Driver(OutputType ty, const std::string& in) :
-    outputype_(ty), inputname_(in)
+Driver::Driver(OutputType ty, const char* e, const std::string& in) :
+    outputype_(ty), environment_(e), inputname_(in)
 {
     if (outputype_ == OutputType::assembly)
         outputname_ = StripExtension(inputname_) + ".s";
@@ -40,15 +40,20 @@ void Driver::Preprocess()
     std::uniform_int_distribution<> dis(0, 0x7FFFFFFF);
     auto temp = std::filesystem::temp_directory_path() / (std::to_string(dis(gen)) + ".c");
 
-    std::string absolute{};
-    // this is the case of not installing ginkgo
+    // this is the case for not installing ginkgo
     // the ginkgo itself is in the same directory with gkcpp
-    if (std::filesystem::exists("gkcpp"))
-        absolute = "./gkcpp";
-    else // installed?
+    auto absolute = (std::filesystem::current_path() / environment_).remove_filename();
+    // otherwise... Is Ginkgo already installed?
+    if (!std::filesystem::exists(absolute / "gkcpp"))
         absolute = "gkcpp";
+    else
+        absolute.append("gkcpp");
 
-    system(fmt::format("{} {} > {}", absolute, inputname_, temp).c_str());
+    // -V: not showing version information
+    // -H: output blank lines
+    // -b: output unbalanced braces, brackets, etc.
+    system(fmt::format("{} -V -H -b {} > {}",
+        absolute.string(), inputname_, temp.string()).c_str());
     afterpp_ = std::move(temp);
 }
 

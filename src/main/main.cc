@@ -13,18 +13,18 @@ int main(int argc, char* argv[])
     {
         if (argv[i][0] != '-')
             filename = argv[i];
-        else if (strcmp(argv[i], "-o"))
+        else if (strcmp(argv[i], "-o") == 0)
             outputname = argv[++i];
-        else if (strcmp(argv[i], "-emit-ir"))
+        else if (strcmp(argv[i], "-emit-ir") == 0)
             outputype = OutputType::intermediate;
-        else if (strcmp(argv[i], "-S"))
+        else if (strcmp(argv[i], "-S") == 0)
             outputype = OutputType::assembly;
     }
 
     if (filename.empty())
         return 1;
 
-    Driver div = Driver(outputype, outputname);
+    Driver div = Driver(outputype, argv[0], filename);
     div.Compile();
 
     if (outputype == OutputType::binary)

@@ -21,9 +21,9 @@ enum class OutputType
 class Driver
 {
 public:
-    Driver(OutputType ty, const std::string& in);
-    Driver(OutputType ty, const std::string& in, const std::string& out) :
-        outputype_(ty), inputname_(in), outputname_(out), afterpp_(in) {}
+    Driver(OutputType ty, const char* e, const std::string& in);
+    Driver(OutputType ty, const char* e, const std::string& in, const std::string& out) :
+        outputype_(ty), environment_(e), inputname_(in), outputname_(out), afterpp_(in) {}
 
     void Compile();
     void EmitBinary();
@@ -38,6 +38,7 @@ private:
     void GenerateIR();
 
     OutputType outputype_{};
+    const char* environment_{};
 
     std::string inputname_{};
     std::string outputname_{};
