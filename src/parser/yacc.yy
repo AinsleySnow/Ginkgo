@@ -33,6 +33,8 @@ public:
 
     bool& InEnum() { return inenum_; }
     bool InEnum() const { return inenum_; }
+    bool& InPreprocess() { return inpp_; }
+    bool InPreprocess() const { return inpp_; }
 
     void LeftParen()  { paren_++; }
     void RightParen() { paren_--; }
@@ -47,6 +49,7 @@ public:
 
 private:
     bool within_{};
+    bool inpp_{};
     bool inenum_{};
     bool instruct_{};
     int paren_{};
@@ -1121,6 +1124,11 @@ static_assert_declaration
 	: STATIC_ASSERT '(' constant_expression ',' STRING_LITERAL ')' ';'
 	;
 
+preprocess_instruction
+    : '#' IDENTIFIER I_CONSTANT STRING_LITERAL '\n' // #line 123 "123.c"
+    | '#' IDENTIFIER I_CONSTANT '\n'                // #line 123
+    ;
+
 statement
 	: labeled_statement     { $$ = std::move($1); }
 	| compound_statement    { $$ = std::move($1); }
@@ -1168,6 +1176,7 @@ block_item_list
 block_item
 	: declaration { $$ = std::move($1); }
 	| statement { $$ = std::move($1); }
+    | preprocess_instruction { $$ = std::make_unique<ExprStmt>(nullptr); }
 	;
 
 expression_statement
@@ -1220,8 +1229,12 @@ jump_statement
 translation_unit
 	: external_declaration
     { transunit.AddDecl(std::move($1)); }
+    | preprocess_instruction
+    { $$ = nullptr; }
 	| translation_unit external_declaration
     { transunit.AddDecl(std::move($2)); }
+    | translation_unit preprocess_instruction
+    { $$ = nullptr; }
 	;
 
 external_declaration 

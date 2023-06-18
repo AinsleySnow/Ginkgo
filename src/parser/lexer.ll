@@ -25,7 +25,7 @@ IS  (((u|U)(l|L|ll|LL)?)|((l|L|ll|LL)(u|U)?))
 CP  (u|U|L)
 SP  (u8|u|U|L)
 ES  (\\(['"\?\\abfnrtv]|[0-7]{1,3}|x[a-fA-F0-9]+))
-WS  [ \t\v\n\f]
+WS  [ \t\v\f]
 
 /* U8 - expect for [\x00-\x7f] - this one will be handled seperately */
 U8  [\xc2-\xdf][\x80-\xbf]|\xe0[\xa0-\xbf][\x80-\xbf]|[\xe1-\xec][\x80-\xbf][\x80-\xbf]|\xed[\x80-\x9f][\x80-\xbf]|[\xee\xef][\x80-\xbf][\x80-\xbf]|\xf0[\x90-\xbf][\x80-\xbf][\x80-\xbf]|[\xf1-\xf3][\x80-\xbf][\x80-\xbf][\x80-\xbf]|\xf4[\x80-\x8f][\x80-\xbf][\x80-\xbf]
@@ -190,6 +190,11 @@ static void comment(void);
 "|"					    { return '|'; }
 "?"					    { return '?'; }
 
+"#"                     {
+    checktype.InPreprocess() = true;
+    return '#';
+}
+
 ":"					    {
     if (checktype.InEnum())
         checktype.WithinScope() = false;
@@ -227,6 +232,13 @@ static void comment(void);
 }
 
 
+"\n"                    {
+    if (checktype.InPreprocess())
+    {
+        checktype.InPreprocess() = false;
+        return '\n';
+    }
+}
 {WS}+					{ /* whitespace separates tokens */ }
 .					    { /* discard bad characters */ }
 
