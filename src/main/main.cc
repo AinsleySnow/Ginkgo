@@ -24,7 +24,7 @@ int main(int argc, char* argv[])
     if (filename.empty())
         return 1;
 
-    Driver div = Driver(outputype, argv[0], filename);
+    Driver div{ outputype, argv[0], filename, outputname };
     div.Compile();
 
     if (outputype == OutputType::binary)

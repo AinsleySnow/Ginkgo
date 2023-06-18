@@ -8,8 +8,6 @@
 #include "IR/Value.h"
 #include "parser/yacc.hh"
 
-class Pipeline;
-
 
 enum class OutputType
 {
@@ -21,9 +19,7 @@ enum class OutputType
 class Driver
 {
 public:
-    Driver(OutputType ty, const char* e, const std::string& in);
-    Driver(OutputType ty, const char* e, const std::string& in, const std::string& out) :
-        outputype_(ty), environment_(e), inputname_(in), outputname_(out), afterpp_(in) {}
+    Driver(OutputType ty, const char* e, const std::string& in, const std::string& out);
 
     void Compile();
     void EmitBinary();

@@ -21,9 +21,15 @@ static std::string StripExtension(const std::string& name)
     return name.substr(0, index);
 }
 
-Driver::Driver(OutputType ty, const char* e, const std::string& in) :
-    outputype_(ty), environment_(e), inputname_(in)
+Driver::Driver(OutputType ty, const char* e, const std::string& in, const std::string& out) :
+    outputype_(ty), environment_(e), inputname_(in), afterpp_(in)
 {
+    if (!out.empty())
+    {
+        outputname_ = std::move(out);
+        return;
+    }
+
     if (outputype_ == OutputType::assembly)
         outputname_ = StripExtension(inputname_) + ".s";
     else if (outputype_ == OutputType::intermediate)
