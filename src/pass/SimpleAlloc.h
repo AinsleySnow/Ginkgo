@@ -35,6 +35,7 @@ private:
         void Access(const Register*) const;
         void Map2Reg(const Register*, RegTag);
         void Map2Stack(const Register*, long offset);
+        void Map2Stack(const Register*, size_t size, long offset);
 
     private:
         SimpleAlloc& alloc_;

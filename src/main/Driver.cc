@@ -111,7 +111,7 @@ void Driver::EmitBinary()
             "-lc "
             "{}.o "
             "/usr/lib/x86_64-linux-gnu/crtn.o",
-            outputname_, outputname_).c_str());
+            outputname_, StripExtension(outputname_)).c_str());
 }
 
 void Driver::EmitAssembly()

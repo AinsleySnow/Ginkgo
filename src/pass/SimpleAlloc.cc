@@ -46,8 +46,12 @@ void SimpleAlloc::StackCache::Map2Reg(const Register* reg, RegTag tag)
 
 void SimpleAlloc::StackCache::Map2Stack(const Register* reg, long offset)
 {
-    auto px64 = std::make_unique<x64Mem>(
-        reg->Type()->Size(), offset, RegTag::rsp, RegTag::none, 0);
+    Map2Stack(reg, reg->Type()->Size(), offset);
+}
+
+void SimpleAlloc::StackCache::Map2Stack(const Register* reg, size_t size, long offset)
+{
+    auto px64 = std::make_unique<x64Mem>(size, offset, RegTag::rsp, RegTag::none, 0);
     auto raw = px64.get();
     alloc_.MapRegister(reg, std::move(px64));
     regmap_[reg] = raw;
@@ -88,8 +92,8 @@ long SimpleAlloc::AllocateOnX64Stack(x64Stack& info, size_t size, size_t align)
         // meet strict alignment requirements.
         // here, the offset of rsp is always zero.
         info.belowrsp_ = MakeAlign(info.belowrsp_, align);
-        base = -info.belowrsp_;
         info.belowrsp_ += size;
+        base = -info.belowrsp_;
     }
 
     return base;
@@ -159,7 +163,7 @@ void SimpleAlloc::VisitRetInstr(RetInstr* i)
 
 void SimpleAlloc::VisitBrInstr(BrInstr* i)
 {
-    if (!i->GetFalseBlk()) return;
+    if (!i->Cond()) return;
     if (!MapConstAndGlobalVar(i->Cond()))
         stackcache_.Access(i->Cond()->As<Register>());
 }
@@ -201,7 +205,7 @@ void SimpleAlloc::VisitAllocaInstr(AllocaInstr* i)
     auto align = i->Type()->Align();
 
     auto offset = AllocateOnX64Stack(ArchInfo(), size, align);
-    stackcache_.Map2Stack(i->Result()->As<Register>(), offset);
+    stackcache_.Map2Stack(i->Result()->As<Register>(), size, offset);
 }
 
 void SimpleAlloc::VisitLoadInstr(LoadInstr* i)

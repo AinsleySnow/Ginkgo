@@ -103,7 +103,7 @@ private:
     const BasicBlock* curblk_{};
 
     std::string filename_{};
-    std::fstream file_{};
+    std::ofstream file_{};
     bool write2file_{ true };
 };
 

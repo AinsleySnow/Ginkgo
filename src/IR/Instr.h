@@ -37,7 +37,6 @@ public:
     static Instr* CreateInstr(BasicBlock*, std::unique_ptr<Instr>);
     Instr(InstrId instr) : id_(instr) {}
 
-    virtual ~Instr() {}
     virtual std::string ToString() const { return ""; }
     virtual void Accept(IRVisitor*) {}
 
@@ -107,6 +106,7 @@ public:
         Instr(InstrId::ret), retval_(rv) {}
 
     std::string ToString() const override;
+    void Accept(IRVisitor*) override;
 
     auto& ReturnValue() { return retval_; }
     auto ReturnValue() const { return retval_; }
@@ -127,6 +127,7 @@ public:
         Instr(InstrId::br), cond_(c), true_(t), false_(f) {}
 
     std::string ToString() const override;
+    void Accept(IRVisitor*) override;
 
     auto& Cond() { return cond_; }
     auto Cond() const { return cond_; }
@@ -153,6 +154,7 @@ public:
     SwitchInstr(const IROperand* i) : Instr(InstrId::swtch), ident_(i) {}
 
     std::string ToString() const override;
+    void Accept(IRVisitor*) override;
 
     void AddValueBlkPair(const IntConst* val, const BasicBlock* blk) { cases_.push_back({ val, blk }); }
     const auto& GetValueBlkPairs() const { return cases_; }
@@ -179,6 +181,7 @@ public:
         Instr(InstrId::call), result_(result), funcaddr_(addr) {}
 
     std::string ToString() const override;
+    void Accept(IRVisitor*) override;
 
     void AddArgv(const IROperand* argv) { arglist_.push_back(argv); }
     const auto& ArgvList() const { return arglist_; }
@@ -449,6 +452,7 @@ public:
         Instr(InstrId::alloca), result_(r), type_(t), num_(n), align_(a) {}
 
     std::string ToString() const override;
+    void Accept(IRVisitor*) override;
 
     auto& Result() { return result_; }
     auto Result() const { return result_; }
@@ -480,6 +484,7 @@ public:
         align_(a), volatile_(vol) {}
 
     std::string ToString() const override;
+    void Accept(IRVisitor*) override;
 
     auto& Result() { return result_; }
     auto Result() const { return result_; }
@@ -506,6 +511,7 @@ public:
         Instr(InstrId::store), value_(v), pointer_(p), volatile_(vol) {}
 
     std::string ToString() const override;
+    void Accept(IRVisitor*) override;
 
     auto& Value() { return value_; }
     auto Value() const { return value_; }
@@ -529,6 +535,7 @@ public:
         Instr(InstrId::getval), result_(r), pointer_(p), index_(i) {}
 
     std::string ToString() const override;
+    void Accept(IRVisitor*) override;
 
 private:
     const Register* result_{};
@@ -547,6 +554,7 @@ public:
         Instr(InstrId::setval), newval_(nv), pointer_(p), index_(i) {}
 
     std::string ToString() const override;
+    void Accept(IRVisitor*) override;
 
 private:
     const IROperand* newval_{};
@@ -565,6 +573,7 @@ public:
         Instr(InstrId::geteleptr), result_(r), pointer_(p), index_(i) {}
 
     std::string ToString() const override;
+    void Accept(IRVisitor*) override;
 
     auto Result() const { return result_; }
     auto Pointer() const { return pointer_; }
@@ -610,6 +619,7 @@ public:
     ) : ConvertInstr(InstrId::trunc, r, t, v) {}
 
     std::string ToString() const override;
+    void Accept(IRVisitor*) override;
 };
 
 
@@ -624,6 +634,7 @@ public:
     ) : ConvertInstr(InstrId::ftrunc, r, t, v) {}
 
     std::string ToString() const override;
+    void Accept(IRVisitor*) override;
 };
 
 
@@ -638,6 +649,7 @@ public:
     ) : ConvertInstr(InstrId::zext, r, t, v) {}
 
     std::string ToString() const override;
+    void Accept(IRVisitor*) override;
 };
 
 
@@ -652,6 +664,7 @@ public:
     ) : ConvertInstr(InstrId::sext, r, t, v) {}
 
     std::string ToString() const override;
+    void Accept(IRVisitor*) override;
 };
 
 
@@ -666,6 +679,7 @@ public:
     ) : ConvertInstr(InstrId::fext, r, t, v) {}
 
     std::string ToString() const override;
+    void Accept(IRVisitor*) override;
 };
 
 
@@ -680,6 +694,7 @@ public:
     ) : ConvertInstr(InstrId::ftou, r, t, v) {}
 
     std::string ToString() const override;
+    void Accept(IRVisitor*) override;
 };
 
 
@@ -695,6 +710,7 @@ public:
     ) : ConvertInstr(InstrId::ftos, r, t, v) {}
 
     std::string ToString() const override;
+    void Accept(IRVisitor*) override;
 };
 
 
@@ -709,6 +725,7 @@ public:
     ) : ConvertInstr(InstrId::utof, r, t, v) {}
 
     std::string ToString() const override;
+    void Accept(IRVisitor*) override;
 };
 
 
@@ -723,6 +740,7 @@ public:
     ) : ConvertInstr(InstrId::stof, r, t, v) {}
 
     std::string ToString() const override;
+    void Accept(IRVisitor*) override;
 };
 
 
@@ -737,6 +755,7 @@ public:
     ) : ConvertInstr(InstrId::ptrtoi, r, t, v) {}
 
     std::string ToString() const override;
+    void Accept(IRVisitor*) override;
 };
 
 
@@ -751,6 +770,7 @@ public:
     ) : ConvertInstr(InstrId::itoptr, r, t, v) {}
 
     std::string ToString() const override;
+    void Accept(IRVisitor*) override;
 };
 
 
@@ -765,6 +785,7 @@ public:
     ) : ConvertInstr(InstrId::bitcast, r, t, v) {}
 
     std::string ToString() const override;
+    void Accept(IRVisitor*) override;
 };
 
 
@@ -788,6 +809,7 @@ public:
             op1_(o1), op2_(o2) {}
 
     std::string ToString() const override;
+    void Accept(IRVisitor*) override;
 
     auto Cond() const { return cond_; }
     auto Op1() const { return op1_; }
@@ -814,6 +836,7 @@ public:
             op1_(o1), op2_(o2) {}
 
     std::string ToString() const override;
+    void Accept(IRVisitor*) override;
 
     auto Cond() const { return cond_; }
     auto Op1() const { return op1_; }
@@ -840,6 +863,7 @@ public:
             cond_(c), value1_(v1), value2_(v2) {}
 
     std::string ToString() const override;
+    void Accept(IRVisitor*) override;
 
     auto& Result() { return result_; }
     auto Result() const { return result_; }
@@ -872,6 +896,8 @@ public:
         Instr(InstrId::phi), result_(r), type_(t) {}
 
     std::string ToString() const override;
+    void Accept(IRVisitor*) override;
+
     void AddBlockValPair(const BasicBlock*, const IROperand*);
     const auto& GetBlockValPair() const { return labels_; }
     auto Result() const { return result_; }

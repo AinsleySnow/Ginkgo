@@ -2,15 +2,13 @@
 #include "visitir/SysVConv.h"
 #include "visitir/x64.h"
 #include "IR/Value.h"
-#include <cstring>
 #include <memory>
 #include <string>
-#include <unordered_map>
 
 
 static std::string BB2Label(const BasicBlock* bb)
 {
-    return ".L" + bb->Name().substr(1);
+    return ".L" + bb->Name();
 }
 
 static std::string Cond2Str(Condition cond, bool issigned)
@@ -234,7 +232,7 @@ void CodeGen::LeaqEmitHelper(const x64* addr, const x64* dest)
 
 void CodeGen::MovEmitHelper(const x64* from, const x64* to)
 {
-    if (from->Is<x64Reg>() || to->Is<x64Reg>())
+    if (from->Is<x64Reg>() || from->Is<x64Imm>() || to->Is<x64Reg>())
     {
         asmfile_.EmitMov(from, to);
         return;
@@ -506,8 +504,12 @@ void CodeGen::VisitFunction(Function* func)
 {
     alloc_.EnterFunction(func);
     stacksize_ = alloc_.RspOffset();
+    auto name = func->Name().substr(1);
+
     asmfile_.EmitPseudoInstr(".text");
-    asmfile_.EmitLabel(func->Name());
+    asmfile_.EmitPseudoInstr(".globl", { name });
+    asmfile_.EmitPseudoInstr(".type", { name, "@function" });
+    asmfile_.EmitLabel(func->Name().substr(1));
 
     if (func->Variadic())
     {
@@ -539,6 +541,7 @@ void CodeGen::VisitFunction(Function* func)
     }
 
     SaveCalleeSaved();
+    AdjustRsp(alloc_.RspOffset());
     asmfile_.Write2Mem();
 
     for (auto bb : *func)
@@ -551,7 +554,7 @@ void CodeGen::VisitFunction(Function* func)
 void CodeGen::VisitBasicBlock(BasicBlock* bb)
 {
     asmfile_.EnterBlock(bb);
-    asmfile_.EmitLabel(bb->Name());
+    asmfile_.EmitLabel(BB2Label(bb));
     for (auto inst : *bb)
         inst->Accept(this);
 }
@@ -590,8 +593,24 @@ void CodeGen::VisitNode(UnaryNode* un)
 
 void CodeGen::VisitRetInstr(RetInstr* inst)
 {
-    if (inst->ReturnValue())
-        asmfile_.EmitMov(MapPossibleFloat(inst->ReturnValue()), RegTag::rax);
+    if (!inst->ReturnValue())
+        goto ret;
+    else if (inst->ReturnValue()->Type()->Is<IntType>())
+    {
+        auto mapped = alloc_.GetIROpMap(inst->ReturnValue());
+        if (mapped->Is<x64Reg>() && *mapped->As<x64Reg>() == RegTag::rax)
+            goto ret;
+        asmfile_.EmitMov(mapped, RegTag::rax);
+    }
+    else if (inst->ReturnValue()->Type()->Is<FloatType>())
+    {
+        auto mapped = MapPossibleFloat(inst->ReturnValue());
+        if (mapped->Is<x64Reg>() && *mapped->As<x64Reg>() == RegTag::xmm0)
+            goto ret;
+        VecMovEmitHelper(MapPossibleFloat(inst->ReturnValue()), RegTag::xmm0);
+    }
+
+ret:
     asmfile_.EmitRet();
 }
 
@@ -602,10 +621,10 @@ void CodeGen::VisitBrInstr(BrInstr* inst)
     {
         auto cond = MapPossibleFloat(inst->Cond());
         asmfile_.EmitCmp(cond, (unsigned long)0);
-        asmfile_.EmitJmp("ne", inst->GetTrueBlk()->Name());
-        asmfile_.EmitJmp("", inst->GetFalseBlk()->Name());
+        asmfile_.EmitJmp("ne", BB2Label(inst->GetTrueBlk()));
+        asmfile_.EmitJmp("", BB2Label(inst->GetFalseBlk()));
     }
-    else asmfile_.EmitJmp("", inst->GetTrueBlk()->Name());
+    else asmfile_.EmitJmp("", BB2Label(inst->GetTrueBlk()));
 }
 
 

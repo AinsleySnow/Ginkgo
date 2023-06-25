@@ -1,8 +1,6 @@
 #include "visitir/EmitAsm.h"
 #include "visitir/x64.h"
-#include <climits>
 #include <fmt/format.h>
-#include <random>
 
 #define INDENT "    "
 

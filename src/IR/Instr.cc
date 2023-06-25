@@ -22,6 +22,7 @@ std::string UnaryNode::ToString() const
 }
 
 
+void RetInstr::Accept(IRVisitor* v) { v->VisitRetInstr(this); }
 std::string RetInstr::ToString() const
 {
     if (retval_) return "ret " + retval_->ToString();
@@ -29,6 +30,7 @@ std::string RetInstr::ToString() const
 }
 
 
+void BrInstr::Accept(IRVisitor* v) { v->VisitBrInstr(this); }
 std::string BrInstr::ToString() const
 {
     if (!cond_) return "br label " + true_->Name();
@@ -36,6 +38,7 @@ std::string BrInstr::ToString() const
 }
 
 
+void SwitchInstr::Accept(IRVisitor* v) { v->VisitSwitchInstr(this); }
 std::string SwitchInstr::ToString() const
 {
     std::string caselist{ default_->Name() + " [\n" };
@@ -48,6 +51,7 @@ std::string SwitchInstr::ToString() const
 }
 
 
+void CallInstr::Accept(IRVisitor* v) { v->VisitCallInstr(this); }
 std::string CallInstr::ToString() const
 {
     std::string call = "call ";
@@ -111,6 +115,7 @@ std::string XorInstr::ToString() const
 void XorInstr::Accept(IRVisitor* v) { v->VisitXorInstr(this); }
 
 
+void AllocaInstr::Accept(IRVisitor* v) { v->VisitAllocaInstr(this); }
 std::string AllocaInstr::ToString() const
 {
     std::string line = result_->Name() +
@@ -125,6 +130,7 @@ std::string AllocaInstr::ToString() const
     return line;
 }
 
+void LoadInstr::Accept(IRVisitor* v) { v->VisitLoadInstr(this); }
 std::string LoadInstr::ToString() const
 {
     std::string line = result_->Name() + " = " +
@@ -135,6 +141,7 @@ std::string LoadInstr::ToString() const
     return line;
 }
 
+void StoreInstr::Accept(IRVisitor* v) { v->VisitStoreInstr(this); }
 std::string StoreInstr::ToString() const
 {
     std::string line = volatile_ ? "volatile store " : "store ";
@@ -143,6 +150,7 @@ std::string StoreInstr::ToString() const
 }
 
 
+void GetValInstr::Accept(IRVisitor* v) { v->VisitGetValInstr(this); }
 std::string GetValInstr::ToString() const
 {
     return result_->Name() + " = getval " + pointer_->ToString() +
@@ -150,6 +158,7 @@ std::string GetValInstr::ToString() const
             std::to_string(std::get<1>(index_)) : std::get<0>(index_)->ToString()) + ']';
 }
 
+void SetValInstr::Accept(IRVisitor* v) { v->VisitSetValInstr(this); }
 std::string SetValInstr::ToString() const
 {
     return "setval " + newval_->ToString() + ", " +
@@ -157,6 +166,7 @@ std::string SetValInstr::ToString() const
             std::to_string(std::get<1>(index_)) : std::get<0>(index_)->ToString()) + ']';
 }
 
+void GetElePtrInstr::Accept(IRVisitor* v) { v->VisitGetElePtrInstr(this); }
 std::string GetElePtrInstr::ToString() const
 {
     return result_->Name() + " = geteleptr " + pointer_->ToString() +
@@ -165,61 +175,73 @@ std::string GetElePtrInstr::ToString() const
 }
 
 
+void TruncInstr::Accept(IRVisitor* v) { v->VisitTruncInstr(this); }
 std::string TruncInstr::ToString() const
 {
     return Dest()->Name() + " = trunc " + Value()->ToString() +
         " to " + Type()->ToString();
 }
+void FtruncInstr::Accept(IRVisitor* v) { v->VisitFtruncInstr(this); }
 std::string FtruncInstr::ToString() const
 {
     return Dest()->Name() + " = ftrunc " + Value()->ToString() +
         " to " + Type()->ToString();
 }
+void ZextInstr::Accept(IRVisitor* v) { v->VisitZextInstr(this); }
 std::string ZextInstr::ToString() const
 {
     return Dest()->Name() + " = zext " + Value()->ToString() +
         " to " + Type()->ToString();
 }
+void SextInstr::Accept(IRVisitor* v) { v->VisitSextInstr(this); }
 std::string SextInstr::ToString() const
 {
     return Dest()->Name() + " = sext " + Value()->ToString() +
         " to " + Type()->ToString();
 }
+void FextInstr::Accept(IRVisitor* v) { v->VisitFextInstr(this); }
 std::string FextInstr::ToString() const
 {
     return Dest()->Name() + " = fext " + Value()->ToString() +
         " to " + Type()->ToString();
 }
+void FtoUInstr::Accept(IRVisitor* v) { v->VisitFtoUInstr(this); }
 std::string FtoUInstr::ToString() const
 {
     return Dest()->Name() + " = ftou " + Value()->ToString() +
         " to " + Type()->ToString();
 }
+void FtoSInstr::Accept(IRVisitor* v) { v->VisitFtoSInstr(this); }
 std::string FtoSInstr::ToString() const
 {
     return Dest()->Name() + " = ftos " + Value()->ToString() +
         " to " + Type()->ToString();
 }
+void UtoFInstr::Accept(IRVisitor* v) { v->VisitUtoFInstr(this); }
 std::string UtoFInstr::ToString() const
 {
     return Dest()->Name() + " = utof " + Value()->ToString() +
         " to " + Type()->ToString();
 }
+void StoFInstr::Accept(IRVisitor* v) { v->VisitStoFInstr(this); }
 std::string StoFInstr::ToString() const
 {
     return Dest()->Name() + " = stof " + Value()->ToString() +
         " to " + Type()->ToString();
 }
+void PtrtoIInstr::Accept(IRVisitor* v) { v->VisitPtrtoIInstr(this); }
 std::string PtrtoIInstr::ToString() const
 {
     return Dest()->Name() + " = ptrtoi " + Value()->ToString() +
         " to " + Type()->ToString();
 }
+void ItoPtrInstr::Accept(IRVisitor* v) { v->VisitItoPtrInstr(this); }
 std::string ItoPtrInstr::ToString() const
 {
     return Dest()->Name() + " = itoptr " + Value()->ToString() +
         " to " + Type()->ToString();
 }
+void BitcastInstr::Accept(IRVisitor* v) { v->VisitBitcastInstr(this); }
 std::string BitcastInstr::ToString() const
 {
     return Dest()->Name() + " = bitcast " + Value()->ToString() +
@@ -244,11 +266,13 @@ string to_string(Condition c)
 }
 }
 
+void IcmpInstr::Accept(IRVisitor* v) { v->VisitIcmpInstr(this); }
 std::string IcmpInstr::ToString() const
 {
     return result_->ToString() + " = icmp " + std::to_string(cond_) +
         ' ' + op1_->ToString() + ", " + op2_->ToString();
 }
+void FcmpInstr::Accept(IRVisitor* v) { v->VisitFcmpInstr(this); }
 std::string FcmpInstr::ToString() const
 {
     return result_->ToString() + " = fcmp " + std::to_string(cond_) +
@@ -256,12 +280,22 @@ std::string FcmpInstr::ToString() const
 }
 
 
+void SelectInstr::Accept(IRVisitor* v)
+{
+    v->VisitSelectInstr(this);
+}
+
 std::string SelectInstr::ToString() const
 {
     return result_->ToString() + " = select " + selty_->ToString() + " ? " +
         value1_->ToString() + " : " + value2_->ToString();
 }
 
+
+void PhiInstr::Accept(IRVisitor* v)
+{
+    v->VisitPhiInstr(this);
+}
 
 std::string PhiInstr::ToString() const
 {
