@@ -30,6 +30,7 @@ public:
     void Write2Mem() { write2file_ = false; }
     void Dump2File();
 
+    void EmitBlankLine();
     void EmitLabel(const std::string&);
     void EmitPseudoInstr(const std::string&);
     void EmitPseudoInstr(
@@ -81,6 +82,7 @@ public:
 
     void EmitCall(const std::string&);
     void EmitCall(const x64* func);
+    void EmitLeave();
     void EmitRet();
 
     void EmitJmp(const std::string&, const std::string&);

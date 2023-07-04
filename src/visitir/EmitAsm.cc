@@ -53,6 +53,11 @@ void EmitAsm::Dump2File()
 }
 
 
+void EmitAsm::EmitBlankLine()
+{
+    Output("\n");
+}
+
 void EmitAsm::EmitLabel(const std::string& label)
 {
     Output(fmt::format("{}:\n", label));
@@ -102,7 +107,7 @@ void EmitAsm::EmitUnary(const std::string& instr, const x64* op)
 void EmitAsm::EmitBinary(const std::string& instr, unsigned long imm, const x64* op)
 {
     Output(fmt::format(INDENT "{}{} ${}, {}\n",
-        instr, std::to_string(imm), op->ToString()));
+        instr, GetIntTag(op), std::to_string(imm), op->ToString()));
 }
 
 void EmitAsm::EmitBinary(const std::string& instr, const x64* op1, const x64* op2)
@@ -355,9 +360,14 @@ void EmitAsm::EmitCall(const x64* func)
     Output(fmt::format(INDENT "call *{}\n", func->ToString()));
 }
 
+void EmitAsm::EmitLeave()
+{
+    Output(INDENT "leave\n");
+}
+
 void EmitAsm::EmitRet()
 {
-    Output(fmt::format(INDENT "ret\n"));
+    Output(INDENT "ret\n");
 }
 
 
