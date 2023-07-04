@@ -6,7 +6,7 @@
 # ifdef NDEBUG
 #   define assert(expr) ((void)0)
 # else
-#   define assert(expr) __Ginkgo_assert(#expr, __FILE__, __LINE__, __func__)
+#   define assert(expr) __Ginkgo_assert(expr, #expr, __FILE__, __LINE__, __func__)
 # endif // NDEBUG
 
 #endif // __GINKGO_ASSERT_H
