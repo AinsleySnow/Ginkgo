@@ -32,6 +32,11 @@ static RegTag X64Phys2RegTag(x64Phys phys)
     return static_cast<RegTag>(static_cast<int>(phys) + 2);
 }
 
+static x64Phys RegTag2X64Phys(RegTag tag)
+{
+    return static_cast<x64Phys>(static_cast<int>(tag) - 2);
+}
+
 
 std::string CodeGen::GetLCLabel() const
 {
@@ -66,7 +71,7 @@ const x64* CodeGen::MapPossibleFloat(const IROperand* op)
         fpconst_[val] = label;
     }
 
-    tempmap_[op] = std::make_unique<x64Mem>(label);
+    tempmap_[op] = std::make_unique<x64Mem>(op->Type()->Size(), label);
     return tempmap_[op].get();
 }
 
@@ -106,12 +111,12 @@ std::pair<const x64*, bool> CodeGen::MapPossiblePointer(const IROperand* op)
 }
 
 
-void CodeGen::AlignRspBy(size_t align)
+void CodeGen::AlignRspBy(size_t add, size_t align)
 {
-    if (stacksize_ % align == 0)
+    if ((stacksize_ + add) % align == 0)
         return;
-    auto offset = align - stacksize_ % align;
-    AdjustRsp(offset);
+    auto offset = align - (stacksize_ + add) % align;
+    AdjustRsp(-offset);
 }
 
 void CodeGen::AdjustRsp(long offset)
@@ -126,32 +131,25 @@ void CodeGen::AdjustRsp(long offset)
 
 void CodeGen::DeallocFrame()
 {
-    AdjustRsp(-stacksize_);
-    stacksize_ = 0;
+    AdjustRsp(stacksize_);
 }
 
 
 void CodeGen::PassParam(
-    const FuncType* proto, const std::vector<const IROperand*>& param)
+    const SysVConv& conv, const std::vector<const IROperand*>& param)
 {
-    SysVConv conv{ proto };
-    int i = 0;
-    for (; i < 6 && i < param.size(); ++i)
+    for (int i = param.size() - 1; i >= 0; --i)
     {
         auto loc = conv.PlaceOfArgv(i);
-        if (loc)
+        if (!loc)
+            PushEmitHelper(MapPossibleFloat(param[i]));
+        else
         {
-            asmfile_.EmitMov(MapPossibleFloat(param[i]), loc);
+            auto reg = loc->As<x64Reg>();
+            asmfile_.EmitMov(MapPossibleFloat(param[i]), loc);            
             continue;
         }
-        PushEmitHelper(MapPossibleFloat(param[i]));
     }
-
-    if (param.size() <= 6)
-        return;
-
-    for (int j = param.size() - 1; j >= i; --j)
-        PushEmitHelper(MapPossibleFloat(param[j]));
 }
 
 void CodeGen::SaveCalleeSaved()
@@ -286,6 +284,8 @@ void CodeGen::MovsEmitHelper(const x64* from, const x64* to) { MOVZ_MOVS_HELPER(
 #undef MOVZ_MOVS_HELPER
 
 #define MOVZ_MOVS_HELPER(name)                              \
+if (op->Is<x64Reg>() && from == to) /* In the same reg? */  \
+    return;                         /* Emit nothing */      \
 if (op->Is<x64Reg>())                                       \
 {                                                           \
     asmfile_.name(from, to, op);                            \
@@ -415,7 +415,7 @@ void CodeGen::PushEmitHelper(const x64* reg)
 {
     auto original = 0;
 
-    if (reg->Size() == 1 || reg->Size() == 4)
+    if (reg->Size() != 8)
     {
         MovzEmitHelper(reg->Size(), 8, reg);
         original = reg->Size();
@@ -430,7 +430,7 @@ void CodeGen::PushEmitHelper(const x64* reg)
 
 void CodeGen::PushEmitHelper(RegTag tag, size_t size)
 {
-    if (size == 1 || size == 4)
+    if (size != 8)
     {
         x64Reg reg{ tag };
         asmfile_.EmitMovz(size, 8, &reg);
@@ -443,7 +443,7 @@ void CodeGen::PushEmitHelper(RegTag tag, size_t size)
 void CodeGen::PopEmitHelper(const x64* reg)
 {
     size_t original = 0;
-    if (reg->Size() == 1 || reg->Size() == 4)
+    if (reg->Size() != 8)
     {
         original = reg->Size();
         const_cast<x64*>(reg)->Size() = 8;
@@ -456,7 +456,7 @@ void CodeGen::PopEmitHelper(const x64* reg)
 
 void CodeGen::PopEmitHelper(RegTag tag, size_t size)
 {
-    if (size == 1 || size == 4)
+    if (size != 8)
         size = 8;
     asmfile_.EmitPop(tag, size);
     stacksize_ -= size;
@@ -480,6 +480,7 @@ void CodeGen::PopXmmReg(RegTag tag)
 void CodeGen::VisitModule(Module* mod)
 {
     asmfile_.EmitPseudoInstr(".file", { "\"" + mod->Name() + "\"" });
+    asmfile_.EmitBlankLine();
     for (auto val : *mod)
         val->Accept(this);
 }
@@ -488,22 +489,56 @@ void CodeGen::VisitGlobalVar(GlobalVar* var)
 {
     // stripping the leading '@'
     auto name = var->Name().substr(1);
-    auto size = std::to_string(var->Type()->Size());
+    auto size = var->Type()->Size();
 
     var->GetTree()->Accept(this);
-    asmfile_.EmitPseudoInstr(".data");
-    asmfile_.EmitPseudoInstr(".globl", { name });
-    asmfile_.EmitPseudoInstr(".align", { size });
-    asmfile_.EmitPseudoInstr(".type", { name, "@object" });
-    asmfile_.EmitPseudoInstr(".size", { name, size });
-    asmfile_.EmitLabel(name);
-    asmfile_.EmitPseudoInstr(".long", { var->GetTree()->repr_ });
+    auto repr = var->GetTree()->repr_;
+    if (repr[0] == '"')
+    {
+        asmfile_.EmitPseudoInstr(".section .rodata");
+        asmfile_.EmitLabel(name);
+        auto width = dynamic_cast<OpNode*>(var->GetTree())->op_->
+            As<StrConst>()->Type()->As<ArrayType>()->ArrayOf()->Size();
+        std::string pseudo = ".string";
+        if (width != 1)
+            pseudo += std::to_string(width * 8);
+
+        asmfile_.EmitPseudoInstr(std::move(pseudo), { std::move(repr) });
+    }
+    else
+    {
+        auto strsz = std::to_string(size);
+        asmfile_.EmitPseudoInstr(".data");
+        asmfile_.EmitPseudoInstr(".globl", { name });
+        asmfile_.EmitPseudoInstr(".align", { strsz });
+        asmfile_.EmitPseudoInstr(".type", { name, "@object" });
+        asmfile_.EmitPseudoInstr(".size", { name, strsz });
+        asmfile_.EmitLabel(name);
+
+        if (!var->GetTree())
+            asmfile_.EmitPseudoInstr(".zero", { strsz });
+        else
+        {
+            std::string pseudo = "";
+            switch (size)
+            {
+            case 1: pseudo = ".byte"; break;
+            case 2: pseudo = ".value"; break;
+            case 4: pseudo = ".long"; break;
+            case 8: pseudo = ".quad"; break;
+            }
+            asmfile_.EmitPseudoInstr(pseudo, { var->GetTree()->repr_ });
+        }
+    }
+    asmfile_.EmitBlankLine();
 }
 
 void CodeGen::VisitFunction(Function* func)
 {
+    if (func->Empty())
+        return;
+
     alloc_.EnterFunction(func);
-    stacksize_ = alloc_.RspOffset();
     auto name = func->Name().substr(1);
 
     asmfile_.EmitPseudoInstr(".text");
@@ -511,9 +546,15 @@ void CodeGen::VisitFunction(Function* func)
     asmfile_.EmitPseudoInstr(".type", { name, "@function" });
     asmfile_.EmitLabel(func->Name().substr(1));
 
+    asmfile_.EmitPush(RegTag::rbp, 8);
+    x64Reg rsp{ RegTag::rsp };
+    x64Reg rbp{ RegTag::rbp };
+    asmfile_.EmitMov(&rsp, &rbp);
+    AdjustRsp(-alloc_.RspOffset());
+
     if (func->Variadic())
     {
-        AlignRspBy(8);
+        AlignRspBy(0, 8);
         auto baseline = stacksize_;
         AdjustRsp(-176);
         asmfile_.EmitMov(RegTag::rdi, baseline);
@@ -541,14 +582,13 @@ void CodeGen::VisitFunction(Function* func)
     }
 
     SaveCalleeSaved();
-    AdjustRsp(alloc_.RspOffset());
     asmfile_.Write2Mem();
 
     for (auto bb : *func)
         VisitBasicBlock(bb);
 
     asmfile_.Dump2File();
-    RestoreCalleeSaved();
+    asmfile_.EmitBlankLine();
 }
 
 void CodeGen::VisitBasicBlock(BasicBlock* bb)
@@ -611,6 +651,13 @@ void CodeGen::VisitRetInstr(RetInstr* inst)
     }
 
 ret:
+    // what if there's multiple ret instruction in a function?
+    auto oldstacksize = stacksize_;
+    RestoreCalleeSaved();
+    DeallocFrame();
+    stacksize_ = oldstacksize;
+
+    asmfile_.EmitLeave();
     asmfile_.EmitRet();
 }
 
@@ -645,14 +692,64 @@ void CodeGen::VisitSwitchInstr(SwitchInstr* inst)
 
 void CodeGen::VisitCallInstr(CallInstr* inst)
 {
-    SaveCallerSaved();
-    PassParam(inst->Proto(), inst->ArgvList());
-    AlignRspBy(16);
+    // Layout of the stack:
+    //         high address
+    // +------------------------+
+    // |       Local Vars       |
+    // +------------------------+
+    // |   Caller Saved Regs    |
+    // +------------------------+
+    // |  Saved rdi, rsi, etc.  |
+    // +------------------------+
+    // |        Padding         |
+    // +------------------------+
+    // |  Argvs Passed on Stack |
+    // +------------------------+  <- rsp in caller
+    // |     Frame of Callee    |
+    // +------------------------+
+    //         low address
 
+    SaveCallerSaved();
+    SysVConv conv{ inst->Proto() };
+    conv.MapArgv();
+
+    auto [gp, vec] = conv.CountRegs();
+    for (int i = gp - 1; i >= 0; --i)
+    {
+        auto tag = SysVConv::Index2IntTag(i);
+        if (alloc_.UsedIntReg().count(RegTag2X64Phys(tag)))
+            PushEmitHelper(tag, 8);
+    }
+    for (int i = vec - 1; i >= 0; --i)
+    {
+        auto tag = SysVConv::Index2VecTag(i);
+        if (alloc_.UsedVecReg().count(RegTag2X64Phys(tag)))
+            PushXmmReg(tag);
+    }
+
+    AdjustRsp(-conv.Padding());
+    PassParam(conv, inst->ArgvList());
     if (inst->FuncAddr())
         asmfile_.EmitCall(alloc_.GetIROpMap(inst->FuncAddr()));
     else
-        asmfile_.EmitCall(inst->FuncName());
+        asmfile_.EmitCall(inst->FuncName().substr(1) + "@PLT");
+    // adjust rsp directly here since conv.StackSize()
+    // has already included 'padding'
+    AdjustRsp(conv.StackSize());
+
+    for (int i = 0; i < vec; ++i)
+    {
+        auto tag = SysVConv::Index2VecTag(i);
+        if (alloc_.UsedVecReg().count(RegTag2X64Phys(tag)))
+            PopXmmReg(tag);
+    }
+    for (int i = 0; i < gp; ++i)
+    {
+        auto tag = SysVConv::Index2IntTag(i);
+        if (alloc_.UsedIntReg().count(RegTag2X64Phys(tag)))
+            PopEmitHelper(tag, 8);
+    }
+
     RestoreCallerSaved();
 
     if (inst->Result() && inst->Result()->Type()->Is<IntType>())
@@ -789,11 +886,17 @@ void CodeGen::VisitGetElePtrInstr(GetElePtrInstr* inst)
 
     // here, pointer can only be x64Mem*.
     auto castptr = pointer->As<x64Mem>();
-    x64Mem mem{
-        size, castptr->Offset() + offset,
-        castptr->Base(), indexreg, size
-    };
-    MovEmitHelper(&mem, alloc_.GetIROpMap(inst->Result()));
+    // Is the variable a string?
+    if (inst->Pointer()->Name()[1] == '.')
+        LeaqEmitHelper(castptr, alloc_.GetIROpMap(inst->Result()));
+    else
+    {
+        x64Mem mem{
+            size, castptr->Offset() + offset,
+            castptr->Base(), indexreg, size
+        };
+        MovEmitHelper(&mem, alloc_.GetIROpMap(inst->Result()));
+    }
 
     if (poprbx) asmfile_.EmitPop(RegTag::rbx, 8);
     if (poprax) asmfile_.EmitPop(RegTag::rax, 8);
@@ -942,7 +1045,7 @@ void CodeGen::VisitSelectInstr(SelectInstr* inst)
             else
                 label = fpconst_[0];
 
-            x64Mem zero{ label };
+            x64Mem zero{ 0, label };
             asmfile_.EmitUcom(&zero, mappedcond);
         }
         else

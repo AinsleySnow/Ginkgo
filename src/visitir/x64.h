@@ -77,7 +77,7 @@ public:
     static bool ClassOf(const x64Mem* const) { return true; }
     static bool ClassOf(const x64* const i) { return i->id_ == x64Id::mem; }
 
-    x64Mem(const std::string& l) : x64(x64Id::mem, 0), label_(l) {}
+    x64Mem(size_t sz, const std::string& l) : x64(x64Id::mem, sz), label_(l) {}
     x64Mem(size_t sz, long o, const x64Reg& b, const x64Reg& i, size_t s) :
         x64(x64Id::mem, sz), offset_(o), base_(b), index_(i), scale_(s) {}
 

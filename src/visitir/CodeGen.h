@@ -11,8 +11,8 @@
 
 class BinaryInstr;
 class Constant;
-class FuncType;
 class IROperand;
+class SysVConv;
 class x64;
 enum class Condition;
 enum class RegTag;
@@ -102,11 +102,11 @@ private:
     // it points to. MapPossiblePointer tackle with this problem.
     std::pair<const x64*, bool> MapPossiblePointer(const IROperand*); 
 
-    void AlignRspBy(size_t);
+    void AlignRspBy(size_t, size_t);
     void AdjustRsp(long);
     void DeallocFrame();
 
-    void PassParam(const FuncType*, const std::vector<const IROperand*>&);
+    void PassParam(const SysVConv&, const std::vector<const IROperand*>&);
     void SaveCalleeSaved();
     void RestoreCalleeSaved();
     void SaveCallerSaved();
