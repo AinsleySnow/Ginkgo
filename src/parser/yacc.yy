@@ -226,7 +226,7 @@ enumeration_constant		/* before it has been defined as such */
 
 string
 	: STRING_LITERAL // fall through
-	| FUNC_NAME      // fall through
+	| FUNC_NAME      { $$ = "__func__"; }
 	;
 
 generic_selection

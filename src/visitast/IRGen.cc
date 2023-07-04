@@ -130,8 +130,10 @@ const IROperand* IRGen::LoadVal(Expr* expr)
     }
     else if (expr->IsStrExpr())
     {
+        auto zero = IntConst::CreateIntConst(
+            ibud_.Container(), 0, IntType::GetInt32(true));
         expr->Val() = ibud_.InsertGetElePtrInstr(
-            env_.GetRegName(), expr->Val()->As<Register>(), 0);
+            env_.GetRegName(), expr->Val()->As<Register>(), zero);
         return expr->Val();
     }
     else return expr->Val();
@@ -933,7 +935,7 @@ std::string WashString(const T& str, size_t& count)
     }
 
     count += 1;
-    return result + "\\00";
+    return result;
 }
 
 void IRGen::VisitStrExpr(StrExpr* str)
@@ -942,14 +944,22 @@ void IRGen::VisitStrExpr(StrExpr* str)
 
     auto content = str->Content();
     std::string literal = "";
-
     size_t count = 0;
-    if (str->Width() == 1)
-        literal = WashString(content, count);
-    else if (str->Width() == 2)
-        literal = WashString(utf8::utf8to16(content), count);
-    else if (str->Width() == 4)
-        literal = WashString(utf8::utf8to32(content), count);
+
+    if (content == "__func__")
+    {
+        literal = env_.GetFunction()->Name().substr(1);
+        count = literal.size();
+    }
+    else
+    {
+        if (str->Width() == 1)
+            literal = WashString(content, count);
+        else if (str->Width() == 2)
+            literal = WashString(utf8::utf8to16(content), count);
+        else if (str->Width() == 4)
+            literal = WashString(utf8::utf8to32(content), count);
+    }
 
     str->Type()->As<CArrayType>()->Count() = count;
     auto array = str->Type()->ToIRType(transunit_.get())->As<ArrayType>();

@@ -143,7 +143,7 @@ static void comment(void);
 {HP}{HS}?"."{HS}{P}{FS}?	  { yylval->emplace<std::string>() = yytext; return YYTOKEN::F_CONSTANT; }
 {HP}{HS}"."{P}{FS}?			  { yylval->emplace<std::string>() = yytext; return YYTOKEN::F_CONSTANT; }
 
-({SP}?\"([^"\\\n]|{ES}|{U8})*\"{WS}*)+	{
+({SP}?\"([^"\\\n]|{ES}|{U8})*\"[ \t\v\f\n]*)+	{
     yylval->emplace<std::string>() = yytext;
     return YYTOKEN::STRING_LITERAL;
 }
