@@ -225,7 +225,6 @@ public:
     void AddParam(const CType* t);
 
 private:
-    int index_{};
     bool variadic_{};
     bool inline_{};
     bool noreturn_{};

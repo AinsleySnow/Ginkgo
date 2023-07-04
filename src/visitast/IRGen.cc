@@ -75,6 +75,31 @@ Function* IRGen::AllocaFunc(const CFuncType* raw, const std::string& name)
 }
 
 
+bool IRGen::HandleBuiltins(CallExpr* call)
+{
+    const static PtrType ptr{ IntType::GetInt8(true) };
+    const static FuncType assert{
+        VoidType::GetVoidType(), {
+            IntType::GetInt8(true), &ptr, &ptr,
+            IntType::GetInt32(false), &ptr
+        },
+        false
+    };
+
+    if (!call->Postfix()->IsIdentifier())
+        return false;
+
+    auto name = call->Postfix()->ToIdentifier()->Name();
+    if (name == "__Ginkgo_assert")
+    {
+        ibud_.InsertCallInstr("", &assert, '@' + name);
+        return true;
+    }
+
+    return false;
+}
+
+
 const IROperand* IRGen::LoadVal(Expr* expr)
 {
     if (expr->IsIdentifier())
@@ -519,6 +544,9 @@ void IRGen::VisitCallExpr(CallExpr* call)
             LoadVal(argv.get());
     }
 
+    if (HandleBuiltins(call))
+        goto end;
+
     call->postfix_->Accept(&tbud_);
 
     if (call->postfix_->IsIdentifier())
@@ -543,6 +571,7 @@ pointercall:
             isvoid ? "" : env_.GetRegName(), pfunc);
     }
 
+end:
     if (call->argvlist_)
     {
         auto callinstr = ibud_.LastInstr()->As<CallInstr>();

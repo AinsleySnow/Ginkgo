@@ -171,7 +171,7 @@ std::string CArithmType::ToString() const
 
 void CFuncType::AddParam(const CType* t)
 {
-    paramlist_[index_++] = std::move(t);
+    paramlist_.push_back(t);
 }
 
 const FuncType* CFuncType::ToIRType(Pool<IRType>* pool) const

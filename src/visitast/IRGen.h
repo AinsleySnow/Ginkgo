@@ -123,6 +123,8 @@ private:
     const Register* AllocaObject(const CType*, const std::string&);
     Function* AllocaFunc(const CFuncType*, const std::string&);
 
+    bool HandleBuiltins(CallExpr*);
+
     const IROperand* LoadVal(Expr*);
     const Register* LoadAddr(Expr*);
 

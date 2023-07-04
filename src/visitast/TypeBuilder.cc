@@ -367,6 +367,16 @@ void TypeBuilder::VisitCallExpr(CallExpr* expr)
 {
     if (expr->Type()) return;
 
+    if (expr->Postfix()->IsIdentifier())
+    {
+        auto name = expr->Postfix()->ToIdentifier()->Name();
+        if (name == "__Ginkgo_assert")
+        {
+            expr->Type() = std::make_unique<CVoidType>();
+            return;
+        }
+    }
+
     auto func = expr->Postfix()->Type();
     if (func->Is<CFuncType>())
     {
