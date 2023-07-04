@@ -81,7 +81,11 @@ std::string Function::ToString() const
             func += params.back()->ToString();
         }
     }
-    func += ')';
+
+    if (Variadic())
+        func += ", ...)";
+    else
+        func += ')';
 
     if (Empty())
         func += ';';
@@ -117,10 +121,6 @@ BasicBlock* Function::GetBasicBlock(int index)
         return elements_[index].get();
 }
 
-void Function::AddIROperand(std::unique_ptr<IROperand> op)
-{
-    operands_.push_back(std::move(op));
-}
 
 void Function::AddParam(const Register* r)
 {

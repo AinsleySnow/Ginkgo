@@ -285,9 +285,10 @@ void TypeBuilder::VisitFuncDef(FuncDef* def)
     bool _noreturn = declspec->Func().IsNoreturn();
     funccty->Inline() = _inline;
     funccty->Noreturn() = _noreturn;
+    funccty->Variadic() = def->paramlist_->Variadic();
 
     for (auto param : def->GetParamType())
-        funccty->AddParam(std::move(param));
+        funccty->AddParam(param);
 
     def->Type() = std::move(funccty);
 }

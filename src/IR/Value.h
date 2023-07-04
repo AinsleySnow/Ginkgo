@@ -87,7 +87,6 @@ public:
 
     BasicBlock* GetBasicBlock(const std::string&);
     BasicBlock* GetBasicBlock(int);
-    void AddIROperand(std::unique_ptr<IROperand>);
     void AddParam(const Register*);
 
     auto Type() const { return functype_; }
@@ -99,7 +98,7 @@ public:
     bool& Inline() { return inline_; }
     bool Noreturn() const { return noreturn_; }
     bool& Noreturn() { return noreturn_; }
-    bool Variadic() { return functype_->Variadic(); }
+    bool Variadic() const { return functype_->Variadic(); }
 
     auto ReturnValue() const { return returnvalue_; }
     auto& ReturnValue() { return returnvalue_; }
@@ -107,8 +106,6 @@ public:
 
 private:
     const Register* addr_{};
-
-    std::vector<std::unique_ptr<IROperand>> operands_{};
 
     bool inline_{}, noreturn_{};
 

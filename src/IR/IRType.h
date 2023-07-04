@@ -143,8 +143,10 @@ public:
     static bool ClassOf(const IRType* const i) { return i->id_ == TypeId::func; }
 
     static FuncType* GetFuncType(Pool<IRType>*, const IRType*, bool);
-    FuncType(const IRType* ret, bool v) : 
-        IRType(TypeId::func), retype_(std::move(ret)), variadic_(v) { size_ = -1; }
+    FuncType(const IRType* ret, bool v) :
+        IRType(TypeId::func), retype_(ret), variadic_(v) { size_ = -1; }
+    FuncType(const IRType* ret, std::initializer_list<const IRType*> l, bool v) :
+        IRType(TypeId::func), retype_(ret), param_(l), variadic_(v) { size_ = -1; }
 
     auto ReturnType() const { return retype_; }
     const auto& ParamType() const { return param_; }
