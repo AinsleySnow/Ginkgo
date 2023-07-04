@@ -23,11 +23,19 @@ public:
     };
 
     SysVConv(const FuncType*);
+    void MapArgv();
     const x64* PlaceOfArgv(int) const;
+    long OffsetOfArgv(int) const;
+
+    static RegTag Index2IntTag(int);
+    static RegTag Index2VecTag(int);
+    std::pair<int, int> CountRegs() const;
     auto StackSize() const { return stacksize_; }
+    auto Padding() const { return padding_; }
 
 
 private:
+    void AlignStackBy(size_t, size_t);
     void CheckParamClass(const IRType*);
     void Emplace(int, const IRType*, RegTag);
     RegTag GetIntReg();
@@ -37,15 +45,20 @@ private:
     int intcnt_{};
     int veccnt_{};
 
+    const FuncType* functype_{};
     // class of every eight bytes
     std::vector<ParamClass> wordclass_{};
     // how many bytes of parameters are passed in the stack
     size_t stacksize_{};
+    size_t padding_{};
 
     // to where does the xth parameter map?
     // no map will be created if some parameter
     // is to be placed into somewhere of the memory
     std::map<int, std::unique_ptr<x64>> argvs_{};
+    // if an argv is passed on the stack, what's its
+    // offset relative to rsp?
+    std::map<int, long> memoffset_{};
 };
 
 #endif // _SYSV_CONV_H_

@@ -8,8 +8,8 @@ RegTag SimpleAlloc::StackCache::SpareReg() const
     auto ret = RegTag::none;
     if (index_ >= 3) return ret;
     if (index_ == 0) ret = RegTag::rax;
-    if (index_ == 1) ret = RegTag::rdx;
-    if (index_ == 2) ret = RegTag::rcx;
+    if (index_ == 1) ret = RegTag::r10;
+    if (index_ == 2) ret = RegTag::r11;
     index_ += 1;
     return ret;
 }
@@ -18,9 +18,9 @@ RegTag SimpleAlloc::StackCache::SpareFReg() const
 {
     auto ret = RegTag::none;
     if (findex_ >= 3) return ret;
-    if (findex_ == 0) ret = RegTag::xmm0;
-    if (findex_ == 1) ret = RegTag::xmm1;
-    if (findex_ == 2) ret = RegTag::xmm2;
+    if (findex_ == 0) ret = RegTag::xmm8;
+    if (findex_ == 1) ret = RegTag::xmm9;
+    if (findex_ == 2) ret = RegTag::xmm10;
     findex_ += 1;
     return ret;
 }
@@ -30,8 +30,12 @@ void SimpleAlloc::StackCache::Access(const Register* reg) const
     auto it = regmap_.find(reg);
     if (it == regmap_.end()) return;
 
-    auto mempos = it->second;
-    if (mempos->Is<x64Reg>()) index_ -= 1;
+    auto mempos = it->second->As<x64Reg>();
+    if (mempos)
+    {
+        index_ -= 1;
+        alloc_.Unmark(static_cast<x64Phys>(static_cast<int>(mempos->Tag()) - 2));
+    }
     return;
 }
 
@@ -51,7 +55,7 @@ void SimpleAlloc::StackCache::Map2Stack(const Register* reg, long offset)
 
 void SimpleAlloc::StackCache::Map2Stack(const Register* reg, size_t size, long offset)
 {
-    auto px64 = std::make_unique<x64Mem>(size, offset, RegTag::rsp, RegTag::none, 0);
+    auto px64 = std::make_unique<x64Mem>(size, offset, RegTag::rbp, RegTag::none, 0);
     auto raw = px64.get();
     alloc_.MapRegister(reg, std::move(px64));
     regmap_[reg] = raw;
@@ -64,7 +68,10 @@ void SimpleAlloc::Allocate(const Register* reg)
         stackcache_.SpareFReg() : stackcache_.SpareReg();
 
     if (tag != RegTag::none)
+    {
         stackcache_.Map2Reg(reg, tag);
+        Mark(static_cast<x64Phys>(static_cast<int>(tag) - 2));
+    }
     else
     {
         auto offset = AllocateOnX64Stack(
@@ -76,26 +83,10 @@ void SimpleAlloc::Allocate(const Register* reg)
 
 long SimpleAlloc::AllocateOnX64Stack(x64Stack& info, size_t size, size_t align)
 {
-    long base = 0;
-
-    // not a leaf; just use allocated_ as the offset.
-    if (!info.leaf_ || info.allocated_ + size > 128)
-    {
-        info.allocated_ = MakeAlign(info.allocated_, align);
-        base = info.allocated_;
-        info.allocated_ += size;
-        info.rspoffset_ = info.allocated_;
-    }
-    // leaf; use both red zone and zone above rsp.
-    else if (info.belowrsp_ + size <= 128)
-    {
-        // meet strict alignment requirements.
-        // here, the offset of rsp is always zero.
-        info.belowrsp_ = MakeAlign(info.belowrsp_, align);
-        info.belowrsp_ += size;
-        base = -info.belowrsp_;
-    }
-
+    info.allocated_ = MakeAlign(info.allocated_, align);
+    info.allocated_ += size;
+    long base = -info.allocated_;
+    info.rspoffset_ = info.allocated_;
     return base;
 }
 
@@ -134,6 +125,7 @@ void SimpleAlloc::VisitFunction(Function* func)
         for (auto i : *bb)
             if (i->Is<AllocaInstr>())
                 VisitAllocaInstr(i->As<AllocaInstr>());
+    LoadParam();
 
     for (auto bb : *func)
         VisitBasicBlock(bb);
@@ -141,9 +133,7 @@ void SimpleAlloc::VisitFunction(Function* func)
     // we need to guarantee that info.allocated_ is always a multiple of 16
     auto& info = ArchInfo();
     info.allocated_ = MakeAlign(info.allocated_, 16);
-    if (!info.leaf_)
-        // eight more bytes for the return address.
-        info.allocated_ += 8;
+    info.rspoffset_ = info.allocated_;
 }
 
 
@@ -179,6 +169,8 @@ void SimpleAlloc::VisitCallInstr(CallInstr* i)
     for (auto op : i->ArgvList())
         if (!MapConstAndGlobalVar(op))
             stackcache_.Access(op->As<Register>());
+    if (i->Result())
+        Allocate(i->Result()->As<Register>());
 }
 
 

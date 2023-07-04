@@ -1,7 +1,14 @@
-#include "SysVConv.h"
+#include "visitir/SysVConv.h"
 #include "IR/IROperand.h"
 #include "IR/IRType.h"
 
+
+void SysVConv::AlignStackBy(size_t add, size_t align)
+{
+    if ((stacksize_ + add) % align == 0)
+        return;
+    stacksize_ += align - (stacksize_ + add) % align;
+}
 
 void SysVConv::CheckParamClass(const IRType* t)
 {
@@ -26,27 +33,113 @@ void SysVConv::CheckParamClass(const IRType* t)
 
 void SysVConv::Emplace(int i, const IRType* p, RegTag t)
 {
-    if (t == RegTag::none) return;
+    if (t == RegTag::none)
+    {
+        AlignStackBy(0, p->Align());
+        memoffset_[i] = stacksize_;
+        stacksize_ += p->Size();
+        return;
+    }
     argvs_[i] = std::make_unique<x64Reg>(t, p->Size());
 }
 
 RegTag SysVConv::GetIntReg()
 {
-    switch (intcnt_++)
-    {
-    case 1: return RegTag::rdi;
-    case 2: return RegTag::rsi;
-    case 3: return RegTag::rdx;
-    case 4: return RegTag::rcx;
-    case 5: return RegTag::r8;
-    case 6: return RegTag::r9;
-    default: return RegTag::none;
-    }
+    if (intcnt_ == 6)
+        return RegTag::none;
+    return Index2IntTag(intcnt_++);
 }
 
 RegTag SysVConv::GetVecReg()
 {
-    switch (veccnt_++)
+    if (veccnt_ == 8)
+        return RegTag::none;
+    return Index2VecTag(veccnt_++);
+}
+
+
+SysVConv::SysVConv(const FuncType* f) : functype_(f)
+{
+    for (int i = 0; i < f->ParamType().size(); ++i)
+        CheckParamClass(f->ParamType()[i]);
+}
+
+void SysVConv::MapArgv()
+{
+    auto size = functype_->ParamType().size();
+
+    // index for wordclass_
+    int windex = 0;
+    for (int i = 0; i < size; ++i)
+    {
+        switch (wordclass_[windex])
+        {
+        case ParamClass::integer:
+            Emplace(i, functype_->ParamType()[i], GetIntReg());
+            windex++;
+            break;
+        case ParamClass::sse:
+            Emplace(i, functype_->ParamType()[i], GetVecReg());
+            windex++;
+            break;
+
+        // no need to implement this case - we
+        // don't even have __m256 or __m512.
+        // case ParamClass::sseup: break;
+
+        // If the class is X87, X87UP or COMPLEX_X87,
+        // it is passed in memory.
+        case ParamClass::x87:
+        case ParamClass::memory:
+            AlignStackBy(0, 8);
+            memoffset_[i] = static_cast<long>(stacksize_);
+            stacksize_ += functype_->ParamType()[i]->Size();
+
+            if (wordclass_[windex] == ParamClass::x87)
+                windex += 2; // since x87up always follows behind x87
+            else
+                windex++;
+            break;
+        }
+    }
+
+    auto oldsz = stacksize_;
+    AlignStackBy(8, 16);
+    padding_ = stacksize_ - oldsz;
+}
+
+const x64* SysVConv::PlaceOfArgv(int index) const
+{
+    if (argvs_.find(index) != argvs_.end())
+        return argvs_.at(index).get();
+    return nullptr;
+}
+
+long SysVConv::OffsetOfArgv(int index) const
+{
+    if (memoffset_.find(index) != memoffset_.end())
+        return memoffset_.at(index);
+    return -1;
+}
+
+
+RegTag SysVConv::Index2IntTag(int i)
+{
+    switch (i)
+    {
+    case 0: return RegTag::rdi;
+    case 1: return RegTag::rsi;
+    case 2: return RegTag::rdx;
+    case 3: return RegTag::rcx;
+    case 4: return RegTag::r8;
+    case 5: return RegTag::r9;
+    default: return RegTag::none;
+    }
+}
+
+RegTag SysVConv::Index2VecTag(int i)
+{
+    switch (i)
     {
     case 0: return RegTag::xmm0;
     case 1: return RegTag::xmm1;
@@ -60,54 +153,24 @@ RegTag SysVConv::GetVecReg()
     }
 }
 
-
-SysVConv::SysVConv(const FuncType* f)
+std::pair<int, int> SysVConv::CountRegs() const
 {
-#define ALIGN_BY_8(x) (((x) + 7) & ~7)
-
-    auto size = f->ParamType().size();
-    for (int i = 0; i < size; ++i)
-        CheckParamClass(f->ParamType()[i]);
-
-    // index for wordclass_
+    int gp = 0, vec = 0;
     int windex = 0;
-    for (int i = 0; i < size; ++i)
+    for (int i = 0; i < functype_->ParamType().size(); ++i)
     {
         switch (wordclass_[windex])
         {
         case ParamClass::integer:
-            Emplace(i, f->ParamType()[i], GetIntReg());
-            windex++;
-            break;
+            gp++; windex++; break;
         case ParamClass::sse:
-            Emplace(i, f->ParamType()[i], GetVecReg());
-            windex++;
-            break;
-
-        // no need to implement this case - we
-        // don't even have __m256 or __m512.
-        // case ParamClass::sseup: break;
-
-        // If the class is X87, X87UP or COMPLEX_X87,
-        // it is passed in memory.
+            vec++; windex++; break;
         case ParamClass::x87:
-            windex += 2; // since x87up always follows behind x87
-            continue;
+            windex += 2; break;
         case ParamClass::memory:
-            stacksize_ += f->ParamType()[i]->Size();
-            stacksize_ = ALIGN_BY_8(stacksize_);
-            windex++;
-            continue;
+            windex++; break;
         }
     }
 
-#undef ALIGN_BY_8
-}
-
-
-const x64* SysVConv::PlaceOfArgv(int index) const
-{
-    if (argvs_.find(index) != argvs_.end())
-        return argvs_.at(index).get();
-    return nullptr;
+    return std::make_pair(gp, vec);
 }

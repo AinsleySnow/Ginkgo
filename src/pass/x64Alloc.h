@@ -67,14 +67,16 @@ public:
 
     RegSet UsedCallerSaved() const;
     RegSet UsedCalleeSaved() const;
+    RegSet UsedIntReg() const;
+    RegSet UsedVecReg() const;
     RegSet NotUsedIntReg() const;
     RegSet NotUsedVecReg() const;
 
 protected:
     inline size_t MakeAlign(size_t base, size_t align) const
     {
-        return (base + 16) % align == 0 ?
-            base : (base + 16) + align - (base + 16) % align;
+        return base % align == 0 ?
+            base : base + align - base % align;
     }
 
     void LoadParam();
