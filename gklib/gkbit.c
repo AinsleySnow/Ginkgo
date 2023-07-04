@@ -6,6 +6,7 @@
 // instructions may not be supported by your CPU. However, on my
 // own processor (Intel Core i5-1035G1), they work well.
 #include <immintrin.h>
+#include <stdbool.h>
 
 int stdc_leading_zerosuc(unsigned char v) { return _lzcnt_u32(v) - 24; }
 int stdc_leading_zerosus(unsigned short v) { return _lzcnt_u32(v) - 16; }
@@ -32,12 +33,12 @@ int stdc_trailing_onesul(unsigned long v) { return _tzcnt_u64(~v); }
 int stdc_trailing_onesull(unsigned long long v) { return _tzcnt_u64(~v); }
 
 
-#define RETURN_BSR_RESULT(value)    \
-    int dest = 0;                   \
+#define RETURN_BSR_RESULT           \
+    typeof(v) dest = 0;             \
     asm (                           \
-        "bsr %0, %1\n"              \
+        "bsr %1, %0"                \
         : "=r" (dest)               \
-        : "r" (value)               \
+        : "r" (v)                   \
     );                              \
     return dest
 
@@ -58,12 +59,12 @@ int stdc_first_leading_oneul(unsigned long v) { return bsr64(v); }
 int stdc_first_leading_oneull(unsigned long long v) { return bsr64(v); }
 
 
-#define RETURN_BSF_RESULT(value)    \
-    int dest = 0;                   \
+#define RETURN_BSF_RESULT           \
+    typeof(v) dest = 0;             \
     asm (                           \
-        "bsf %0, %1\n"              \
+        "bsf %1, %0"                \
         : "=r" (dest)               \
-        : "r" (value)               \
+        : "r" (v)                   \
     );                              \
     return dest
 

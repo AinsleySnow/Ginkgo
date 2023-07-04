@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-project(Ginkgo)
+project(Ginkgo VERSION 0.0.1)
 
 # People keep running CMake in the wrong folder, completely nuking their project or creating weird bugs.
 # This checks if you're running CMake from a folder that already has CMakeLists.txt.
@@ -39,6 +39,7 @@ ExternalProject_Add(
     INSTALL_COMMAND ""
 )
 
+add_subdirectory(gklib)
 add_subdirectory(src)
 add_subdirectory(third_party)
 
