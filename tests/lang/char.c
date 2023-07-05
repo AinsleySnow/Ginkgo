@@ -1,7 +1,7 @@
 #include "test.h"
 
 char a = '1';
-char b = L'你';
+int b = L'你';
 int c = u'好';
 int d = U'吗';
 
@@ -37,4 +37,6 @@ int main()
     assert(m == 8);     assert(n == 12);
     assert(o == 10);    assert(p == 13);
     assert(q == 9);     assert(r == 11);
+
+    SUCCESS;
 }
