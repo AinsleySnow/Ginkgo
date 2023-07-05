@@ -1,5 +1,6 @@
 #include "main/Driver.h"
 #include "pass/SimpleAlloc.h"
+#include "parser/yacc.hh"
 #include "visitast/CodeChk.h"
 #include "visitast/IRGen.h"
 #include "visitir/CodeGen.h"
@@ -21,51 +22,76 @@ static std::string StripExtension(const std::string& name)
     return name.substr(0, index);
 }
 
-Driver::Driver(OutputType ty, const char* e, const std::string& in, const std::string& out) :
-    outputype_(ty), environment_(e), inputname_(in), afterpp_(in)
+Driver::Driver(const char* e)
 {
-    if (!out.empty())
+    // find path of gkcpp and gklib.a
+    // this is the case for not installing ginkgo
+    // the ginkgo itself is in the same directory with gkcpp
+    auto absolute = (std::filesystem::current_path() / e).remove_filename();
+    // otherwise... Is Ginkgo already installed?
+    if (!std::filesystem::exists(absolute / "gkcpp"))
     {
-        outputname_ = std::move(out);
-        return;
+        cppath_ = "gkcpp";
+        libpath_ = "/usr/lib/Ginkgo/gklib.a";
     }
-
-    if (outputype_ == OutputType::assembly)
-        outputname_ = StripExtension(inputname_) + ".s";
-    else if (outputype_ == OutputType::intermediate)
-        outputname_ = StripExtension(inputname_) + ".ll";
     else
-        outputname_ = "a.out";
+    {
+        absolute.append("gkcpp");
+        cppath_ = absolute.string();
+        absolute.remove_filename();
+        absolute.append("../lib/gklib.a");
+        libpath_ = absolute.string();
+    }
 }
 
 
-void Driver::Preprocess()
+std::string Driver::GetRandom() const
 {
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> dis(0, 0x7FFFFFFF);
-    auto temp = std::filesystem::temp_directory_path() / (std::to_string(dis(gen)) + ".c");
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    static std::uniform_int_distribution<> dis(0, 0x7FFFFFFF);
+    return std::to_string(dis(gen));
+}
 
-    // this is the case for not installing ginkgo
-    // the ginkgo itself is in the same directory with gkcpp
-    auto absolute = (std::filesystem::current_path() / environment_).remove_filename();
-    // otherwise... Is Ginkgo already installed?
-    if (!std::filesystem::exists(absolute / "gkcpp"))
-        absolute = "gkcpp";
-    else
-        absolute.append("gkcpp");
+std::string Driver::Path2Temp(const std::string& name, char ext) const
+{
+    return fmt::format("{}.{}",
+        (std::filesystem::temp_directory_path() / name).string(), ext);
+}
 
+void Driver::Prologue()
+{
+    switch (outputype_)
+    {
+    case OutputType::binary:
+        if (outputname_.empty())
+            outputname_ = "a.out";
+        break;
+    case OutputType::intermediate:
+        if (outputname_.empty())
+            outputname_ = StripExtension(inputname_) + ".ll";
+        break;
+    case OutputType::assembly:
+        if (outputname_.empty())
+            outputname_ = StripExtension(inputname_) + ".s";
+        break;
+    }
+}
+
+std::string Driver::Preprocess(const std::string& input)
+{
+    auto afterpp = Path2Temp(GetRandom(), 'c');
     // -V: not showing version information
     // -H: output blank lines
     // -b: output unbalanced braces, brackets, etc.
     system(fmt::format("{} -V -H -b {} > {}",
-        absolute.string(), inputname_, temp.string()).c_str());
-    afterpp_ = std::move(temp);
+        cppath_, input, afterpp).c_str());
+    return afterpp;
 }
 
-void Driver::Parse()
+void Driver::Parse(const std::string& name)
 {
-    yyin = fopen(afterpp_.c_str(), "r");
+    yyin = fopen(name.c_str(), "r");
     yy::parser parser(transunit_, CheckType());
     parser.parse();
 }
@@ -91,40 +117,83 @@ void Driver::GenerateIR()
     module_ = std::move(irgen.GetModule());
 }
 
-
-void Driver::Compile()
+void Driver::GenerateAsm(const std::string& output)
 {
-    Preprocess();
-    Parse();
+    // Note here that the parameter stands for output
+    // file name, not input as in the other methods.
+    SimpleAlloc alloc{ module_.get() };
+    alloc.Execute();
+    CodeGen codegen{ output, alloc };
+    codegen.VisitModule(module_.get());
+}
+
+std::string Driver::Assemble(const std::string& input)
+{
+    auto output = Path2Temp(GetRandom(), 'o');
+    system(fmt::format("as {} -o {}", input, output).c_str());
+    return output;
+}
+
+void Driver::Link(const std::string& input)
+{
+    std::string basic = fmt::format(
+        "ld -o {} "
+        "-dynamic-linker /lib64/ld-linux-x86-64.so.2 "
+        "/usr/lib/x86_64-linux-gnu/crti.o "
+        "/usr/lib/x86_64-linux-gnu/crt1.o "
+        "-lc ",
+        outputname_);
+
+    if (link2gk_)
+        basic += libpath_ + ' ';
+
+    system(fmt::format(
+            "{}"
+            "{} "
+            "/usr/lib/x86_64-linux-gnu/crtn.o",
+            basic, input).c_str());
+}
+
+
+std::string Driver::Compile()
+{
+    Prologue();
+    auto afterpp = Preprocess(inputname_);
+    Parse(afterpp);
     GenerateIR();
+    return afterpp;
 }
 
 void Driver::EmitBinary()
 {
-    EmitAssembly();
-    system(fmt::format("as {}.s -o {}.o",
-        StripExtension(inputname_), StripExtension(outputname_)).c_str());
-    system(fmt::format("ld -o {} "
-            "-dynamic-linker /lib64/ld-linux-x86-64.so.2 "
-            "/usr/lib/x86_64-linux-gnu/crti.o "
-            "/usr/lib/x86_64-linux-gnu/crt1.o "
-            "-lc "
-            "{}.o "
-            "/usr/lib/x86_64-linux-gnu/crtn.o",
-            outputname_, StripExtension(outputname_)).c_str());
+    auto afterpp = Compile();
+    auto assembly = Path2Temp(GetRandom(), 's');
+    GenerateAsm(assembly);
+    auto obj = Assemble(assembly);
+    Link(obj);
 }
 
 void Driver::EmitAssembly()
 {
-    SimpleAlloc alloc{ module_.get() };
-    alloc.Execute();
-    CodeGen codegen{ outputname_, alloc };
-    codegen.VisitModule(module_.get());
+    Compile();
+    GenerateAsm(outputname_);
 }
 
 void Driver::EmitIntermediate()
 {
+    Compile();
     auto output = std::ofstream(outputname_);
     output << module_->ToString();
     output.close();
+}
+
+
+void Driver::Run()
+{
+    if (outputype_ == OutputType::binary)
+        EmitBinary();
+    else if (outputype_ == OutputType::assembly)
+        EmitAssembly();
+    else if (outputype_ == OutputType::intermediate)
+        EmitIntermediate();
 }

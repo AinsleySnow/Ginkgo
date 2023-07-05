@@ -5,8 +5,8 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include "ast/Statement.h"
 #include "IR/Value.h"
-#include "parser/yacc.hh"
 
 
 enum class OutputType
@@ -19,26 +19,41 @@ enum class OutputType
 class Driver
 {
 public:
-    Driver(OutputType ty, const char* e, const std::string& in, const std::string& out);
+    Driver(const char* e);
 
-    void Compile();
+    void SetOutputType(OutputType ty) { outputype_ = ty; }
+    void SetLink2Ginkgo(bool l) { link2gk_ = l; }
+    void SetInputName(const std::string& n) { inputname_ = n; }
+    void SetOutputName(const std::string& n) { outputname_ = n; }
+
+    void Run();
+
+private:
+    std::string GetRandom() const;
+    std::string Path2Temp(const std::string&, char) const;
+
+    void Prologue();
+    std::string Preprocess(const std::string&);
+    void Parse(const std::string&);
+    std::string Compile();
+    const auto& GetAST();
+    bool CheckAST();
+    void GenerateIR();
+    void GenerateAsm(const std::string&);
+    std::string Assemble(const std::string&);
+    void Link(const std::string&);
+
     void EmitBinary();
     void EmitAssembly();
     void EmitIntermediate();
 
-private:
-    void Preprocess();
-    void Parse();
-    const auto& GetAST();
-    bool CheckAST();
-    void GenerateIR();
-
     OutputType outputype_{};
-    const char* environment_{};
+    std::string cppath_{};
+    std::string libpath_{};
 
+    bool link2gk_{};
     std::string inputname_{};
     std::string outputname_{};
-    std::string afterpp_{};
 
     TransUnit transunit_{};
     std::unique_ptr<Module> module_{};
