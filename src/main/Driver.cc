@@ -139,19 +139,19 @@ void Driver::Link(const std::string& input)
     std::string basic = fmt::format(
         "ld -o {} "
         "-dynamic-linker /lib64/ld-linux-x86-64.so.2 "
-        "/usr/lib/x86_64-linux-gnu/crti.o "
         "/usr/lib/x86_64-linux-gnu/crt1.o "
-        "-lc ",
-        outputname_);
+        "/usr/lib/x86_64-linux-gnu/crti.o "
+        "-lc "
+        "{} ",
+        outputname_, input);
 
     if (link2gk_)
         basic += libpath_ + ' ';
 
     system(fmt::format(
-            "{}"
             "{} "
             "/usr/lib/x86_64-linux-gnu/crtn.o",
-            basic, input).c_str());
+            basic).c_str());
 }
 
 

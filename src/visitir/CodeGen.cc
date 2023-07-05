@@ -587,6 +587,7 @@ void CodeGen::VisitFunction(Function* func)
     for (auto bb : *func)
         VisitBasicBlock(bb);
 
+    RestoreCalleeSaved();
     asmfile_.Dump2File();
     asmfile_.EmitBlankLine();
 }
@@ -699,8 +700,6 @@ void CodeGen::VisitCallInstr(CallInstr* inst)
     // +------------------------+
     // |   Caller Saved Regs    |
     // +------------------------+
-    // |  Saved rdi, rsi, etc.  |
-    // +------------------------+
     // |        Padding         |
     // +------------------------+
     // |  Argvs Passed on Stack |
@@ -713,21 +712,17 @@ void CodeGen::VisitCallInstr(CallInstr* inst)
     SysVConv conv{ inst->Proto() };
     conv.MapArgv();
 
-    auto [gp, vec] = conv.CountRegs();
-    for (int i = gp - 1; i >= 0; --i)
+    auto [_, vec] = conv.CountRegs();
+    if (inst->Proto()->Variadic())
     {
-        auto tag = SysVConv::Index2IntTag(i);
-        if (alloc_.UsedIntReg().count(RegTag2X64Phys(tag)))
-            PushEmitHelper(tag, 8);
-    }
-    for (int i = vec - 1; i >= 0; --i)
-    {
-        auto tag = SysVConv::Index2VecTag(i);
-        if (alloc_.UsedVecReg().count(RegTag2X64Phys(tag)))
-            PushXmmReg(tag);
+        if (vec == 0)
+            asmfile_.EmitInstr("    xorq %rax, %rax\n");
+        else
+            asmfile_.EmitInstr("    movb " + std::to_string(vec) + ", %al\n");
     }
 
-    AdjustRsp(-conv.Padding());
+    auto extra = (stacksize_ + 8) % 16 ? 8 : 0;
+    AdjustRsp(-(conv.Padding() + extra));
     PassParam(conv, inst->ArgvList());
     if (inst->FuncAddr())
         asmfile_.EmitCall(alloc_.GetIROpMap(inst->FuncAddr()));
@@ -735,21 +730,7 @@ void CodeGen::VisitCallInstr(CallInstr* inst)
         asmfile_.EmitCall(inst->FuncName().substr(1) + "@PLT");
     // adjust rsp directly here since conv.StackSize()
     // has already included 'padding'
-    AdjustRsp(conv.StackSize());
-
-    for (int i = 0; i < vec; ++i)
-    {
-        auto tag = SysVConv::Index2VecTag(i);
-        if (alloc_.UsedVecReg().count(RegTag2X64Phys(tag)))
-            PopXmmReg(tag);
-    }
-    for (int i = 0; i < gp; ++i)
-    {
-        auto tag = SysVConv::Index2IntTag(i);
-        if (alloc_.UsedIntReg().count(RegTag2X64Phys(tag)))
-            PopEmitHelper(tag, 8);
-    }
-
+    AdjustRsp(conv.StackSize() + extra);
     RestoreCallerSaved();
 
     if (inst->Result() && inst->Result()->Type()->Is<IntType>())

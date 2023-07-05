@@ -30,6 +30,8 @@ public:
     void Write2Mem() { write2file_ = false; }
     void Dump2File();
 
+    void EmitInstr(const std::string&);
+
     void EmitBlankLine();
     void EmitLabel(const std::string&);
     void EmitPseudoInstr(const std::string&);
@@ -95,8 +97,6 @@ public:
     void EmitSet(const std::string& cond, const x64* dest);
 
 private:
-    void Output(const std::string&);
-
     mutable int labelindex_{};
 
     std::unordered_map<

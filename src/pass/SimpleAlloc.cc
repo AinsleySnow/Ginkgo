@@ -7,9 +7,9 @@ RegTag SimpleAlloc::StackCache::SpareReg() const
 {
     auto ret = RegTag::none;
     if (index_ >= 3) return ret;
-    if (index_ == 0) ret = RegTag::rax;
-    if (index_ == 1) ret = RegTag::r10;
-    if (index_ == 2) ret = RegTag::r11;
+    if (index_ == 0) ret = RegTag::rbx;
+    if (index_ == 1) ret = RegTag::r12;
+    if (index_ == 2) ret = RegTag::r13;
     index_ += 1;
     return ret;
 }
