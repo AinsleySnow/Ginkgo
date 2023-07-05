@@ -12,6 +12,7 @@
 #include <variant>
 #include <vector>
 
+class CompoundStmt;
 class DeclSpec;
 class ObjDef;
 class FuncDef;

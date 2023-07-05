@@ -8,6 +8,7 @@ class Declaration;
 class ASTVisitor;
 
 #include "ast/Expr.h"
+#include "ast/Declaration.h"
 #include <list>
 #include <memory>
 #include <string>

@@ -28,7 +28,7 @@ public:
         identype_(it), name_(n), type_(t) {}
     virtual ~Identifier() {}
 
-    virtual std::unique_ptr<Identifier>&& Clone() { return nullptr; }
+    virtual std::unique_ptr<Identifier> Clone() { return nullptr; }
 
     std::string GetName() const { return name_; }
     auto GetIdentType() const { return identype_; }
@@ -58,7 +58,7 @@ public:
     Func(const std::string& n, const CFuncType* t, const Register* addr) :
         Identifier(Identifier::IdentType::func, n, t), addr_(addr) {}
 
-    std::unique_ptr<Identifier>&& Clone() { return std::make_unique<Func>(*this); }
+    std::unique_ptr<Identifier> Clone() { return std::make_unique<Func>(*this); }
 
     Func* ToFunc() override { return this; }
     auto Addr() const { return addr_; }
@@ -74,7 +74,7 @@ public:
     Label(const std::string& n) :
         Identifier(Identifier::IdentType::label, n) {}
 
-    std::unique_ptr<Identifier>&& Clone() { return std::make_unique<Label>(*this); }
+    std::unique_ptr<Identifier> Clone() { return std::make_unique<Label>(*this); }
 
     Label* ToLabel() override { return this; }
 };
@@ -86,7 +86,7 @@ public:
     Object(const std::string& n, const CType* t, const Register* r) :
         Identifier(Identifier::IdentType::obj, n, t), reg_(r) {}
 
-    std::unique_ptr<Identifier>&& Clone() { return std::make_unique<Object>(*this); }
+    std::unique_ptr<Identifier> Clone() { return std::make_unique<Object>(*this); }
 
     Object* ToObject() override { return this; }
 
@@ -109,7 +109,7 @@ public:
     Typedef(const std::string& n, const Typedef* t) :
         Identifier(Identifier::IdentType::tydef, n, nullptr), type_(t) {}
 
-    std::unique_ptr<Identifier>&& Clone() { return std::make_unique<Typedef>(*this); }
+    std::unique_ptr<Identifier> Clone() { return std::make_unique<Typedef>(*this); }
 
     Typedef* ToTypedef() override { return this; }
     auto& Type() { return type_; }
@@ -126,7 +126,7 @@ public:
     CustomedType(const std::string& n, const CType* ty) :
         Identifier(Identifier::IdentType::custom, n, ty) {}
 
-    std::unique_ptr<Identifier>&& Clone() { return std::make_unique<CustomedType>(*this); }
+    std::unique_ptr<Identifier> Clone() { return std::make_unique<CustomedType>(*this); }
 
     CustomedType* ToCustomed() override { return this; }
 };
@@ -138,7 +138,7 @@ public:
     Member(const std::string& n, const CType* ty) :
         Identifier(Identifier::IdentType::member, n, ty) {}
 
-    std::unique_ptr<Identifier>&& Clone() { return std::make_unique<Member>(*this); }
+    std::unique_ptr<Identifier> Clone() { return std::make_unique<Member>(*this); }
 
     Member* ToMember() override { return this; }
     auto Value() const { return value_; }
