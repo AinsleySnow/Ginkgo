@@ -75,24 +75,19 @@ const x64* CodeGen::MapPossibleFloat(const IROperand* op)
     return tempmap_[op].get();
 }
 
-std::pair<const x64*, bool> CodeGen::MapPossiblePointer(const IROperand* op)
+const x64* CodeGen::MapPossiblePointer(const IROperand* op)
 {
     if (!op->Type()->Is<PtrType>())
-        return std::make_pair(alloc_.GetIROpMap(op), false);
+        return alloc_.GetIROpMap(op);
 
     auto mappedop = alloc_.GetIROpMap(op);
     auto mayload = RegTag::none;
-    bool poprax = false;
 
     if (mappedop->Is<x64Mem>() && mappedop->As<x64Mem>()->LoadTwice())
     {
         auto regs = alloc_.NotUsedIntReg();
         if (regs.empty())
-        {
             mayload = RegTag::rax;
-            PushEmitHelper(RegTag::rax, 8);
-            poprax = true;
-        }
         else
             mayload = X64Phys2RegTag(*regs.begin());
         asmfile_.EmitMov(mappedop, mayload);
@@ -105,9 +100,9 @@ std::pair<const x64*, bool> CodeGen::MapPossiblePointer(const IROperand* op)
         tempmap_[op] = std::make_unique<x64Mem>(8, 0, *reg, RegTag::none, 0);
     }
     else
-        return std::make_pair(mappedop, false);
+        return mappedop;
 
-    return std::make_pair(tempmap_.at(op).get(), poprax);
+    return tempmap_.at(op).get();
 }
 
 
@@ -215,10 +210,8 @@ void CodeGen::LeaqEmitHelper(const x64* addr, const x64* dest)
     auto notused = alloc_.NotUsedIntReg();
     if (notused.empty())
     {
-        PushEmitHelper(RegTag::rax, 8);
         asmfile_.EmitLeaq(mem, RegTag::rax);
         asmfile_.EmitMov(RegTag::rax, dest);
-        PopEmitHelper(RegTag::rax, 8);
     }
     else
     {
@@ -239,10 +232,8 @@ void CodeGen::MovEmitHelper(const x64* from, const x64* to)
     auto notused = alloc_.NotUsedIntReg();
     if (notused.empty())
     {
-        PushEmitHelper(RegTag::rax, 8);
         asmfile_.EmitMov(from, RegTag::rax);
         asmfile_.EmitMov(RegTag::rax, to);
-        PopEmitHelper(RegTag::rax, 8);
     }
     else
     {
@@ -266,10 +257,8 @@ auto notused = alloc_.NotUsedIntReg();                          \
 if (notused.empty())                                            \
 {                                                               \
     x64Reg rax{ RegTag::rax, to->Size() };                      \
-    PushEmitHelper(RegTag::rax, 8);                             \
     asmfile_.name(from, &rax);                                  \
     asmfile_.EmitMov(&rax, to);                                 \
-    PopEmitHelper(RegTag::rax, 8);                              \
 }                                                               \
 else                                                            \
 {                                                               \
@@ -296,11 +285,9 @@ auto notused = alloc_.NotUsedIntReg();                      \
 if (notused.empty())                                        \
 {                                                           \
     x64Reg rax{ RegTag::rax, from };                        \
-    PushEmitHelper(RegTag::rax, 8);                         \
     asmfile_.EmitMov(op, &rax);                             \
     asmfile_.name(from, to, &rax);                          \
     asmfile_.EmitMov(&rax, op);                             \
-    PopEmitHelper(RegTag::rax, 8);                          \
 }                                                           \
 else                                                        \
 {                                                           \
@@ -587,7 +574,6 @@ void CodeGen::VisitFunction(Function* func)
     for (auto bb : *func)
         VisitBasicBlock(bb);
 
-    RestoreCalleeSaved();
     asmfile_.Dump2File();
     asmfile_.EmitBlankLine();
 }
@@ -813,37 +799,30 @@ void CodeGen::VisitStoreInstr(StoreInstr* inst)
 {
     auto dest = inst->Dest();
     auto value = inst->Value();
-    auto [mappeddest, poprax] = MapPossiblePointer(dest);
+    auto mappeddest = MapPossiblePointer(dest);
 
     if (value->Type()->Is<FloatType>())
         VecMovEmitHelper(MapPossibleFloat(value), mappeddest);
     else
         MovEmitHelper(alloc_.GetIROpMap(value), mappeddest);
-
-    if (poprax)
-        asmfile_.EmitPop(RegTag::rax, 8);
 }
 
 void CodeGen::VisitLoadInstr(LoadInstr* inst)
 {
     auto result = inst->Result();
     auto pointer = inst->Pointer();
-    auto [mappedptr, poprax] = MapPossiblePointer(pointer);
+    auto mappedptr = MapPossiblePointer(pointer);
 
     if (result->Type()->Is<FloatType>())
         VecMovEmitHelper(mappedptr, MapPossibleFloat(result));
     else
         MovEmitHelper(mappedptr, alloc_.GetIROpMap(result));
-
-    if (poprax)
-        asmfile_.EmitPop(RegTag::rax, 8);
 }
-
 
 void CodeGen::VisitGetElePtrInstr(GetElePtrInstr* inst)
 {
     auto size = inst->Result()->Type()->Size();
-    auto [pointer, poprax] = MapPossiblePointer(inst->Pointer());
+    auto pointer = MapPossiblePointer(inst->Pointer());
     auto index = alloc_.GetIROpMap(inst->OpIndex());
     auto poprbx = false;
     auto indexreg = RegTag::none;
@@ -880,7 +859,6 @@ void CodeGen::VisitGetElePtrInstr(GetElePtrInstr* inst)
     }
 
     if (poprbx) asmfile_.EmitPop(RegTag::rbx, 8);
-    if (poprax) asmfile_.EmitPop(RegTag::rax, 8);
 }
 
 

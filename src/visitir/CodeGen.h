@@ -100,7 +100,7 @@ private:
     // sometimes an operator with pointer type maps to a stack
     // address where the address stores itself, not the value
     // it points to. MapPossiblePointer tackle with this problem.
-    std::pair<const x64*, bool> MapPossiblePointer(const IROperand*); 
+    const x64* MapPossiblePointer(const IROperand*); 
 
     void AlignRspBy(size_t, size_t);
     void AdjustRsp(long);
