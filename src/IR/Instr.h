@@ -56,6 +56,8 @@ struct Node
 {
     virtual void Accept(IRVisitor*) = 0;
     virtual std::string ToString() const = 0;
+    virtual const IRType* Type() const = 0;
+
     std::string repr_{};
 };
 
@@ -65,6 +67,7 @@ struct OpNode : public Node
 
     void Accept(IRVisitor*) override;
     std::string ToString() const override;
+    const IRType* Type() const override;
 
     const IROperand* op_{};
 };
@@ -76,6 +79,7 @@ struct BinaryNode : public Node
 
     void Accept(IRVisitor*) override;
     std::string ToString() const override;
+    const IRType* Type() const override;
 
     std::unique_ptr<Node> left_{};
     Instr::InstrId id_{};
@@ -89,6 +93,7 @@ struct UnaryNode : public Node
 
     void Accept(IRVisitor*) override;
     std::string ToString() const override;
+    const IRType* Type() const override;
 
     Instr::InstrId id_{};
     std::unique_ptr<Node> op_{};

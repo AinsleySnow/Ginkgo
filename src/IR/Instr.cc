@@ -6,19 +6,36 @@
 
 
 void OpNode::Accept(IRVisitor* v) { v->VisitNode(this); }
-void BinaryNode::Accept(IRVisitor* v) { v->VisitNode(this); }
-void UnaryNode::Accept(IRVisitor* v) { v->VisitNode(this); }
-
 std::string OpNode::ToString() const { return op_->ToString(); }
+const IRType* OpNode::Type() const { return op_->Type(); }
+
+void BinaryNode::Accept(IRVisitor* v) { v->VisitNode(this); }
 std::string BinaryNode::ToString() const
 {
     return left_->ToString() +
         (id_ == Instr::InstrId::add ? '+' : '-') +
         right_->ToString();
 }
+const IRType* BinaryNode::Type() const
+{
+    if (left_->Type()->Is<PtrType>())
+        return left_->Type();
+    else if (right_->Type()->Is<PtrType>())
+        return right_->Type();
+    return left_->Type()->Size() > right_->Type()->Size() ?
+        left_->Type() : right_->Type();
+}
+
+void UnaryNode::Accept(IRVisitor* v) { v->VisitNode(this); }
 std::string UnaryNode::ToString() const
 {
+    // Truncate an address is not permitted in C.
+    // So only getaddr operation is allowable here.
     return "(getaddr " + op_->ToString() + ')';
+}
+const IRType* UnaryNode::Type() const
+{
+    return op_->Type();
 }
 
 

@@ -132,7 +132,7 @@ public:
     auto& Addr() { return addr_; }
     const auto Addr() const { return addr_; }
 
-    void Dump2Tree() { tree_ = std::move(stack_.top()); stack_.pop(); }
+    void Dump2Tree();
     Node* GetTree() { return tree_.get(); }
     void MergeNode(Instr::InstrId);
     void AddOpNode(const IROperand*, int);

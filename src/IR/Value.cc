@@ -150,6 +150,46 @@ void GlobalVar::Accept(IRVisitor* v)
 
 std::stack<std::unique_ptr<Node>> GlobalVar::stack_;
 
+void GlobalVar::Dump2Tree()
+{
+    tree_ = std::move(stack_.top());
+    stack_.pop();
+
+    if (tree_->Type()->Size() == type_->Size())
+        return;
+
+    // If the type sizes mismatch, the expression tree must
+    // be exactly an OpNode, since the address epxression,
+    // which may lead to UnaryNode and BinaryNode, can't be
+    // assigned to float point variables and can't be truncated,
+    // and other numbers in the original expression have been folded.
+    auto op = dynamic_cast<OpNode*>(tree_.get());
+    IROperand* irop = nullptr;
+    if (type_->Is<IntType>() && op->op_->Is<IntConst>())
+    {
+        irop = IntConst::CreateIntConst(
+            this, op->op_->As<IntConst>()->Val(), type_->As<IntType>());
+    }
+    else if (type_->Is<IntType>() && op->op_->Is<FloatConst>())
+    {
+        irop = IntConst::CreateIntConst(
+            this,
+            static_cast<unsigned long>(op->op_->As<FloatConst>()->Val()),
+            type_->As<IntType>());
+    }
+    else if (type_->Is<FloatType>() && op->op_->Is<FloatConst>())
+    {
+        irop = FloatConst::CreateFloatConst(
+            this, op->op_->As<FloatConst>()->Val(), type_->As<FloatType>());
+    }
+    else // if (type_->Is<FloatType>() && op->op_->Is<IntConst>())
+    {
+        irop = FloatConst::CreateFloatConst(this,
+            op->op_->As<IntConst>()->Val(), type_->As<FloatType>());
+    }
+    op->op_ = irop;
+}
+
 void GlobalVar::MergeNode(Instr::InstrId op)
 {
     if (op == Instr::InstrId::geteleptr)
