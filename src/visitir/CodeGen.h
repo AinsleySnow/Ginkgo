@@ -88,7 +88,36 @@ public:
     void VisitPhiInstr(PhiInstr*) override;
 
 private:
-    std::string GetLCLabel() const;
+    struct FpRepr
+    {
+        struct Equal
+        {
+            bool operator()(const FpRepr& r1, const FpRepr& r2) const
+            {
+                return r1.first_ == r2.first_ &&
+                    r1.second_ == r2.second_ && r1.size_ == r2.size_;
+            }
+        };
+        struct Hash
+        {
+            size_t operator()(const FpRepr& repr) const
+            {
+            #define HASH 0x9e3779b9 + (hash << 6) + (hash >> 2)
+                size_t hash = repr.first_;
+                hash ^= repr.second_ + HASH;
+                hash ^= repr.size_ + HASH;
+                return hash;
+            #undef HASH
+            }
+        };
+
+        unsigned long first_;
+        unsigned long second_;
+        size_t size_;
+    };
+
+    std::string GetFpLabel(unsigned long, size_t);
+    std::string GetFpLabel(std::pair<unsigned long, unsigned long>, size_t);
     std::string GetTempLabel() const;
 
     // since x64 requires that float point constants
@@ -112,6 +141,9 @@ private:
     void SaveCallerSaved();
     void RestoreCallerSaved();
 
+    RegTag GetSpareIntReg() const;
+    RegTag GetSpareVecReg() const;
+
     void BinaryGenHelper(const std::string&, const BinaryInstr*);
     void VarithmGenHelper(const std::string&, const BinaryInstr*);
 
@@ -126,7 +158,9 @@ private:
     void VecMovEmitHelper(RegTag, const x64*);
 
     void VcvtEmitHelper(const x64*, const x64*);
+    void VcvtsiEmitHelper(const x64*, const x64*);
     void VcvttEmitHelper(const x64*, const x64*);
+    void UcomEmitHelper(const x64*, const x64*);
 
     void PushEmitHelper(const x64*);
     void PushEmitHelper(RegTag, size_t);
@@ -135,12 +169,17 @@ private:
     void PushXmmReg(RegTag);
     void PopXmmReg(RegTag);
 
+    void CMovEmitHelper(Condition, bool, const x64*, const x64*);
+    void CmpEmitHelper(const x64*, const x64*);
+    void SetEmitHelper(Condition, bool, const x64*);
+    void TestEmitHelper(const x64*, const x64*);
+
     size_t stacksize_{};
     mutable int labelindex_{};
 
     std::unordered_map<
         const IROperand*, std::unique_ptr<const x64>> tempmap_{};
-    std::unordered_map<double, std::string> fpconst_{};
+    std::unordered_map<FpRepr, std::string, FpRepr::Hash, FpRepr::Equal> fpconst_{};
 
     x64Alloc& alloc_;
     EmitAsm asmfile_{ "" };
