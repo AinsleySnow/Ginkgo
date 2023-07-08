@@ -30,9 +30,10 @@ double x = 1.0l;
 double y = 1.0L;
 
 float z = 0x1.0p1;
-float aa = 0xABCDEF.ABCDEFP+6;
-float ab = 1.0e-1;
+double aa = 0xABCDEF.ABCDEFP+24;
+float ab = 10e-1;
 float ac = 1.0e+1;
+
 
 int main()
 {
@@ -66,9 +67,9 @@ int main()
     assert(y == 1.0L);
 
     assert(z == 0x1.0p1);
-    assert(aa == 0xABCDEF.ABCDEFP+6);
-    assert(ab == 1.0e-1);
+    assert(aa == 0xABCDEF.ABCDEFP+24);
+    assert(ab == 10e-1);
     assert(ac == 1.0e+1);
 
-    return 0;
+    SUCCESS;
 }
