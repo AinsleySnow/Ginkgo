@@ -51,14 +51,14 @@ public:
 
     void EmitVcvtt(const x64* src, const x64* dest);
     void EmitVcvtt(const x64* op1, RegTag op2);
-    void EmitVcvtt(RegTag op1, const x64* op2);
 
     void EmitVcvt(const x64* op1, const x64* dest);
     void EmitVcvt(const x64* op1, RegTag op2);
-    void EmitVcvt(RegTag op1, const x64* op2);
+    void EmitVcvtsi(const x64* op1, const x64* dest);
+    void EmitVcvtsi(const x64* op1, RegTag op2);
 
     void EmitUcom(const x64* op1, const x64* op2);
-    void EmitUcom(RegTag op1, const x64* op2);
+    void EmitUcom(const x64* op1, RegTag op2);
 
     void EmitMov(const x64* src, const x64* dest);
     void EmitMov(RegTag, const x64* dest);
@@ -91,10 +91,13 @@ public:
     void EmitCMov(const std::string& cond, const x64* op1, const x64* op2);
 
     void EmitCmp(const x64* op1, const x64* op2);
+    void EmitCmp(RegTag op1, const x64* op2);
     void EmitCmp(const x64* op1, unsigned long);
     void EmitTest(const x64* op1, const x64* op2);
+    void EmitTest(RegTag op1, const x64* op2);
     void EmitTest(const x64* op1, unsigned long);
     void EmitSet(const std::string& cond, const x64* dest);
+    void EmitSet(const std::string& cond, RegTag dest);
 
 private:
     mutable int labelindex_{};

@@ -16,8 +16,10 @@ static char GetIntTag(const x64* op)
 
 static std::string GetFltTag(const x64* op)
 {
-    if (op->Size() == 4) return "ss";
-    if (op->Size() == 8) return "sd";
+    if (op->Size() == 4)
+        return "ss";
+    if (op->Size() == 8 || op->Size() == 16)
+        return "sd";
     return "";
 }
 
@@ -143,7 +145,7 @@ void EmitAsm::EmitVarithm(const std::string& instr, RegTag op1, RegTag op2, RegT
 void EmitAsm::EmitVcvtt(const x64* src, const x64* dest)
 {
     auto from = GetFltTag(src);
-    auto to = dest->Size() == 8 ? "q " : " ";
+    auto to = GetIntTag(dest);
 
     EmitInstr(fmt::format(INDENT "vcvtt{}2si{}{}, {}\n",
         from, to, src->ToString(), dest->ToString()));
@@ -155,21 +157,15 @@ void EmitAsm::EmitVcvtt(const x64* op1, RegTag op2)
     EmitVcvtt(op1, &reg);
 }
 
-void EmitAsm::EmitVcvtt(RegTag op1, const x64* op2)
-{
-    x64Reg reg{ op1 };
-    EmitVcvtt(&reg, op2);
-}
-
 
 void EmitAsm::EmitVcvt(const x64* op1, const x64* dest)
 {
-    auto t2 = GetFltTag(dest);
-    auto suffix = dest->Size() == 8 ? "q " : " ";
+    auto from = GetFltTag(op1);
+    auto to = GetFltTag(dest);
     auto sdest = dest->ToString();
 
-    EmitInstr(fmt::format(INDENT "vcvtsi2{}{}{}, {}, {}\n",
-        t2, suffix, op1->ToString(), sdest, sdest));
+    EmitInstr(fmt::format(INDENT "vcvt{}2{} {}, {}, {}\n",
+        from, to, op1->ToString(), sdest, sdest));
 }
 
 void EmitAsm::EmitVcvt(const x64* op1, RegTag op2)
@@ -178,10 +174,20 @@ void EmitAsm::EmitVcvt(const x64* op1, RegTag op2)
     EmitVcvt(op1, &reg);
 }
 
-void EmitAsm::EmitVcvt(RegTag op1, const x64* op2)
+void EmitAsm::EmitVcvtsi(const x64* op1, const x64* dest)
 {
-    x64Reg reg{ op1 };
-    EmitVcvt(&reg, op2);
+    auto t2 = GetFltTag(dest);
+    auto suffix = GetIntTag(op1);
+    auto sdest = dest->ToString();
+
+    EmitInstr(fmt::format(INDENT "vcvtsi2{}{}{}, {}, {}\n",
+        t2, suffix, op1->ToString(), sdest, sdest));
+}
+
+void EmitAsm::EmitVcvtsi(const x64* op1, RegTag op2)
+{
+    x64Reg reg{ op2 };
+    EmitVcvtsi(op1, &reg);
 }
 
 
@@ -191,9 +197,9 @@ void EmitAsm::EmitUcom(const x64* op1, const x64* op2)
         GetFltTag(op1), op1->ToString(), op2->ToString()));
 }
 
-void EmitAsm::EmitUcom(RegTag op1, const x64* op2)
+void EmitAsm::EmitUcom(const x64* op1, RegTag op2)
 {
-    x64Reg reg{ op1 };
+    x64Reg reg{ op2 };
     EmitUcom(op1, &reg);
 }
 
@@ -390,6 +396,12 @@ void EmitAsm::EmitCmp(const x64* op1, const x64* op2)
         GetIntTag(op1), op1->ToString(), op2->ToString()));
 }
 
+void EmitAsm::EmitCmp(RegTag op1, const x64* op2)
+{
+    x64Reg reg{ op1, op2->Size() };
+    EmitCmp(&reg, op2);
+}
+
 void EmitAsm::EmitCmp(const x64* op1, unsigned long c)
 {
     EmitInstr(fmt::format(INDENT "cmp{} {}, ${}\n",
@@ -402,6 +414,12 @@ void EmitAsm::EmitTest(const x64* op1, const x64* op2)
         GetIntTag(op1), op1->ToString(), op2->ToString()));
 }
 
+void EmitAsm::EmitTest(RegTag op1, const x64* op2)
+{
+    x64Reg reg{ op1, op2->Size() };
+    EmitTest(&reg, op2);
+}
+
 void EmitAsm::EmitTest(const x64* op1, unsigned long c)
 {
     EmitInstr(fmt::format(INDENT "test{} {}, ${}\n",
@@ -412,4 +430,11 @@ void EmitAsm::EmitSet(const std::string& cond, const x64* dest)
 {
     EmitInstr(fmt::format(INDENT "set{} {}\n",
         cond, dest->ToString()));
+}
+
+void EmitAsm::EmitSet(const std::string& cond, RegTag dest)
+{
+    x64Reg reg{ dest, 1 };
+    EmitInstr(fmt::format(INDENT "set{} {}\n",
+        cond, reg.ToString()));
 }
