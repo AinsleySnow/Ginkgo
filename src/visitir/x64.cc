@@ -15,6 +15,13 @@ bool x64::operator==(const x64& x) const
     return false;
 }
 
+bool x64::operator==(RegTag t) const
+{
+    if (this->id_ != x64Id::reg)
+        return false;
+    return this->As<x64Reg>()->Tag() == t;
+}
+
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wswitch-enum"
@@ -127,22 +134,23 @@ x64Imm::x64Imm(const Constant* c) :
     x64(x64Id::imm, c->Type()->Size()), val_(c) {}
 
 
-unsigned long x64Imm::GetRepr() const
+std::pair<unsigned long, unsigned long> x64Imm::GetRepr() const
 {
     if (val_->Is<IntConst>())
-        return val_->As<IntConst>()->Val();
+        return std::make_pair(val_->As<IntConst>()->Val(), 0);
 
     double val = val_->As<FloatConst>()->Val();
-    unsigned long repr = 0;
-    std::memcpy(reinterpret_cast<char*>(&repr),
-        reinterpret_cast<char*>(&val), sizeof(unsigned long));
-
-    return repr;
+    if (val_->Type()->Size() == 4)
+        return FloatRepr(static_cast<float>(val));
+    else
+        return FloatRepr(val);
 }
 
 std::string x64Imm::ToString() const
 {
-    return '$' + std::to_string(GetRepr());
+    // The immediate here can't be larger than 8 bytes
+    // since it must can be fit into a GP register.
+    return '$' + std::to_string(GetRepr().first);
 }
 
 

@@ -2,9 +2,20 @@
 #define _X64_H_
 
 #include "utils/DynCast.h"
+#include <cstring>
 #include <string>
 
 class Constant;
+
+
+template <typename T>
+std::pair<unsigned long, unsigned long> FloatRepr(T fp)
+{
+    unsigned long repr[2] = { 0, 0 };
+    std::memcpy(reinterpret_cast<char*>(&repr),
+        reinterpret_cast<char*>(&fp), sizeof(T));
+    return std::make_pair(repr[0], repr[1]);
+}
 
 
 enum class RegTag
@@ -37,6 +48,8 @@ public:
 
     bool operator==(const x64& x) const;
     bool operator!=(const x64& x) const { return !(*this == x); }
+    bool operator==(RegTag t) const;
+    bool operator!=(RegTag t) const { return !(*this == t); }
 
     virtual std::string ToString() const = 0;
 
@@ -58,10 +71,8 @@ public:
     x64Reg(RegTag r) : x64(x64Id::reg, 8), reg_(r) {}
     x64Reg(RegTag r, size_t s) : x64(x64Id::reg, s), reg_(r) {}
 
-    bool operator==(const x64Reg& reg) const { return reg_ == reg.reg_; }
-    bool operator!=(const x64Reg& reg) const { return reg_ != reg.reg_; }
-    bool operator==(RegTag tag) const { return reg_ == tag; }
-    bool operator!=(RegTag tag) const { return reg_ != tag; }
+    bool operator==(const x64Reg& reg) const { return reg_ == reg.reg_ && Size() == reg.Size(); }
+    bool operator!=(const x64Reg& reg) const { return !(*this == reg); }
 
     std::string ToString() const override;
     RegTag Tag() const { return reg_; }
@@ -117,7 +128,7 @@ public:
 
     x64Imm(const Constant* c);
 
-    unsigned long GetRepr() const;
+    std::pair<unsigned long, unsigned long> GetRepr() const;
     std::string ToString() const override;
 
     bool operator==(const x64Imm& imm) const;
