@@ -726,7 +726,7 @@ void IRGen::VisitConstant(ConstExpr* constant)
 }
 
 
-void IRGen::VisitDataofExpr(DataofExpr* expr)
+void IRGen::VisitSzAlgnExpr(SzAlgnExpr* expr)
 {
     if (expr->ContentAsDecl())
         expr->ContentAsDecl()->Accept(&tbud_);

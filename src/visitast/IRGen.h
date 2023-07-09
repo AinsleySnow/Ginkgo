@@ -42,7 +42,7 @@ public:
     void VisitCastExpr(CastExpr*) override;
     void VisitCondExpr(CondExpr*) override;
     void VisitConstant(ConstExpr*) override;
-    void VisitDataofExpr(DataofExpr*) override;
+    void VisitSzAlgnExpr(SzAlgnExpr*) override;
     void VisitEnumConst(EnumConst*) override;
     void VisitEnumList(EnumList*) override;
     void VisitExprList(ExprList*) override;

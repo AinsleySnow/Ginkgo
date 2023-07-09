@@ -28,7 +28,7 @@ public:
     void VisitCallExpr(CallExpr*) override;
     void VisitCastExpr(CastExpr*) override;
     void VisitCondExpr(CondExpr*) override;
-    void VisitDataofExpr(DataofExpr*) override;
+    void VisitSzAlgnExpr(SzAlgnExpr*) override;
     void VisitEnumConst(EnumConst*) override;
     void VisitEnumList(EnumList*) override;
     void VisitIdentExpr(IdentExpr*) override;

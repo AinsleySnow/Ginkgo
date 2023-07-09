@@ -234,19 +234,19 @@ bool ConstExpr::IsZero() const
 }
 
 
-void DataofExpr::Accept(ASTVisitor* v)
+void SzAlgnExpr::Accept(ASTVisitor* v)
 {
-    v->VisitDataofExpr(this);
+    v->VisitSzAlgnExpr(this);
 }
 
-Expr* DataofExpr::ContentAsExpr()
+Expr* SzAlgnExpr::ContentAsExpr()
 {
     if (std::holds_alternative<std::unique_ptr<Expr>>(content_))
         return std::get<0>(content_).get();
     return nullptr;
 }
 
-Declaration* DataofExpr::ContentAsDecl()
+Declaration* SzAlgnExpr::ContentAsDecl()
 {
     if (std::holds_alternative<std::unique_ptr<Declaration>>(content_))
         return std::get<1>(content_).get();

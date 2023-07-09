@@ -301,11 +301,11 @@ unary_expression
 	| unary_operator cast_expression
     { $$ = std::make_unique<UnaryExpr>($1, std::move($2)); }
 	| SIZEOF unary_expression
-    { $$ = std::make_unique<DataofExpr>($1, std::move($2)); }
+    { $$ = std::make_unique<SzAlgnExpr>($1, std::move($2)); }
 	| SIZEOF '(' type_name ')'
-    { $$ = std::make_unique<DataofExpr>($1, std::move($3)); }
+    { $$ = std::make_unique<SzAlgnExpr>($1, std::move($3)); }
 	| ALIGNOF '(' type_name ')'
-    { $$ = std::make_unique<DataofExpr>($1, std::move($3)); }
+    { $$ = std::make_unique<SzAlgnExpr>($1, std::move($3)); }
 	;
 
 unary_operator

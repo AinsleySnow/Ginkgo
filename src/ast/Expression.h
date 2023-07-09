@@ -187,12 +187,12 @@ private:
 
 
 // sizeof and alignof
-class DataofExpr : public Expr
+class SzAlgnExpr : public Expr
 {
 public:
-    DataofExpr(Tag t, std::unique_ptr<Expr> e) :
+    SzAlgnExpr(Tag t, std::unique_ptr<Expr> e) :
         op_(t), content_(std::move(e)) {}
-    DataofExpr(Tag t, std::unique_ptr<Declaration> d) :
+    SzAlgnExpr(Tag t, std::unique_ptr<Declaration> d) :
         op_(t), content_(std::move(d)) {}
 
     void Accept(ASTVisitor* v) override;
