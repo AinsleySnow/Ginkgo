@@ -29,7 +29,7 @@ enum class Tag
     slash, percent, lshift, rshift, greathan,
     lessthan, greatequal, lessequal, equal, notequal,
     logical_and, logical_or,
-    _sizeof, _alignof,
+    _sizeof, _alignof, _alignas,
     left, right,
 
     assign, mul_assign, div_assign, mod_assign, add_assign,

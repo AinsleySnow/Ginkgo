@@ -75,7 +75,7 @@ static void comment(void);
 "return"				{ yylval->emplace<Tag>() = Tag::_return; return YYTOKEN::RETURN; }
 "short"					{ yylval->emplace<Tag>() = Tag::_short; return YYTOKEN::SHORT; }
 "signed"				{ yylval->emplace<Tag>() = Tag::_signed; return YYTOKEN::SIGNED; }
-"sizeof"				{ return YYTOKEN::SIZEOF; }
+"sizeof"				{ yylval->emplace<Tag>() = Tag::_sizeof; return YYTOKEN::SIZEOF; }
 "static"				{ return YYTOKEN::STATIC; }
 "switch"				{ return YYTOKEN::SWITCH; }
 "typedef"				{ return YYTOKEN::TYPEDEF; }
@@ -83,10 +83,10 @@ static void comment(void);
 "void"					{ yylval->emplace<Tag>() = Tag::_void; return YYTOKEN::VOID; }
 "volatile"				{ yylval->emplace<Tag>() = Tag::_volatile; return YYTOKEN::VOLATILE; }
 "while"					{ yylval->emplace<Tag>() = Tag::_while; return YYTOKEN::WHILE; }
-"_Alignas"              { return YYTOKEN::ALIGNAS; }
-"alignas"               { return YYTOKEN::ALIGNAS; }
-"_Alignof"              { return YYTOKEN::ALIGNOF; }
-"alignof"               { return YYTOKEN::ALIGNOF; }
+"_Alignas"              { yylval->emplace<Tag>() = Tag::_alignas; return YYTOKEN::ALIGNAS; }
+"alignas"               { yylval->emplace<Tag>() = Tag::_alignas; return YYTOKEN::ALIGNAS; }
+"_Alignof"              { yylval->emplace<Tag>() = Tag::_alignof; return YYTOKEN::ALIGNOF; }
+"alignof"               { yylval->emplace<Tag>() = Tag::_alignof; return YYTOKEN::ALIGNOF; }
 "_Atomic"               { yylval->emplace<Tag>() = Tag::_atomic; return YYTOKEN::ATOMIC; }
 "_Bool"                 { yylval->emplace<Tag>() = Tag::_bool; return YYTOKEN::BOOL; }
 "bool"                  { yylval->emplace<Tag>() = Tag::_bool; return YYTOKEN::BOOL; }
