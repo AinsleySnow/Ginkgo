@@ -4,6 +4,7 @@
 %k  284
 %a  1213
 %o  1117
+%s  inpreprocess
 
 B   [01]
 O   [0-7]
@@ -34,7 +35,6 @@ U8  [\xc2-\xdf][\x80-\xbf]|\xe0[\xa0-\xbf][\x80-\xbf]|[\xe1-\xec][\x80-\xbf][\x8
 
 
 %{
-#include <cstdio>
 #include <cstdlib>
 #include <string>
 #include <memory>
@@ -143,7 +143,12 @@ static void comment(void);
 {HP}{HS}?"."{HS}{P}{FS}?	  { yylval->emplace<std::string>() = yytext; return YYTOKEN::F_CONSTANT; }
 {HP}{HS}"."{P}{FS}?			  { yylval->emplace<std::string>() = yytext; return YYTOKEN::F_CONSTANT; }
 
-({SP}?\"([^"\\\n]|{ES}|{U8})*\"[ \t\v\f\n]*)+	{
+<inpreprocess>(\"([^"\\\n]|{ES}|{U8})*\")       {
+    yylval->emplace<std::string>() = yytext;
+    return YYTOKEN::STRING_LITERAL;
+}
+
+<INITIAL>({SP}?\"([^"\\\n]|{ES}|{U8})*\"[ \t\v\f\n]*)+	{
     yylval->emplace<std::string>() = yytext;
     return YYTOKEN::STRING_LITERAL;
 }
@@ -191,7 +196,7 @@ static void comment(void);
 "?"					    { return '?'; }
 
 "#"                     {
-    checktype.InPreprocess() = true;
+    BEGIN(inpreprocess);
     return '#';
 }
 
@@ -232,13 +237,11 @@ static void comment(void);
 }
 
 
-"\n"                    {
-    if (checktype.InPreprocess())
-    {
-        checktype.InPreprocess() = false;
-        return '\n';
-    }
+<inpreprocess>"\n"      {
+    BEGIN(INITIAL);
+    return '\n';
 }
+<INITIAL>"\n"           { /* not preprocess instruction, discard it */ }
 {WS}+					{ /* whitespace separates tokens */ }
 .					    { /* discard bad characters */ }
 

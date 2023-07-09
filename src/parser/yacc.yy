@@ -33,8 +33,6 @@ public:
 
     bool& InEnum() { return inenum_; }
     bool InEnum() const { return inenum_; }
-    bool& InPreprocess() { return inpp_; }
-    bool InPreprocess() const { return inpp_; }
 
     void LeftParen()  { paren_++; }
     void RightParen() { paren_--; }
@@ -49,7 +47,6 @@ public:
 
 private:
     bool within_{};
-    bool inpp_{};
     bool inenum_{};
     bool instruct_{};
     int paren_{};
@@ -64,7 +61,7 @@ private:
 %language "c++"
 
 %define api.value.type variant
-// %define parser.error custom
+%define parse.error detailed
 %define parse.trace
 
 %parse-param { TransUnit& transunit }
