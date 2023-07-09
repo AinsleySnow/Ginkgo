@@ -127,6 +127,8 @@ public:
         const std::string& result, const FuncType* proto, const std::string& func);
     const Register* InsertCallInstr(const std::string& result, const Register* func);
 
+    const IROperand* InsertArithmCastInstr(const IRType* ty, const IROperand* op);
+
     const Register* InsertAddInstr(
         const std::string& result, const IROperand* lhs, const IROperand* rhs);
     const Register* InsertFaddInstr(
@@ -220,6 +222,8 @@ public:
         bool cond, const IROperand* lhs, const IROperand* rhs);
     const Register* InsertPhiInstr(const std::string& result, const IRType* ty);
 
+
+private:
     void MatchArithmType(const IRType*, const IROperand*&);
     void MatchArithmType(const IROperand*&, const IROperand*&);
 };

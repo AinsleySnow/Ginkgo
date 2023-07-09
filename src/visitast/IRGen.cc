@@ -75,7 +75,7 @@ Function* IRGen::AllocaFunc(const CFuncType* raw, const std::string& name)
 }
 
 
-bool IRGen::HandleBuiltins(CallExpr* call)
+const FuncType* IRGen::HandleBuiltins(CallExpr* call)
 {
     const static PtrType ptr{ IntType::GetInt8(true) };
     const static FuncType assert{
@@ -87,16 +87,16 @@ bool IRGen::HandleBuiltins(CallExpr* call)
     };
 
     if (!call->Postfix()->IsIdentifier())
-        return false;
+        return nullptr;
 
     auto name = call->Postfix()->ToIdentifier()->Name();
     if (name == "__Ginkgo_assert")
     {
         ibud_.InsertCallInstr("", &assert, '@' + name);
-        return true;
+        return &assert;
     }
 
-    return false;
+    return nullptr;
 }
 
 
@@ -546,7 +546,9 @@ void IRGen::VisitCallExpr(CallExpr* call)
             LoadVal(argv.get());
     }
 
-    if (HandleBuiltins(call))
+    const FuncType* proto = nullptr;
+
+    if (proto = HandleBuiltins(call))
         goto end;
 
     call->postfix_->Accept(&tbud_);
@@ -558,17 +560,18 @@ void IRGen::VisitCallExpr(CallExpr* call)
 
         if (!func) goto pointercall;
 
-        auto functy = transunit_->GetFunction('@' + name)->Type();
-        bool isvoid = functy->ReturnType()->Is<VoidType>();
+        proto = transunit_->GetFunction('@' + name)->Type();
+        bool isvoid = proto->ReturnType()->Is<VoidType>();
         call->Val() = ibud_.InsertCallInstr(
-            isvoid ? "" : env_.GetRegName(), functy, '@' + name);
+            isvoid ? "" : env_.GetRegName(), proto, '@' + name);
     }
     else // if a function is called through a pointer
     {
 pointercall:
         call->postfix_->Accept(this);
         auto pfunc = LoadVal(call->postfix_.get())->As<Register>();
-        bool isvoid = pfunc->Type()->As<PtrType>()->Point2()->As<FuncType>()->ReturnType()->Is<VoidType>();
+        proto = pfunc->Type()->As<PtrType>()->Point2()->As<FuncType>();
+        bool isvoid = proto->ReturnType()->Is<VoidType>();
         call->Val() = ibud_.InsertCallInstr(
             isvoid ? "" : env_.GetRegName(), pfunc);
     }
@@ -577,8 +580,19 @@ end:
     if (call->argvlist_)
     {
         auto callinstr = ibud_.LastInstr()->As<CallInstr>();
-        for (auto& argv : *call->argvlist_)
-            callinstr->AddArgv(argv->Val());
+        auto argv = call->argvlist_->begin();
+        for (auto ty : proto->ParamType())
+        {
+            auto op = (*argv)->Val();
+            if (op->Type()->IsArithm())
+                op = ibud_.InsertArithmCastInstr(ty, op);
+            callinstr->AddArgv(op);
+            ++argv;
+        }
+
+        if (proto->Variadic())
+            for (; argv != call->ArgvList()->end(); ++argv)
+                callinstr->AddArgv((*argv)->Val());
     }
 
     tbud_.VisitCallExpr(call);
@@ -628,7 +642,7 @@ void IRGen::VisitCastExpr(CastExpr* cast)
     {
         // cast->typename_ is arithmetic type
         // so does the type of cast->expr_
-        ibud_.MatchArithmType(
+        expreg = ibud_.InsertArithmCastInstr(
             ty->ToIRType(ibud_.Container()), expreg);
     }
 

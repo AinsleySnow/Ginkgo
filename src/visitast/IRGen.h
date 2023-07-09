@@ -16,6 +16,7 @@ class EnumSpec;
 class HeterSpec;
 class IROperand;
 class IRType;
+class FuncType;
 class Statement;
 
 
@@ -123,7 +124,7 @@ private:
     const Register* AllocaObject(const CType*, const std::string&);
     Function* AllocaFunc(const CFuncType*, const std::string&);
 
-    bool HandleBuiltins(CallExpr*);
+    const FuncType* HandleBuiltins(CallExpr*);
 
     const IROperand* LoadVal(Expr*);
     const Register* LoadAddr(Expr*);

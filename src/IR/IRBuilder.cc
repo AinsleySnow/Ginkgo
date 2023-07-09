@@ -102,6 +102,10 @@ void InstrBuilder::MatchArithmType(
             val = InsertFtruncInstr(trgname, target->As<FloatType>(), reg);
         else val = InsertTruncInstr(trgname, target->As<IntType>(), reg);
     }
+    // Here, target and regty belong to the same category.
+    else if (target->Is<IntType>() &&
+        (target->As<IntType>()->IsSigned() ^ regty->As<IntType>()->IsSigned()))
+        val = InsertBitcastInstr(trgname, target, val->As<Register>());
 }
 
 void InstrBuilder::MatchArithmType(
@@ -111,6 +115,19 @@ void InstrBuilder::MatchArithmType(
         MatchArithmType(reg1->Type(), reg2);
     else if (reg1->Type()->operator<(*(reg2->Type())))
         MatchArithmType(reg2->Type(), reg1);
+    // Here, reg1 and reg2 has the same size. One being
+    // float point means the other one must have the same
+    // float point type.
+    if (reg1->Type()->Is<FloatType>())
+        return;
+    auto ty1 = reg1->Type()->As<IntType>(),
+        ty2 = reg2->Type()->As<IntType>();
+    if (!(ty1->IsSigned() ^ ty2->IsSigned()))
+        return;
+    if (ty1->IsSigned())
+        MatchArithmType(ty2, reg1);
+    else
+        MatchArithmType(ty1, reg2);
 }
 
 
@@ -168,6 +185,13 @@ const Register* InstrBuilder::InsertCallInstr(
         nullptr : Register::CreateRegister(Container(), result, rety);
     Insert(std::make_unique<CallInstr>(preg, func));
     return preg;
+}
+
+
+const IROperand* InstrBuilder::InsertArithmCastInstr(const IRType* ty, const IROperand* op)
+{
+    MatchArithmType(ty, op);
+    return op;
 }
 
 
