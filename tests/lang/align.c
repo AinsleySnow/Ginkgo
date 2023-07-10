@@ -42,8 +42,18 @@ void as()
     // declaration, the effective alignment requirement
     // is the strictest specified alignment.
     // (6.7.5[7])
-    int alignas(4) alignas(8) alignas(32) c = 40;
-    assert(alignof(c) == 32);
+    int alignas(4) alignas(8) alignas(16) c = 40;
+    assert(alignof(c) == 16);
+
+    int alignas(8) d[20];
+    assert(alignof(d) == 8);
+}
+
+void enumas()
+{
+    enum a { A_A, A_B, A_C };
+    enum a alignas(8) aa = A_A;
+    assert(alignof(aa) == 8);
 }
 
 int main()
@@ -51,7 +61,7 @@ int main()
     common();
     array();
     as();
+    enumas();
 
-    printf("OK\n");
-    return 0;
+    SUCCESS;
 }
