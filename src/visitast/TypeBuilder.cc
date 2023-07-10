@@ -140,7 +140,8 @@ std::unique_ptr<CEnumType> TypeBuilder::EnumHelper(const EnumSpec* spec, size_t 
         auto enumty = scopestack_.SearchCustomed(spec->Name());
         auto enumcty = enumty->GetCType();
         auto ty = enumcty->Clone();
-        ty->Align() = align;
+        if (align != 0)
+            ty->Align() = align;
         return std::unique_ptr<CEnumType>(static_cast<CEnumType*>(ty.release()));
     }
 
@@ -160,7 +161,11 @@ std::unique_ptr<CEnumType> TypeBuilder::EnumHelper(const EnumSpec* spec, size_t 
     if (!underlying)
         underlying = std::move(spec->EnumeratorList()->Type()->Clone());
 
-    auto ty = std::make_unique<CEnumType>(spec->Name(), std::move(underlying), align);
+    std::unique_ptr<CEnumType> ty = nullptr;
+    if (align)
+        ty = std::make_unique<CEnumType>(spec->Name(), std::move(underlying), align);
+    else
+        ty = std::make_unique<CEnumType>(spec->Name(), std::move(underlying));
     ty->Reserve(spec->EnumeratorList()->Count());
 
     for (auto& mem : *spec->EnumeratorList())

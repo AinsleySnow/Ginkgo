@@ -277,7 +277,8 @@ std::string CEnumType::ToString() const
 
 const IntType* CEnumType::ToIRType(Pool<IRType>* pool) const
 {
-    underlying_->Align() = align_;
+    if (align_ != 0)
+        underlying_->Align() = align_;
     return static_cast<const IntType*>(underlying_->ToIRType(pool));
 }
 
