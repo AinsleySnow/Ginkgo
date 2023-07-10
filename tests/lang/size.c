@@ -26,6 +26,22 @@ void pointer()
     assert(sizeof(int (*(*) [5])(int)) == 8);
 }
 
+void _enum()
+{
+    enum a : long { A_A, A_B, A_C };
+    enum b : int  { B_A, B_B, B_C };
+    enum c        { C_A, C_B, C_C };
+    enum a aa = A_A;
+    enum b bb = B_A;
+    enum c cc = C_A;
+    assert(sizeof(enum a) == 8);
+    assert(sizeof(enum b) == 4);
+    assert(sizeof(enum c) == 4);
+    assert(sizeof(aa) == 8);
+    assert(sizeof(bb) == 4);
+    assert(sizeof(cc) == 4);
+}
+
 void expr()
 {
     assert(sizeof(1 + 1) == 4);
@@ -53,6 +69,7 @@ int main(void)
     common();
     array();
     pointer();
+    _enum();
     expr();
     var();
 
