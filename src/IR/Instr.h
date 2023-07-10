@@ -469,7 +469,7 @@ private:
     const Register* result_{};
     const IRType* type_{};
     size_t num_{ 1 };
-    size_t align_{ type_->Align() };
+    size_t align_{ 0 };
 };
 
 
@@ -582,6 +582,8 @@ public:
 
     auto Result() const { return result_; }
     auto Pointer() const { return pointer_; }
+
+    bool HoldsInt() const { return std::holds_alternative<int>(index_); }
     auto IntIndex() const { return std::get<1>(index_); }
     auto OpIndex() const { return std::get<0>(index_); }
 
