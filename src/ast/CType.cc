@@ -59,7 +59,7 @@ bool FuncSpec::SetSpec(Tag t)
 }
 
 
-CArithmType::CArithmType(TypeTag tt) : CType(CTypeId::arithm), type_(tt)
+CArithmType::CArithmType(TypeTag tt, size_t a) : CType(CTypeId::arithm), type_(tt)
 {
     switch (tt)
     {
@@ -77,6 +77,14 @@ CArithmType::CArithmType(TypeTag tt) : CType(CTypeId::arithm), type_(tt)
         size_ = 8; break;
     default: break;
     }
+    if (a != 0)
+        align_ = a;
+    else
+        align_ = size_;
+}
+
+CArithmType::CArithmType(TypeTag tt) : CArithmType(tt, 0)
+{
 }
 
 const IRType* CArithmType::ToIRType(Pool<IRType>* pool) const
@@ -84,35 +92,35 @@ const IRType* CArithmType::ToIRType(Pool<IRType>* pool) const
     switch (type_)
     {
     case TypeTag::int8:
-        if (align_) return IntType::GetInt8(pool, Align(), true);
-        else        return IntType::GetInt8(true);
+        if (align_ != size_) return IntType::GetInt8(pool, Align(), true);
+        else                 return IntType::GetInt8(true);
     case TypeTag::int16:
-        if (align_) return IntType::GetInt16(pool, Align(), true);
-        else        return IntType::GetInt16(true);
+        if (align_ != size_) return IntType::GetInt16(pool, Align(), true);
+        else                 return IntType::GetInt16(true);
     case TypeTag::int32:
-        if (align_) return IntType::GetInt32(pool, Align(), true);
-        else        return IntType::GetInt32(true);
+        if (align_ != size_) return IntType::GetInt32(pool, Align(), true);
+        else                 return IntType::GetInt32(true);
     case TypeTag::int64:
-        if (align_) return IntType::GetInt64(pool, Align(), true);
-        else        return IntType::GetInt64(true);
+        if (align_ != size_) return IntType::GetInt64(pool, Align(), true);
+        else                 return IntType::GetInt64(true);
     case TypeTag::uint8:
-        if (align_) return IntType::GetInt8(pool, Align(), false);
-        else        return IntType::GetInt8(false);
+        if (align_ != size_) return IntType::GetInt8(pool, Align(), false);
+        else                 return IntType::GetInt8(false);
     case TypeTag::uint16:
-        if (align_) return IntType::GetInt16(pool, Align(), false);
-        else        return IntType::GetInt16(false);
+        if (align_ != size_) return IntType::GetInt16(pool, Align(), false);
+        else                 return IntType::GetInt16(false);
     case TypeTag::uint32:
-        if (align_) return IntType::GetInt32(pool, Align(), false);
+        if (align_ != size_) return IntType::GetInt32(pool, Align(), false);
         else        return IntType::GetInt32(false);
     case TypeTag::uint64:
-        if (align_) return IntType::GetInt64(pool, Align(), false);
-        else        return IntType::GetInt64(false);
+        if (align_ != size_) return IntType::GetInt64(pool, Align(), false);
+        else                 return IntType::GetInt64(false);
     case TypeTag::flt32:
-        if (align_) return FloatType::GetFloat32(pool, Align());
-        else        return FloatType::GetFloat32();
+        if (align_ != size_) return FloatType::GetFloat32(pool, Align());
+        else                 return FloatType::GetFloat32();
     case TypeTag::flt64:
-        if (align_) return FloatType::GetFloat64(pool, Align());
-        else        return FloatType::GetFloat64();
+        if (align_ != size_) return FloatType::GetFloat64(pool, Align());
+        else                 return FloatType::GetFloat64();
     }
     return nullptr;
 }
@@ -269,8 +277,18 @@ std::string CEnumType::ToString() const
 
 const IntType* CEnumType::ToIRType(Pool<IRType>* pool) const
 {
+    underlying_->Align() = align_;
     return static_cast<const IntType*>(underlying_->ToIRType(pool));
 }
+
+std::unique_ptr<CType> CEnumType::Clone() const
+{
+    auto underlying = underlying_->Clone();
+    auto ty = std::make_unique<CEnumType>(name_, std::move(underlying), align_);
+    ty->members_ = members_;
+    return std::move(ty);
+}
+
 
 
 void CHeterType::AddMember(const std::string& n, const CType* t, int i)

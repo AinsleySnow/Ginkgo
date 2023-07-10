@@ -125,11 +125,8 @@ public:
     StorageType& Storage() { return storage_; }
 
     size_t Size() const { return size_; }
-    // for arithmic type (int, long and so on), if align_ is not set,
-    // return the default alignment of the type (always same as size).
-    // for heterogenerous type and array type, their align_ are set
-    // in the constructors, so no default alignment for them.
-    size_t Align() const { return align_ ? align_ : size_; }
+    size_t Align() const { return align_; }
+    size_t& Align() { return align_; }
 
     bool operator==(const CType&) const = delete;
     bool operator!=(const CType&) const = delete;
@@ -167,6 +164,7 @@ public:
     static bool ClassOf(const CType* const t) { return t->id_ == CTypeId::arithm; }
 
     CArithmType(TypeTag);
+    CArithmType(TypeTag, size_t);
 
     const IRType* ToIRType(Pool<IRType>*) const override;
     std::string ToString() const override;
@@ -239,9 +237,11 @@ public:
     static bool ClassOf(const CPtrType* const) { return true; }
     static bool ClassOf(const CType* const t) { return t->id_ == CTypeId::pointer; }
 
-    CPtrType() : CType(CTypeId::pointer, 8) {}
+    CPtrType() : CType(CTypeId::pointer, 8, 8) {}
     CPtrType(std::unique_ptr<CType> p) :
-        CType(CTypeId::pointer, 8), point2_(std::move(p)) {}
+        CType(CTypeId::pointer, 8, 8), point2_(std::move(p)) {}
+    CPtrType(std::unique_ptr<CType> p, size_t a) :
+        CType(CTypeId::pointer, 8, a), point2_(std::move(p)) {}
 
     std::string ToString() const override;
     const PtrType* ToIRType(Pool<IRType>*) const override;
@@ -269,9 +269,9 @@ public:
 
     CArrayType() : CType(CTypeId::array) {}
     CArrayType(std::unique_ptr<CType> ty) :
-        CType(CTypeId::array), arrayof_(std::move(ty)) {}
+        CType(CTypeId::array, 0, ty->Align()), arrayof_(std::move(ty)) {}
     CArrayType(std::unique_ptr<CType> ty, size_t c) :
-        CType(CTypeId::array, ty->Size() * c), arrayof_(std::move(ty)), count_(c) {}
+        CType(CTypeId::array, ty->Size() * c, ty->Align()), arrayof_(std::move(ty)), count_(c) {}
 
     std::string ToString() const;
     const ArrayType* ToIRType(Pool<IRType>*) const override;
@@ -283,6 +283,12 @@ public:
     void SetCount(size_t val) { count_ = val; size_ = count_ * arrayof_->Size(); }
 
     const auto& ArrayOf() const { return arrayof_; }
+    void SetArrayOf(std::unique_ptr<CType> ty)
+    {
+        arrayof_ = std::move(ty);
+        align_ = ty->Align();
+    }
+
     bool VariableLen() const { return variable_; }
     bool& VariableLen() { return variable_; }
     bool Static() const { return static_; }
@@ -304,16 +310,18 @@ public:
     static bool ClassOf(const CEnumType* const) { return true; }
     static bool ClassOf(const CType* const t) { return t->id_ == CTypeId::_enum; }
 
-    CEnumType(const std::string& n) : CType(CTypeId::_enum),
-        name_(n), underlying_(std::make_shared<CArithmType>(TypeTag::int32)) {}
-    CEnumType(const std::string& n, std::shared_ptr<CType> ty) :
-        CType(CTypeId::_enum), name_(n), underlying_(ty) {}
+    CEnumType(const std::string& n) : CType(CTypeId::_enum, 4),
+        name_(n), underlying_(std::make_unique<CArithmType>(TypeTag::int32)) {}
+    CEnumType(const std::string& n, std::unique_ptr<CType> ty) :
+        CType(CTypeId::_enum, ty->Size(), ty->Align()), name_(n), underlying_(std::move(ty)) {}
+    CEnumType(const std::string& n, std::unique_ptr<CType> ty, size_t a) :
+        CType(CTypeId::_enum, ty->Size(), a), name_(n), underlying_(std::move(ty)) {}
 
     std::string ToString() const override;
     const IntType* ToIRType(Pool<IRType>*) const override;
 
     bool Compatible(const CType&) const override { return false; }
-    std::unique_ptr<CType> Clone() const override { return std::make_unique<CEnumType>(*this); }
+    std::unique_ptr<CType> Clone() const override;
 
     void Reserve(size_t size) { members_.reserve(size); }
     void AddMember(const Member* m) { members_[index_++] = m; }
@@ -324,7 +332,7 @@ public:
 private:
     int index_{};
     std::string name_{};
-    std::shared_ptr<CType> underlying_{};
+    std::unique_ptr<CType> underlying_{};
     std::vector<const Member*> members_{};
 };
 
@@ -338,6 +346,7 @@ public:
 
     CHeterType(CTypeId i) : CType(i) {}
     CHeterType(CTypeId i, const std::string& n) : CType(i), name_(n) {}
+    CHeterType(CTypeId i, const std::string& n, size_t a) : CType(i, 0, a), name_(n) {}
 
     auto Name() const { return name_; }
     auto IRName() const { return irname_; }
@@ -365,6 +374,7 @@ public:
 
     CStructType() : CHeterType(CTypeId::_struct) {}
     CStructType(const std::string& n) : CHeterType(CTypeId::_struct, n) {}
+    CStructType(const std::string& n, size_t a) : CHeterType(CTypeId::_struct, n, a) {}
 
     std::string ToString() const override { return ""; }
     const StructType* ToIRType(Pool<IRType>*) const override;
@@ -382,6 +392,7 @@ public:
 
     CUnionType() : CHeterType(CTypeId::_union) {}
     CUnionType(const std::string& n) : CHeterType(CTypeId::_union, n) {}
+    CUnionType(const std::string& n, size_t a) : CHeterType(CTypeId::_union, n, a) {}
 
     std::string ToString() const override { return ""; }
     const UnionType* ToIRType(Pool<IRType>*) const override;
