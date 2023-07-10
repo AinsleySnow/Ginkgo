@@ -2,6 +2,7 @@
 #include "visitast/Scope.h"
 #include "ast/Declaration.h"
 #include "ast/Expression.h"
+#include "IR/IROperand.h"
 #include <climits>
 #include <cfloat>
 
@@ -113,8 +114,7 @@ void TypeBuilder::VisitArrayDef(ArrayDef* def)
         size_t size = 0;
         if (def->Size()->IsConstant())
         {
-            auto intconst = static_cast<
-                const IntConst*>(def->Size()->Val());
+            auto intconst = static_cast<const IntConst*>(def->Size()->Val());
             size = intconst->Val();
         }
         array = std::make_unique<CArrayType>(
@@ -132,18 +132,20 @@ void TypeBuilder::VisitArrayDef(ArrayDef* def)
 }
 
 
-std::unique_ptr<CEnumType> TypeBuilder::EnumHelper(const EnumSpec* spec)
+std::unique_ptr<CEnumType> TypeBuilder::EnumHelper(const EnumSpec* spec, size_t align)
 {
     // empty; the enum must have been defined somewhere
     if (!spec->EnumeratorList())
     {
         auto enumty = scopestack_.SearchCustomed(spec->Name());
         auto enumcty = enumty->GetCType();
-        return std::make_unique<CEnumType>(*enumcty->As<CEnumType>());
+        auto ty = enumcty->Clone();
+        ty->Align() = align;
+        return std::unique_ptr<CEnumType>(static_cast<CEnumType*>(ty.release()));
     }
 
     // not empty; we're declaring a new enum
-    std::shared_ptr<CType> underlying = nullptr;
+    std::unique_ptr<CType> underlying = nullptr;
     if (spec->EnumeratorType())
     {
         spec->EnumeratorType()->Accept(&visitor_);
@@ -156,9 +158,9 @@ std::unique_ptr<CEnumType> TypeBuilder::EnumHelper(const EnumSpec* spec)
     // field inherited from Expr class
     spec->EnumeratorList()->Accept(&visitor_);
     if (!underlying)
-        underlying = std::move(spec->EnumeratorList()->Type());
+        underlying = std::move(spec->EnumeratorList()->Type()->Clone());
 
-    auto ty = std::make_unique<CEnumType>(spec->Name(), underlying);
+    auto ty = std::make_unique<CEnumType>(spec->Name(), std::move(underlying), align);
     ty->Reserve(spec->EnumeratorList()->Count());
 
     for (auto& mem : *spec->EnumeratorList())
@@ -172,20 +174,22 @@ std::unique_ptr<CEnumType> TypeBuilder::EnumHelper(const EnumSpec* spec)
 }
 
 template <class T>
-std::unique_ptr<T> TypeBuilder::HeterHelper(const HeterSpec* spec)
+std::unique_ptr<T> TypeBuilder::HeterHelper(const HeterSpec* spec, size_t align)
 {
     auto& fields = spec->GetHeterFields();
 
     // if the struct is declared else where
     if (fields.empty())
     {
-        auto ty = scopestack_.SearchCustomed(spec->Name());
-        auto cty = ty->GetCType()->As<T>();
-        return std::make_unique<T>(*cty);
+        auto ty = scopestack_.SearchCustomed(spec->Name())->GetCType()->As<T>();
+        auto cty = std::make_unique<T>(*ty);
+        cty->Align() = align;
+        return std::move(cty);
     }
 
     int fieldindex = 0;
     auto ty = std::make_unique<T>();
+    ty->Align() = align;
     scopestack_.LoadNewScope(const_cast<HeterSpec*>(spec)->GetScope());
     for (auto& decl : fields)
     {
@@ -230,19 +234,43 @@ std::unique_ptr<T> TypeBuilder::HeterHelper(const HeterSpec* spec)
 
 void TypeBuilder::VisitDeclSpec(DeclSpec* spec)
 {
+    auto& aligns = spec->AlignSpecs();
+    size_t align = 0;
+    auto isdecl = [] (const AlignSpec& as) {
+        return std::holds_alternative<std::unique_ptr<Declaration>>(as);
+    };
+    for (auto& as : aligns)
+    {
+        if (isdecl(as))
+        {
+            auto& decl = std::get<0>(as);
+            decl->Accept(this);
+            if (decl->Type()->Align() > align)
+                align = decl->Type()->Align();
+        }
+        else // if isexpr(as)
+        {
+            auto& expr = std::get<1>(as);
+            expr->Accept(&visitor_);
+            auto val = expr->Val()->As<IntConst>()->Val();
+            if (val > align)
+                align = val;
+        }
+    }
+
     auto tag = spec->GetTypeTag();
 
     if (tag == TypeTag::_void)
         spec->Type() = std::make_unique<CVoidType>();
     else if (int(tag) & int(TypeTag::scalar))
     {
-        spec->Type() = std::make_unique<CArithmType>(tag);
+        spec->Type() = std::make_unique<CArithmType>(tag, align);
         spec->Type()->Qual() = spec->Qual();
         spec->Type()->Storage() = spec->Storage();
     }
     else if (tag == TypeTag::_enum)
     {
-        auto ty = EnumHelper(spec->GetEnumSpec());
+        auto ty = EnumHelper(spec->GetEnumSpec(), align);
         ty->Qual() = spec->Qual();
         ty->Storage() = spec->Storage();
 
@@ -251,7 +279,7 @@ void TypeBuilder::VisitDeclSpec(DeclSpec* spec)
     }
     else if (tag == TypeTag::_struct)
     {
-        auto ty = HeterHelper<CStructType>(spec->GetHeterSpec());
+        auto ty = HeterHelper<CStructType>(spec->GetHeterSpec(), align);
         ty->Qual() = spec->Qual();
         ty->Storage() = spec->Storage();
 
@@ -260,7 +288,7 @@ void TypeBuilder::VisitDeclSpec(DeclSpec* spec)
     }
     else if (tag == TypeTag::_union)
     {
-        auto ty = HeterHelper<CUnionType>(spec->GetHeterSpec());
+        auto ty = HeterHelper<CUnionType>(spec->GetHeterSpec(), align);
         ty->Qual() = spec->Qual();
         ty->Storage() = spec->Storage();
 

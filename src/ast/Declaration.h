@@ -139,11 +139,13 @@ public:
     void SetStorage(Tag t) { storagelist_.push_back(t); }
     void SetQual(Tag t) { quallist_.push_back(t); }
     void SetFuncSpec(Tag t) { funcspeclist_.push_back(t); }
-    void SetAlignSpec(AlignSpec a) { align_ = std::move(a); }
 
     void AddTypeSpec(std::unique_ptr<::TypeSpec> ts);
     const EnumSpec* GetEnumSpec() const;
     const HeterSpec* GetHeterSpec() const;
+
+    void AddAlignSpec(AlignSpec a) { aligns_.push_back(std::move(a)); }
+    const auto& AlignSpecs() const { return aligns_; }
 
     TypeTag GetTypeTag();
     QualType Qual();
@@ -159,7 +161,7 @@ private:
     std::list<Tag> storagelist_{};
     std::list<Tag> quallist_{};
     std::list<Tag> funcspeclist_{};
-    AlignSpec align_{};
+    std::list<AlignSpec> aligns_{};
 };
 
 

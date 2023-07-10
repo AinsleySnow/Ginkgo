@@ -301,6 +301,11 @@ unary_expression
     { $$ = std::make_unique<SzAlgnExpr>($1, std::move($2)); }
 	| SIZEOF '(' type_name ')'
     { $$ = std::make_unique<SzAlgnExpr>($1, std::move($3)); }
+    | ALIGNOF unary_expression
+    // This is not standard C23 grammar, but I add it for the sake of
+    // symmetry. Similar to sizeof expr, the alignof expr here doesn't
+    // actually evaluate the expression, but only check the type of it.
+    { $$ = std::make_unique<SzAlgnExpr>($1, std::move($2)); }
 	| ALIGNOF '(' type_name ')'
     { $$ = std::make_unique<SzAlgnExpr>($1, std::move($3)); }
 	;
@@ -509,13 +514,13 @@ declaration_specifiers
     }
 	| alignment_specifier declaration_specifiers
     {
-        $2->SetAlignSpec(std::move($1));
+        $2->AddAlignSpec(std::move($1));
         $$ = std::move($2);
     }
 	| alignment_specifier
     {
         $$ = std::make_unique<DeclSpec>();
-        $$->SetAlignSpec(std::move($1));
+        $$->AddAlignSpec(std::move($1));
     }
 	;
 
