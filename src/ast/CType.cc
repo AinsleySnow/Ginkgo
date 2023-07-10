@@ -71,6 +71,10 @@ CArithmType::CArithmType(TypeTag tt) : CType(CTypeId::arithm), type_(tt)
         size_ = 4; break;
     case TypeTag::int64: case TypeTag::uint64:
         size_ = 8; break;
+    case TypeTag::flt32:
+        size_ = 4; break;
+    case TypeTag::flt64:
+        size_ = 8; break;
     default: break;
     }
 }

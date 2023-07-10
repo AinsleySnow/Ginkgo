@@ -118,7 +118,8 @@ private:
 
     std::string GetFpLabel(unsigned long, size_t);
     std::string GetFpLabel(std::pair<unsigned long, unsigned long>, size_t);
-    std::string GetTempLabel() const;
+    std::string GetLabel() const;
+    std::string GetLabel(const BasicBlock*) const;
 
     // since x64 requires that float point constants
     // must be loaded from the memory, so when the operators
@@ -176,6 +177,8 @@ private:
 
     size_t stacksize_{};
     mutable int labelindex_{};
+    mutable std::unordered_map<
+        const BasicBlock*, std::string> bb2label_{};
 
     std::unordered_map<
         const IROperand*, std::unique_ptr<const x64>> tempmap_{};

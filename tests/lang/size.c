@@ -33,6 +33,8 @@ void expr()
     int a = 10;
     long b = 20;
     assert(sizeof(a + b) == 8);
+    assert(sizeof(a++) == 4);
+    assert(a == 10);
 
     float c = 2.5;
     assert(sizeof(b * c) == 4);
@@ -54,6 +56,5 @@ int main(void)
     expr();
     var();
 
-    printf("OK\n");
-    return 0;
+    SUCCESS;
 }

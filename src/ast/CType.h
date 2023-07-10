@@ -271,7 +271,7 @@ public:
     CArrayType(std::unique_ptr<CType> ty) :
         CType(CTypeId::array), arrayof_(std::move(ty)) {}
     CArrayType(std::unique_ptr<CType> ty, size_t c) :
-        CType(CTypeId::array), arrayof_(std::move(ty)), count_(c) {}
+        CType(CTypeId::array, ty->Size() * c), arrayof_(std::move(ty)), count_(c) {}
 
     std::string ToString() const;
     const ArrayType* ToIRType(Pool<IRType>*) const override;
@@ -279,8 +279,8 @@ public:
     bool Compatible(const CType&) const { return false; }
     std::unique_ptr<CType> Clone() const override;
 
-    auto& Count() { return count_; }
     auto Count() const { return count_; }
+    void SetCount(size_t val) { count_ = val; size_ = count_ * arrayof_->Size(); }
 
     const auto& ArrayOf() const { return arrayof_; }
     bool VariableLen() const { return variable_; }

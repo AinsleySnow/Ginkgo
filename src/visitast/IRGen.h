@@ -86,7 +86,6 @@ private:
 
         std::string GetRegName() { return '%' + std::to_string(index_++); }
         std::string GetLabelName() { return std::to_string(index_++); }
-        std::string GetStrName() { return "@.str" + std::to_string(index_++); }
 
         void PushStmt(Statement* s) { brkcntn_.push(s); }
         void PopStmt() { brkcntn_.pop(); }
@@ -120,6 +119,7 @@ private:
         size_t index_{};
     };
 
+    std::string GetStrName() { return "@.str" + std::to_string(strindex_++); }
 
     const Register* AllocaObject(const CType*, const std::string&);
     Function* AllocaFunc(const CFuncType*, const std::string&);
@@ -138,6 +138,7 @@ private:
     InstrBuilder ibud_{};
     BlockBuilder bbud_{};
     CurrentEnv env_{};
+    size_t strindex_{};
 
     std::unique_ptr<Module> transunit_{};
 };

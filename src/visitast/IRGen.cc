@@ -744,15 +744,25 @@ void IRGen::VisitSzAlgnExpr(SzAlgnExpr* expr)
 {
     if (expr->ContentAsDecl())
         expr->ContentAsDecl()->Accept(&tbud_);
-    else // if expr->IsAlignof()
+    else
         expr->ContentAsExpr()->Accept(&tbud_);
 
     if (expr->IsSizeof())
+    {
+        auto data = expr->ContentAsDecl() ?
+            expr->ContentAsDecl()->Type()->Size() :
+            expr->ContentAsExpr()->Type()->Size();
         expr->Val() = IntConst::CreateIntConst(
-            ibud_.Container(), expr->ContentAsExpr()->Type()->Size(), IntType::GetInt32(true));
+            ibud_.Container(), data, IntType::GetInt64(false));
+    }
     else // if expr->IsAlignof()
+    {
+        auto data = expr->ContentAsDecl() ?
+            expr->ContentAsDecl()->Type()->Align() :
+            expr->ContentAsExpr()->Type()->Align();
         expr->Val() = IntConst::CreateIntConst(
-            ibud_.Container(), expr->ContentAsDecl()->Type()->Align(), IntType::GetInt32(true));
+            ibud_.Container(), data, IntType::GetInt64(false));
+    }
 }
 
 
@@ -975,10 +985,10 @@ void IRGen::VisitStrExpr(StrExpr* str)
             literal = WashString(utf8::utf8to32(content), count);
     }
 
-    str->Type()->As<CArrayType>()->Count() = count;
+    str->Type()->As<CArrayType>()->SetCount(count);
     auto array = str->Type()->ToIRType(transunit_.get())->As<ArrayType>();
     auto global = GlobalVar::CreateGlobalVar(
-        transunit_.get(), env_.GetStrName(), array);
+        transunit_.get(), GetStrName(), array);
     global->AddOpNode(
         StrConst::CreateStrConst(transunit_.get(), literal, array));
     global->Dump2Tree();

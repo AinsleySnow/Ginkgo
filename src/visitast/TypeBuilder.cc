@@ -410,7 +410,7 @@ void TypeBuilder::VisitCondExpr(CondExpr* expr)
 void TypeBuilder::VisitSzAlgnExpr(SzAlgnExpr* expr)
 {
     if (expr->Type()) return;
-    expr->Type() = std::make_unique<CArithmType>(TypeTag::int32);
+    expr->Type() = std::make_unique<CArithmType>(TypeTag::uint64);
 }
 
 void TypeBuilder::VisitEnumConst(EnumConst* expr)
@@ -483,25 +483,27 @@ void TypeBuilder::VisitStrExpr(StrExpr* str)
         else        width = w;
     };
 
-    int i = -1;
-    while ((i = str->Content().
-        find_first_of('"', i + 1)) != std::string::npos)
-    {
-        if (i == 0) continue;
-
-        char prefix = str->Content()[i - 1];
-        if (prefix == '8') setwidth(1);
-        else if (prefix == 'u') setwidth(2);
-        else if (prefix == 'U' || prefix == 'L') setwidth(4);
-
-        // now i is inside a string
-        i -= 1;
+    auto next = [&str] (size_t i) {
+        // Assume that str->Content()[i] is always
+        // the '"' that marks the start of a string.
+        // First navigate to the ending '"'
         while ((i = str->Content().
             find_first_of('"', i + 1)) != std::string::npos)
             if (str->Content()[i - 1] != '\\')
                 break;
+        // Then get the starting '"' of next string
+        i = str->Content().find_first_of('"', i + 1);
+        return i;
+    };
 
-        i += 1;
+    for (auto i = str->Content().find_first_of('"'); i != std::string::npos; i = next(i))
+    {
+        if (i == 0)
+            continue;
+        char prefix = str->Content()[i - 1];
+        if (prefix == '8') setwidth(1);
+        else if (prefix == 'u') setwidth(2);
+        else if (prefix == 'U' || prefix == 'L') setwidth(4);
     }
 
     str->Width() = width <= 0 ? 1 : width;

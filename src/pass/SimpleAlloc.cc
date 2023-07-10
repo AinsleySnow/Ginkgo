@@ -147,6 +147,8 @@ void SimpleAlloc::VisitBasicBlock(BasicBlock* bb)
 
 void SimpleAlloc::VisitRetInstr(RetInstr* i)
 {
+    if (!i->ReturnValue())
+        return;
     if (!MapConstAndGlobalVar(i->ReturnValue()))
         stackcache_.Access(i->ReturnValue()->As<Register>());
 }

@@ -6,11 +6,6 @@
 #include <string>
 
 
-static std::string BB2Label(const BasicBlock* bb)
-{
-    return ".L" + bb->Name();
-}
-
 static std::string Cond2Str(Condition cond, bool issigned)
 {
     std::string str = "";
@@ -67,9 +62,17 @@ std::string CodeGen::GetFpLabel(std::pair<unsigned long, unsigned long> pair, si
     return label;
 }
 
-std::string CodeGen::GetTempLabel() const
+std::string CodeGen::GetLabel() const
 {
-    return ".T" + std::to_string(labelindex_++);
+    return ".L" + std::to_string(labelindex_++);
+}
+
+std::string CodeGen::GetLabel(const BasicBlock* bb) const
+{
+    if (auto label = bb2label_.find(bb); label != bb2label_.end())
+        return label->second;
+    bb2label_[bb] = GetLabel();
+    return bb2label_[bb];
 }
 
 
@@ -113,12 +116,16 @@ const x64* CodeGen::MapPossiblePointer(const IROperand* op)
 }
 
 
+static inline size_t GetAlign(size_t num, size_t align)
+{
+    if (num % align == 0)
+        return 0;
+    return align - num % align;
+}
+
 void CodeGen::AlignRspBy(size_t add, size_t align)
 {
-    if ((stacksize_ + add) % align == 0)
-        return;
-    auto offset = align - (stacksize_ + add) % align;
-    AdjustRsp(-offset);
+    AdjustRsp(-GetAlign(stacksize_ + add, align));
 }
 
 void CodeGen::AdjustRsp(long offset)
@@ -133,7 +140,11 @@ void CodeGen::AdjustRsp(long offset)
 
 void CodeGen::DeallocFrame()
 {
-    AdjustRsp(stacksize_);
+    // Since rbp takes 8 bytes on the stack,
+    // and it will be restored by leave.
+    // stacksize_ itself will never go below to 0,
+    // though, since it is initalized by 8.
+    AdjustRsp(stacksize_ - 8);
 }
 
 
@@ -468,7 +479,7 @@ void CodeGen::CMovEmitHelper(Condition cond, bool issigned, const x64* op1, cons
         return;
     }
     // We can't use cmov if op2 is a mem reference.
-    auto label = GetTempLabel();
+    auto label = GetLabel();
     asmfile_.EmitJmp(Cond2Str(NotCond(cond), issigned), label);
     MovEmitHelper(op1, op2);
     asmfile_.EmitLabel(label);
@@ -606,6 +617,7 @@ void CodeGen::VisitFunction(Function* func)
     asmfile_.EmitPseudoInstr(".type", { name, "@function" });
     asmfile_.EmitLabel(func->Name().substr(1));
 
+    stacksize_ = 8;
     asmfile_.EmitPush(RegTag::rbp, 8);
     x64Reg rsp{ RegTag::rsp };
     x64Reg rbp{ RegTag::rbp };
@@ -625,7 +637,7 @@ void CodeGen::VisitFunction(Function* func)
         asmfile_.EmitMov(RegTag::r9, baseline + 40);
 
         auto rax = x64Reg(RegTag::rax, 1);
-        auto label = GetTempLabel();
+        auto label = GetLabel();
         asmfile_.EmitTest(&rax, &rax);
         asmfile_.EmitJmp("e", label);
 
@@ -654,7 +666,7 @@ void CodeGen::VisitFunction(Function* func)
 void CodeGen::VisitBasicBlock(BasicBlock* bb)
 {
     asmfile_.EnterBlock(bb);
-    asmfile_.EmitLabel(BB2Label(bb));
+    asmfile_.EmitLabel(GetLabel(bb));
     for (auto inst : *bb)
         inst->Accept(this);
 }
@@ -740,10 +752,10 @@ void CodeGen::VisitBrInstr(BrInstr* inst)
     {
         auto cond = MapPossibleFloat(inst->Cond());
         asmfile_.EmitCmp(cond, (unsigned long)0);
-        asmfile_.EmitJmp("ne", BB2Label(inst->GetTrueBlk()));
-        asmfile_.EmitJmp("", BB2Label(inst->GetFalseBlk()));
+        asmfile_.EmitJmp("ne", GetLabel(inst->GetTrueBlk()));
+        asmfile_.EmitJmp("", GetLabel(inst->GetFalseBlk()));
     }
-    else asmfile_.EmitJmp("", BB2Label(inst->GetTrueBlk()));
+    else asmfile_.EmitJmp("", GetLabel(inst->GetTrueBlk()));
 }
 
 
@@ -756,9 +768,9 @@ void CodeGen::VisitSwitchInstr(SwitchInstr* inst)
     for (auto [tag, bb] : inst->GetValueBlkPairs())
     {
         asmfile_.EmitCmp(ident, alloc_.GetIROpMap(tag));
-        asmfile_.EmitJmp("z", BB2Label(bb));
+        asmfile_.EmitJmp("z", GetLabel(bb));
     }
-    asmfile_.EmitJmp("", BB2Label(inst->GetDefault()));
+    asmfile_.EmitJmp("", GetLabel(inst->GetDefault()));
 }
 
 
@@ -792,7 +804,7 @@ void CodeGen::VisitCallInstr(CallInstr* inst)
             asmfile_.EmitInstr("    movb $" + std::to_string(vec) + ", %al\n");
     }
 
-    auto extra = (stacksize_ + 8) % 16 ? 8 : 0;
+    auto extra = GetAlign(stacksize_, 16);
     AdjustRsp(-(conv.Padding() + extra));
     PassParam(conv, inst->ArgvList());
     if (inst->FuncAddr())
@@ -1012,8 +1024,8 @@ void CodeGen::VisitUtoFInstr(UtoFInstr* inst)
         return;
     }
 
-    auto movebiguint = GetTempLabel();
-    auto end = GetTempLabel();
+    auto movebiguint = GetLabel();
+    auto end = GetLabel();
     TestEmitHelper(from, from);
     asmfile_.EmitJmp("s", movebiguint);
     // For uint less than 64 bit,
@@ -1125,7 +1137,7 @@ void CodeGen::VisitSelectInstr(SelectInstr* inst)
         // things like bitwise operations works fine as
         // well, but they require far more complex code,
         // so I don't use them here
-        auto temp = GetTempLabel();
+        auto temp = GetLabel();
         VecMovEmitHelper(v1, ans);
         asmfile_.EmitJmp(ty ? "e" : "ne", temp);
         VecMovEmitHelper(v2, ans);
