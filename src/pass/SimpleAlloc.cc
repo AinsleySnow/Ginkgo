@@ -5,24 +5,20 @@
 
 RegTag SimpleAlloc::StackCache::SpareReg() const
 {
-    auto ret = RegTag::none;
-    if (index_ >= 3) return ret;
-    if (index_ == 0) ret = RegTag::rbx;
-    if (index_ == 1) ret = RegTag::r12;
-    if (index_ == 2) ret = RegTag::r13;
-    index_ += 1;
-    return ret;
+    if (intreg_.empty())
+        return RegTag::none;
+    auto tag = *intreg_.begin();
+    intreg_.erase(intreg_.begin());
+    return tag;
 }
 
 RegTag SimpleAlloc::StackCache::SpareFReg() const
 {
-    auto ret = RegTag::none;
-    if (findex_ >= 3) return ret;
-    if (findex_ == 0) ret = RegTag::xmm8;
-    if (findex_ == 1) ret = RegTag::xmm9;
-    if (findex_ == 2) ret = RegTag::xmm10;
-    findex_ += 1;
-    return ret;
+    if (vecreg_.empty())
+        return RegTag::none;
+    auto tag = *vecreg_.begin();
+    vecreg_.erase(vecreg_.begin());
+    return tag;
 }
 
 void SimpleAlloc::StackCache::Access(const Register* reg) const
@@ -30,11 +26,13 @@ void SimpleAlloc::StackCache::Access(const Register* reg) const
     auto it = regmap_.find(reg);
     if (it == regmap_.end()) return;
 
-    auto mempos = it->second->As<x64Reg>();
-    if (mempos)
+    if (auto pos = it->second->As<x64Reg>(); pos)
     {
-        index_ -= 1;
-        alloc_.Unmark(static_cast<x64Phys>(static_cast<int>(mempos->Tag()) - 2));
+        if (static_cast<int>(pos->Tag()) <= 15)
+            intreg_.emplace(pos->Tag());
+        else
+            vecreg_.emplace(pos->Tag());
+        alloc_.Unmark(static_cast<x64Phys>(static_cast<int>(pos->Tag()) - 2));
     }
     return;
 }
