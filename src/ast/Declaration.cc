@@ -90,7 +90,7 @@ TypeTag DeclSpec::GetTypeTag()
     case int(Tag::_char) | int(Tag::_signed):
         return TypeTag::int8;
     case int(Tag::_char) | int(Tag::_unsigned):
-        return TypeTag::int8;
+        return TypeTag::uint8;
 
     // double
     case int(Tag::_double): case int(Tag::_double) | int(Tag::_long):

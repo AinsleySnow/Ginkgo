@@ -924,7 +924,7 @@ void IRGen::VisitLogicalExpr(LogicalExpr* logical)
 
 
 template <typename T>
-std::string WashString(const T& str, size_t& count)
+static std::string WashString(const T& str, size_t& count)
 {
     std::string result = "";
     constexpr auto size = sizeof(typename T::value_type);
@@ -937,24 +937,45 @@ std::string WashString(const T& str, size_t& count)
     {
         if (*i == '"')
         {
-            if (*(i - 1) == '\\')
-                goto print;
             i += 1;
             while (*i != '"')
                 i += 1;
             continue;
         }
+        else if (*i == '\\')
+        {
+            i += 1;
+            count += 1;
+            result += '\\';
+            if (*i == 'x' || isdigit(*i))
+            {
+                for (int j = 0; j < 3; ++j, ++i)
+                    result += static_cast<typename T::value_type>(*i);
+                i = i - 1;
+            }
+            else if (*i == 'a')
+                result += "007";
+            else if (*i == 'v')
+                result += "013";
+            else
+                result += static_cast<typename T::value_type>(*i);
+            for (int i = 0; i < size - 1; ++i)
+                result += "\\x00";
+        }
         else if (isascii(*i))
         {
-    print:
-            if (*i != '\\' || (*i == '\\' && *(i - 1) == '\\'))
-                count += 1;
             result += static_cast<typename T::value_type>(*i);
+            count += 1;
+            for (int i = 0; i < size - 1; ++i)
+                result += "\\x00";
         }
         else
         {
             count += 1;
-            result += fmt::format("\\x{:0x}", static_cast<unsigned int>((*i) & mask));
+            auto ch = static_cast<unsigned int>((*i) & mask);
+            auto pch = reinterpret_cast<unsigned char*>(&ch);
+            for (int i = 0; i < size; ++i)
+                result += fmt::format("\\x{:02x}", pch[i]);
         }
     }
 

@@ -512,8 +512,8 @@ void TypeBuilder::VisitStrExpr(StrExpr* str)
 
     int width = 0;
     auto setwidth = [&width] (int w) {
-        if (width)  width = -1;
-        else        width = w;
+        if (!width)          width = w;
+        else if (width != w) width = -1;
     };
 
     auto next = [&str] (size_t i) {
@@ -529,14 +529,16 @@ void TypeBuilder::VisitStrExpr(StrExpr* str)
         return i;
     };
 
+    bool sign = false;
     for (auto i = str->Content().find_first_of('"'); i != std::string::npos; i = next(i))
     {
         if (i == 0)
             continue;
         char prefix = str->Content()[i - 1];
-        if (prefix == '8') setwidth(1);
-        else if (prefix == 'u') setwidth(2);
-        else if (prefix == 'U' || prefix == 'L') setwidth(4);
+        if (prefix == '8')      { setwidth(1); }
+        else if (prefix == 'u') { setwidth(2); }
+        else if (prefix == 'U') { setwidth(4); }
+        else if (prefix == 'L') { setwidth(4); sign = true; }
     }
 
     str->Width() = width <= 0 ? 1 : width;
@@ -554,7 +556,7 @@ void TypeBuilder::VisitStrExpr(StrExpr* str)
             std::make_unique<CArithmType>(TypeTag::uint16));
     else if (width == 4)
         str->Type() = std::make_unique<CArrayType>(
-            std::make_unique<CArithmType>(TypeTag::uint32));
+            std::make_unique<CArithmType>(sign ? TypeTag::int32 : TypeTag::uint32));
 }
 
 
