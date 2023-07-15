@@ -136,7 +136,14 @@ private:
     void AdjustRsp(long);
     void DeallocFrame();
 
+    void MapPtrParam2Mem(const x64*);
+    void MapPtrParam2Reg(const x64*, const x64Reg*);
+    void MapFltParam2Mem(const x64*);
+    void MapFltParam2Reg(const x64*, const x64Reg*);
+    void MapOtherParam2Mem(const x64*);
+    void MapOtherParam2Reg(const x64*, const x64Reg*);
     void PassParam(const SysVConv&, const std::vector<const IROperand*>&);
+
     void SaveCalleeSaved();
     void RestoreCalleeSaved();
     void SaveCallerSaved();

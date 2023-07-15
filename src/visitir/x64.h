@@ -106,9 +106,13 @@ public:
     auto Scale() const { return scale_; }
 
 private:
-    // if this field is true, it means that the address stores
-    // an address as well, and in order to get the value,
-    // we have to use two mov instructions.
+    // The register allocator can map a pointer to either the stack
+    // or a register. If a pointer is mapped to the stack, there
+    // comes two situations: one, only by lea instruction can we get
+    // the value of the pointer; two, the value of the pointer can be
+    // loaded by mov instruction like common variable. The loadtwice_
+    // field distinguish the two situations - false for the first
+    // situation, and true for the second one.
     bool loadtwice_{};
 
     std::string label_{};

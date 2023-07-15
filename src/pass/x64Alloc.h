@@ -46,6 +46,26 @@ struct x64Stack
 };
 
 
+// Tips on writing new register allocators:
+// 
+// An assumption is held by the code generator that RAX, R11 and XMM0
+// are ALWAYS able to be used as temporary registers, even if all the
+// physics registers are allocated. So the allocator must be careful
+// to guarantee that writing to these registers arbitraily will not
+// break up the program. Reserving these registers is design compromise
+// since we do not have lower IR here.
+// 
+// Another assumption made by the code generator is that, RDI, RSI
+// and other registers used to pass parameters can be safely overwritten
+// when there is a function call.
+// 
+// After finishing mapping registers to the stack, it is required for the
+// register allocators that to align the stack size by 16. The code generator
+// always treats the stack as aligned by 16 in the beginning of the function.
+// 
+// The allocator can simply ignore the platform requirement of instructions
+// operand type, and the code generator will handle all these annoying stuff.
+
 class x64Alloc : public FunctionPass, protected IRVisitor, public RegAlloc<x64Phys, x64Stack>
 {
 public:
@@ -87,6 +107,7 @@ protected:
     void LoadParam();
     bool MapConstAndGlobalVar(const IROperand* op);
     void MapRegister(const IROperand*, std::unique_ptr<x64>);
+    void MarkLoadTwice(const IROperand*);
 
 private:
     Function* curfunc_{};

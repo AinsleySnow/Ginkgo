@@ -48,6 +48,13 @@ void x64Alloc::MapRegister(const IROperand* op, std::unique_ptr<x64> reg)
     irmap_[curfunc_][op] = std::move(reg);
 }
 
+void x64Alloc::MarkLoadTwice(const IROperand* op)
+{
+    auto mapped = irmap_[curfunc_][op].get();
+    if (auto mem = mapped->As<x64Mem>(); mem)
+        mem->LoadTwice() = true;
+}
+
 
 void x64Alloc::Execute()
 {

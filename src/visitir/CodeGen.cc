@@ -91,28 +91,42 @@ const x64* CodeGen::MapPossibleFloat(const IROperand* op)
     return tempmap_[op].get();
 }
 
-const x64* CodeGen::MapPossiblePointer(const IROperand* op)
+const x64* CodeGen::MapPossibleRegister(const IROperand* op)
 {
     if (!op->Type()->Is<PtrType>())
         return alloc_.GetIROpMap(op);
 
     auto mappedop = alloc_.GetIROpMap(op);
-    if (mappedop->Is<x64Mem>() && mappedop->As<x64Mem>()->LoadTwice())
-    {
-        auto mayload = GetSpareIntReg();
-        asmfile_.EmitMov(mappedop, mayload);
-        tempmap_[op] = std::make_unique<x64Mem>(8, 0, mayload, RegTag::none, 0);
-    }
-    else if (mappedop->Is<x64Reg>())
+    if (mappedop->Is<x64Reg>())
     {
         // Address in a register. Convert it to a x64Mem.
         auto reg = mappedop->As<x64Reg>();
         tempmap_[op] = std::make_unique<x64Mem>(8, 0, *reg, RegTag::none, 0);
+        return tempmap_[op].get();
     }
     else
         return mappedop;
+}
 
-    return tempmap_.at(op).get();
+const x64* CodeGen::LoadPointer(const Register* reg)
+{
+    auto mapped = alloc_.GetIROpMap(reg);
+    if (auto m = mapped->As<x64Reg>(); m)
+    {
+        tempmap_[reg] = std::make_unique<x64Mem>(8, 0, *m, RegTag::none, 0);
+        return tempmap_[reg].get();
+    }
+
+    auto mem = mapped->As<x64Mem>();
+    if (!mem->LoadTwice())
+        return mem;
+
+    // use the second spare GP register here to avoid
+    // possible conflict with the helper functions
+    x64Reg temp{ GetSpareIntReg(1) };
+    asmfile_.EmitMov(mem, &temp);
+    tempmap_[reg] = std::make_unique<x64Mem>(8, 0, temp, RegTag::none, 0);
+    return tempmap_[reg].get();
 }
 
 
@@ -148,20 +162,87 @@ void CodeGen::DeallocFrame()
 }
 
 
+void CodeGen::MapPtrParam2Mem(const x64* ptr)
+{
+    auto mem = ptr->As<x64Mem>();
+    if (!mem)
+    {
+        PushEmitHelper(ptr);
+        return;
+    }
+
+    x64Reg reg{ GetSpareIntReg(0) };
+    if (mem->LoadTwice())
+        asmfile_.EmitMov(ptr, &reg);
+    else
+        asmfile_.EmitLeaq(ptr, &reg);
+    PushEmitHelper(&reg);
+}
+
+void CodeGen::MapPtrParam2Reg(const x64* ptr, const x64Reg* loc)
+{
+    auto mem = ptr->As<x64Mem>();
+    if (mem && mem->LoadTwice())
+        asmfile_.EmitMov(mem, loc);
+    else if (auto r = loc->As<x64Reg>(); mem && !(mem->Base() == r->Tag() &&
+        mem->Offset() == 0 && mem->Index() == RegTag::none))
+        asmfile_.EmitLeaq(ptr, loc);
+    else if (/* !mem && */ *ptr != loc->As<x64Reg>()->Tag())
+        asmfile_.EmitMov(ptr, loc);
+}
+
+void CodeGen::MapFltParam2Mem(const x64* flt)
+{
+    AdjustRsp(-8);
+    x64Mem rsp{ flt->Size(), 0, RegTag::rsp, RegTag::none, 0 };
+    VecMovEmitHelper(flt, &rsp);
+}
+
+void CodeGen::MapFltParam2Reg(const x64* flt, const x64Reg* loc)
+{
+    VecMovEmitHelper(flt, loc);
+}
+
+void CodeGen::MapOtherParam2Mem(const x64* param)
+{
+    if (param->Is<x64Mem>())
+    {
+        asmfile_.EmitMov(param, RegTag::rax);
+        PushEmitHelper(RegTag::rax, 8);
+    }
+    else
+        PushEmitHelper(param);
+}
+
+void CodeGen::MapOtherParam2Reg(const x64* param, const x64Reg* loc)
+{
+    auto reg = loc->As<x64Reg>();
+    if (auto p = param->As<x64Reg>(); p && *p == reg->Tag())
+        return;
+    asmfile_.EmitMov(param, loc);
+}
+
+// PassParam must correctly adjust the value of rsp, as the VisitCallInstr method
+// will add the size of the parameters and padding by rsp directly.
 void CodeGen::PassParam(
     const SysVConv& conv, const std::vector<const IROperand*>& param)
 {
     for (int i = param.size() - 1; i >= 0; --i)
     {
-        auto loc = conv.PlaceOfArgv(i);
-        if (!loc)
-            PushEmitHelper(MapPossibleFloat(param[i]));
-        else
-        {
-            auto reg = loc->As<x64Reg>();
-            asmfile_.EmitMov(MapPossibleFloat(param[i]), loc);            
-            continue;
-        }
+        auto load2reg = conv.PlaceOfArgv(i);
+        auto mapped = MapPossibleFloat(param[i]);
+        if (!load2reg && param[i]->Type()->Is<PtrType>())
+            MapPtrParam2Mem(mapped);
+        else if (!load2reg && param[i]->Type()->Is<FloatType>())
+            MapFltParam2Mem(mapped);
+        else if (!load2reg)
+            MapOtherParam2Mem(mapped);
+        else if (load2reg && param[i]->Type()->Is<PtrType>())
+            MapPtrParam2Reg(mapped, load2reg->As<x64Reg>());
+        else if (load2reg && param[i]->Type()->Is<FloatType>())
+            MapFltParam2Reg(mapped, load2reg->As<x64Reg>());
+        else if (load2reg)
+            MapOtherParam2Reg(mapped, load2reg->As<x64Reg>());
     }
 }
 
