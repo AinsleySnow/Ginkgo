@@ -195,9 +195,8 @@ void SimpleAlloc::VisitAllocaInstr(AllocaInstr* i)
 {
     auto size = i->Type()->Size();
     auto align = i->Type()->Align();
+    auto extra = align > size ? align - size : 0;
 
-    if (align > size /* && align <= 16 */)
-        size += align - size;
     // FIXME:
     // The case where align > 16 is very tricky. Say, k with int
     // type is aligned as 128. Although at the beginning of a function,
@@ -206,7 +205,7 @@ void SimpleAlloc::VisitAllocaInstr(AllocaInstr* i)
     // it's hard to identify the offsets of variables using the simple
     // method below. I'd like to simply ignore the issue for the time being.
 
-    auto offset = AllocateOnX64Stack(ArchInfo(), size, align);
+    auto offset = AllocateOnX64Stack(ArchInfo(), size + extra, align);
     stackcache_.Map2Stack(i->Result()->As<Register>(), size, offset);
 }
 
