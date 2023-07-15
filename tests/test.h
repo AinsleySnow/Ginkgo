@@ -4,4 +4,6 @@
 #include <assert.h>
 int printf(const char *format, ...);
 
+#define SUCCESS printf("OK\n"); return 0
+
 #endif // _TEST_H_
