@@ -73,6 +73,8 @@ public:
 
     bool operator==(const x64Reg& reg) const { return reg_ == reg.reg_ && Size() == reg.Size(); }
     bool operator!=(const x64Reg& reg) const { return !(*this == reg); }
+    bool operator==(RegTag tag) const { return reg_ == tag; }
+    bool operator!=(RegTag tag) const { return reg_ != tag; }
 
     std::string ToString() const override;
     RegTag Tag() const { return reg_; }
@@ -97,12 +99,13 @@ public:
     bool operator==(const x64Mem& mem) const;
     bool operator!=(const x64Mem& mem) const { return !(*this == mem); }
 
+    bool GlobalLoc() const { return !label_.empty(); }
     bool& LoadTwice() { return loadtwice_; }
     bool LoadTwice() const { return loadtwice_; }
 
     auto Offset() const { return offset_; }
-    auto Base() const { return base_; }
-    auto Index() const { return index_; }
+    auto& Base() const { return base_; }
+    auto& Index() const { return index_; }
     auto Scale() const { return scale_; }
 
 private:

@@ -12,8 +12,12 @@
 class BinaryInstr;
 class Constant;
 class IROperand;
+class Register;
 class SysVConv;
 class x64;
+class x64Imm;
+class x64Mem;
+class x64Reg;
 enum class Condition;
 enum class RegTag;
 
@@ -129,8 +133,9 @@ private:
     const x64* MapPossibleFloat(const IROperand*);
     // sometimes an operator with pointer type maps to a stack
     // address where the address stores itself, not the value
-    // it points to. MapPossiblePointer tackle with this problem.
-    const x64* MapPossiblePointer(const IROperand*); 
+    // it points to. MapPossibleRegister tackle with this problem.
+    const x64* MapPossibleRegister(const IROperand*); 
+    const x64* LoadPointer(const Register*);
 
     void AlignRspBy(size_t, size_t);
     void AdjustRsp(long);
@@ -149,8 +154,12 @@ private:
     void SaveCallerSaved();
     void RestoreCallerSaved();
 
-    RegTag GetSpareIntReg() const;
-    RegTag GetSpareVecReg() const;
+    RegTag GetSpareIntReg(int) const;
+    RegTag GetSpareVecReg(int) const;
+
+    void GetElePtrImmHelper(const x64Mem*, const x64Imm*, const x64*, size_t);
+    void GetElePtrRegHelper(const x64Mem*, const x64Reg*, const x64*, size_t);
+    void GetElePtrMemHelper(const x64Mem*, const x64Mem*, const x64*, size_t);
 
     void BinaryGenHelper(const std::string&, const BinaryInstr*);
     void VarithmGenHelper(const std::string&, const BinaryInstr*);

@@ -301,22 +301,93 @@ void CodeGen::RestoreCallerSaved()
 }
 
 
-RegTag CodeGen::GetSpareIntReg() const
+RegTag CodeGen::GetSpareIntReg(int i) const
 {
     auto notused = alloc_.NotUsedIntReg();
-    if (notused.empty())
+    if (notused.empty() && i == 0)
         return RegTag::rax;
-    else
+    else if (notused.empty() && i == 1)
+        return RegTag::r11;
+    else if (i == 0)
         return X64Phys2RegTag(*notused.begin());
+    else
+        return X64Phys2RegTag(*std::next(notused.begin(), i));
 }
 
-RegTag CodeGen::GetSpareVecReg() const
+RegTag CodeGen::GetSpareVecReg(int i) const
 {
     auto notused = alloc_.NotUsedVecReg();
     if (notused.empty())
         return RegTag::xmm0;
-    else
+    else if (i == 0)
         return X64Phys2RegTag(*notused.begin());
+    else
+        return X64Phys2RegTag(*std::next(notused.begin(), i));
+}
+
+
+void CodeGen::GetElePtrImmHelper(
+    const x64Mem* ptr, const x64Imm* i, const x64* rlt, size_t scl)
+{
+    if (ptr->GlobalLoc())
+    {
+        LeaqEmitHelper(ptr, rlt);
+        auto offset = scl * i->GetRepr().first;
+        if (offset)
+            asmfile_.EmitBinary("add", offset, rlt);
+    }
+    else if (ptr->LoadTwice())
+    {
+        x64Reg reg{ GetSpareIntReg(0) };
+        x64Mem mem{ 8, 0, reg, i->GetRepr().first, scl };
+        asmfile_.EmitMov(ptr, &reg);
+        LeaqEmitHelper(&mem, rlt);
+    }
+    else
+    {
+        auto offset = i->GetRepr().first * scl;
+        x64Mem mem{
+            8, static_cast<long>(offset + ptr->Offset()),
+            ptr->Base(), ptr->Index(), ptr->Scale()
+        };
+        LeaqEmitHelper(&mem, rlt);
+    }
+}
+
+void CodeGen::GetElePtrRegHelper(
+    const x64Mem* ptr, const x64Reg* i, const x64* rlt, size_t scl)
+{
+    if (!ptr->LoadTwice()) // eq to (ptr->GlobalLoc() || ptr->LoadOnce())
+    {
+        LeaqEmitHelper(ptr, rlt);
+        x64Reg reg{ GetSpareIntReg(0) };
+        asmfile_.EmitMov(i, &reg);
+        asmfile_.EmitBinary("mul", scl, &reg);
+        asmfile_.EmitBinary("add", &reg, rlt);
+    }
+    else
+    {
+        x64Reg reg{ GetSpareIntReg(0) };
+        asmfile_.EmitMov(ptr, &reg);
+        x64Mem mem{ 8, 0, reg, *i, scl };
+        LeaqEmitHelper(&mem, rlt);
+    }
+}
+
+void CodeGen::GetElePtrMemHelper(
+    const x64Mem* ptr, const x64Mem* i, const x64* rlt, size_t scl)
+{
+    x64Reg reg{ GetSpareIntReg(0) };
+
+    if (!ptr->LoadTwice()) // eq to (ptr->GlobalLoc() || ptr->LoadOnce())
+        asmfile_.EmitLeaq(ptr, &reg);
+    else
+        asmfile_.EmitMov(ptr, &reg);
+
+    x64Reg temp{ GetSpareIntReg(1) };
+    asmfile_.EmitMov(i, &temp);
+    x64Mem mem{ 8, 0, reg, temp, scl };
+    LeaqEmitHelper(&mem, rlt);
 }
 
 
@@ -351,7 +422,7 @@ void CodeGen::LeaqEmitHelper(const x64* addr, const x64* dest)
         return;
     }
 
-    RegTag reg = GetSpareIntReg();
+    RegTag reg = GetSpareIntReg(0);
     asmfile_.EmitLeaq(addr, reg);
     asmfile_.EmitMov(reg, dest);
 }
@@ -364,7 +435,7 @@ void CodeGen::MovEmitHelper(const x64* from, const x64* to)
         return;
     }
 
-    auto tag = GetSpareIntReg();
+    auto tag = GetSpareIntReg(0);
     asmfile_.EmitMov(from, tag);
     asmfile_.EmitMov(tag, to);
 }
@@ -378,7 +449,7 @@ if (to->Is<x64Reg>())                       \
     return;                                 \
 }                                           \
                                             \
-x64Reg reg{ GetSpareIntReg(), to->Size() }; \
+x64Reg reg{ GetSpareIntReg(0), to->Size() };\
 asmfile_.name(from, &reg);                  \
 asmfile_.EmitMov(&reg, to)
 
@@ -394,7 +465,7 @@ if (op->Is<x64Reg>())                   \
     return;                             \
 }                                       \
                                         \
-x64Reg reg{ GetSpareIntReg(), from };   \
+x64Reg reg{ GetSpareIntReg(0), from };  \
 asmfile_.EmitMov(op, &reg);             \
 asmfile_.name(from, to, &reg);          \
 asmfile_.EmitMov(&reg, op)
@@ -414,7 +485,7 @@ void CodeGen::VecMovEmitHelper(const x64* src, const x64* dest)
         asmfile_.EmitVmov(src, dest);
     else
     {
-        auto tag = GetSpareVecReg();
+        auto tag = GetSpareVecReg(0);
         asmfile_.EmitVmov(src, tag);
         asmfile_.EmitVmov(tag, dest);
     }
@@ -444,7 +515,7 @@ void CodeGen::VcvtEmitHelper(const x64* op1, const x64* op2)
         asmfile_.EmitVcvt(op1, op2);
         return;
     }
-    auto tag = GetSpareVecReg();
+    auto tag = GetSpareVecReg(0);
     asmfile_.EmitVcvt(op1, tag);
     asmfile_.EmitVmov(tag, op2);
 }
@@ -456,7 +527,7 @@ void CodeGen::VcvtsiEmitHelper(const x64* op1, const x64* op2)
         asmfile_.EmitVcvtsi(op1, op2);
         return;
     }
-    auto tag = GetSpareVecReg();
+    auto tag = GetSpareVecReg(0);
     asmfile_.EmitVcvtsi(op1, tag);
     asmfile_.EmitVmov(tag, op2);
 }
@@ -468,7 +539,7 @@ void CodeGen::VcvttEmitHelper(const x64* op1, const x64* op2)
         asmfile_.EmitVcvtt(op1, op2);
         return;
     }
-    auto tag = GetSpareVecReg();
+    auto tag = GetSpareVecReg(0);
     asmfile_.EmitVcvtt(op1, tag);
     asmfile_.EmitVmov(tag, op2);
 }
@@ -480,7 +551,7 @@ void CodeGen::UcomEmitHelper(const x64* op1, const x64* op2)
         asmfile_.EmitUcom(op1, op2);
         return;
     }
-    auto tag = GetSpareVecReg();
+    auto tag = GetSpareVecReg(0);
     asmfile_.EmitVmov(op2, tag);
     asmfile_.EmitUcom(op1, tag);
 }
@@ -573,7 +644,7 @@ void CodeGen::CmpEmitHelper(const x64* op1, const x64* op2)
         asmfile_.EmitCmp(op1, op2);
         return;
     }
-    auto tag = GetSpareIntReg();
+    auto tag = GetSpareIntReg(0);
     asmfile_.EmitMov(op1, tag);
     asmfile_.EmitCmp(tag, op2);
 }
@@ -603,7 +674,7 @@ void CodeGen::TestEmitHelper(const x64* op1, const x64* op2)
         asmfile_.EmitTest(op1, op2);
         return;
     }
-    auto tag = GetSpareIntReg();
+    auto tag = GetSpareIntReg(0);
     asmfile_.EmitMov(op1, tag);
     asmfile_.EmitTest(tag, op2);
 }
@@ -649,13 +720,7 @@ void CodeGen::VisitGlobalVar(GlobalVar* var)
     {
         asmfile_.EmitPseudoInstr(".section .rodata");
         asmfile_.EmitLabel(name);
-        auto width = dynamic_cast<OpNode*>(var->GetTree())->op_->
-            As<StrConst>()->Type()->As<ArrayType>()->ArrayOf()->Size();
-        std::string pseudo = ".string";
-        if (width != 1)
-            pseudo += std::to_string(width * 8);
-
-        asmfile_.EmitPseudoInstr(std::move(pseudo), { std::move(repr) });
+        asmfile_.EmitPseudoInstr(".string", { std::move(repr) });
     }
     else
     {
@@ -977,19 +1042,26 @@ void CodeGen::VisitStoreInstr(StoreInstr* inst)
 {
     auto dest = inst->Dest();
     auto value = inst->Value();
-    auto mappeddest = MapPossiblePointer(dest);
+    auto mappeddest = LoadPointer(dest);
 
     if (value->Type()->Is<FloatType>())
+    {
         VecMovEmitHelper(MapPossibleFloat(value), mappeddest);
+        return;
+    }
+
+    auto mappedval = alloc_.GetIROpMap(value);
+    if (value->Type()->Is<PtrType>() &&
+        mappedval->Is<x64Mem>() && !mappedval->As<x64Mem>()->LoadTwice())
+        LeaqEmitHelper(mappedval, mappeddest);
     else
-        MovEmitHelper(alloc_.GetIROpMap(value), mappeddest);
+        MovEmitHelper(mappedval, mappeddest);
 }
 
 void CodeGen::VisitLoadInstr(LoadInstr* inst)
 {
     auto result = inst->Result();
-    auto pointer = inst->Pointer();
-    auto mappedptr = MapPossiblePointer(pointer);
+    auto mappedptr = LoadPointer(inst->Pointer());
 
     if (result->Type()->Is<FloatType>())
         VecMovEmitHelper(mappedptr, MapPossibleFloat(result));
@@ -999,45 +1071,18 @@ void CodeGen::VisitLoadInstr(LoadInstr* inst)
 
 void CodeGen::VisitGetElePtrInstr(GetElePtrInstr* inst)
 {
-    auto size = inst->Result()->Type()->Size();
-    auto pointer = MapPossiblePointer(inst->Pointer());
+    // inst->Result() must be a pointer.
+    auto size = inst->Result()->Type()->As<PtrType>()->Point2()->Size();
+    auto pointer = MapPossibleRegister(inst->Pointer())->As<x64Mem>();
     auto index = alloc_.GetIROpMap(inst->OpIndex());
-    auto poprbx = false;
-    auto indexreg = RegTag::none;
-    auto offset = 0;
+    auto result = alloc_.GetIROpMap(inst->Result());
 
-    if (index->Is<x64Mem>())
-    {
-        auto notused = alloc_.NotUsedIntReg();
-        if (notused.empty())
-        {
-            indexreg = RegTag::rbx;
-            poprbx = true;
-            asmfile_.EmitPush(indexreg, 8);
-        }
-        else
-            indexreg = X64Phys2RegTag(*notused.begin());
-        asmfile_.EmitMov(index, indexreg);
-    }
-    else if (index->Is<x64Imm>())
-    // Index mustn't be a 16-byte float point!
-        offset = index->As<x64Imm>()->GetRepr().first * size;
-
-    // here, pointer can only be x64Mem*.
-    auto castptr = pointer->As<x64Mem>();
-    // Is the variable a string?
-    if (inst->Pointer()->Name()[1] == '.')
-        LeaqEmitHelper(castptr, alloc_.GetIROpMap(inst->Result()));
-    else
-    {
-        x64Mem mem{
-            size, castptr->Offset() + offset,
-            castptr->Base(), indexreg, size
-        };
-        MovEmitHelper(&mem, alloc_.GetIROpMap(inst->Result()));
-    }
-
-    if (poprbx) asmfile_.EmitPop(RegTag::rbx, 8);
+    if (index->Is<x64Imm>())
+        GetElePtrImmHelper(pointer, index->As<x64Imm>(), result, size);
+    else if (index->Is<x64Reg>())
+        GetElePtrRegHelper(pointer, index->As<x64Reg>(), result, size);
+    else if (index->Is<x64Mem>())
+        GetElePtrMemHelper(pointer, index->As<x64Mem>(), result, size);
 }
 
 
@@ -1120,16 +1165,14 @@ void CodeGen::VisitUtoFInstr(UtoFInstr* inst)
     // Note that this implementation is somewhat awkward,
     // since we can't overwrite the value in 'from'.
     asmfile_.EmitLabel(movebiguint);
-    x64Reg temp{ GetSpareIntReg() };
-    asmfile_.EmitMov(from, &temp);
-    asmfile_.EmitUnary("shr", &temp);
-    VcvtsiEmitHelper(&temp, to);
-    asmfile_.EmitVarithm("add", to, to, to);
-
-    asmfile_.EmitMov(from, &temp);
-    asmfile_.EmitBinary("and", 1, &temp);
-    x64Reg tempvec{ GetSpareVecReg(), to->Size() };
-    asmfile_.EmitVarithm("add", &tempvec, to, to);
+    x64Reg temp1{ GetSpareIntReg(0) };
+    x64Reg temp2{ GetSpareIntReg(1) };
+    asmfile_.EmitMov(from, &temp1);
+    asmfile_.EmitUnary("shr", &temp1);
+    asmfile_.EmitMov(from, &temp2);
+    asmfile_.EmitBinary("and", 1, &temp2);
+    asmfile_.EmitBinary("add", &temp2, &temp1);
+    VcvtsiEmitHelper(&temp1, to);
     asmfile_.EmitLabel(end);
 }
 
@@ -1146,11 +1189,10 @@ void CodeGen::VisitPtrtoIInstr(PtrtoIInstr* inst)
     auto from = alloc_.GetIROpMap(inst->Value());
     auto to = alloc_.GetIROpMap(inst->Dest());
 
-    if (from->Is<x64Reg>())
-        LeaqEmitHelper(from, to);
-    else if (from->As<x64Mem>()->LoadTwice())
+    auto mem = from->As<x64Mem>();
+    if ((mem && mem->LoadTwice()) || !mem)
         MovEmitHelper(from, to);
-    else
+    else // if (mem && mem->LoadOnce())
         LeaqEmitHelper(from, to);
 }
 
@@ -1158,7 +1200,10 @@ void CodeGen::VisitItoPtrInstr(ItoPtrInstr* inst)
 {
     auto from = alloc_.GetIROpMap(inst->Value());
     auto to = alloc_.GetIROpMap(inst->Dest());
-    // LoadTwice has been set in the register allocator.
+    // LoadTwice has been set in the register allocator,
+    // and the destination of itoptr must be a load-twice
+    // pointer if it is mapped onto the stack. So its value
+    // can be set by a single mov instruction.
     MovEmitHelper(from, to);
 }
 

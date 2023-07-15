@@ -113,7 +113,7 @@ std::string x64Mem::ToString() const
         loc += base_.ToString();
     if (index_ != RegTag::none)
         loc += ", " + index_.ToString();
-    if (scale_ != 0)
+    if ((scale_ != 0 || scale_ != 1) && index_ != RegTag::none)
         loc += ", " + std::to_string(scale_);
 
     loc += ')';

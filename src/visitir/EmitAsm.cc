@@ -207,7 +207,7 @@ void EmitAsm::EmitUcom(const x64* op1, RegTag op2)
 void EmitAsm::EmitMov(const x64* src, const x64* dest)
 {
     EmitInstr(fmt::format(INDENT "mov{} {}, {}\n",
-        GetIntTag(src), src->ToString(), dest->ToString()));
+        GetIntTag(dest), src->ToString(), dest->ToString()));
 }
 
 void EmitAsm::EmitMov(const x64* src, RegTag tag)
