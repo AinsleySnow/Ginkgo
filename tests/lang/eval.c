@@ -103,6 +103,5 @@ int main()
     floatpoint();
     fp_comp();
 
-    printf("OK\n");
-    return 0;
+    SUCCESS;
 }
