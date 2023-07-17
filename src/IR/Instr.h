@@ -481,12 +481,8 @@ public:
 
     LoadInstr(const Register* r, const Register* p) :
         Instr(InstrId::load), result_(r), pointer_(p) {}
-    LoadInstr(const Register* r, const Register* p, size_t a) :
-        Instr(InstrId::load), result_(r), pointer_(p),
-        align_(a) {}
-    LoadInstr(const Register* r, const Register* p, size_t a, bool vol) :
-        Instr(InstrId::load), result_(r), pointer_(p),
-        align_(a), volatile_(vol) {}
+    LoadInstr(const Register* r, const Register* p, bool vol) :
+        Instr(InstrId::load), result_(r), pointer_(p), volatile_(vol) {}
 
     std::string ToString() const override;
     void Accept(IRVisitor*) override;
@@ -495,13 +491,11 @@ public:
     auto Result() const { return result_; }
     auto& Pointer() { return pointer_; }
     auto Pointer() const { return pointer_; }
-    auto Align() const { return align_; }
     auto Volatile() const { return volatile_; }
 
 private:
     const Register* result_{};
     const Register* pointer_{};
-    size_t align_{ result_->Type()->Size() };
     bool volatile_{};
 };
 

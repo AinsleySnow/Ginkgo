@@ -170,9 +170,7 @@ public:
     const Register* InsertLoadInstr(
         const std::string& result, const Register* ptr);
     const Register* InsertLoadInstr(
-        const std::string& result, const Register* ptr, size_t align);
-    const Register* InsertLoadInstr(
-        const std::string& result, const Register* ptr, size_t align, bool vol);
+        const std::string& result, const Register* ptr, bool vol);
 
     void InsertStoreInstr(const IROperand* val, const Register* ptr, bool vol);
     

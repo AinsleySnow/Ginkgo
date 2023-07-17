@@ -153,8 +153,6 @@ std::string LoadInstr::ToString() const
     std::string line = result_->Name() + " = " +
         (volatile_ ? "volatile load " : "load ");
     line += pointer_->ToString();
-    if (align_ > 1)
-        line += ", align " + std::to_string(align_);
     return line;
 }
 
@@ -286,13 +284,13 @@ string to_string(Condition c)
 void IcmpInstr::Accept(IRVisitor* v) { v->VisitIcmpInstr(this); }
 std::string IcmpInstr::ToString() const
 {
-    return result_->ToString() + " = icmp " + std::to_string(cond_) +
+    return result_->Name() + " = icmp " + std::to_string(cond_) +
         ' ' + op1_->ToString() + ", " + op2_->ToString();
 }
 void FcmpInstr::Accept(IRVisitor* v) { v->VisitFcmpInstr(this); }
 std::string FcmpInstr::ToString() const
 {
-    return result_->ToString() + " = fcmp " + std::to_string(cond_) +
+    return result_->Name() + " = fcmp " + std::to_string(cond_) +
         ' ' + op1_->ToString() + ", " + op2_->ToString();
 }
 

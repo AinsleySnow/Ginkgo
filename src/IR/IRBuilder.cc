@@ -270,24 +270,17 @@ const Register* InstrBuilder::InsertLoadInstr(const std::string& result, const R
 }
 
 const Register* InstrBuilder::InsertLoadInstr(
-    const std::string& result, const Register* ptr, size_t align)
+    const std::string& result, const Register* ptr, bool vol)
 {
     auto ans = Register::CreateRegister(Container(), result, ptr->Type()->As<PtrType>()->Point2());
-    Insert(std::make_unique<LoadInstr>(ans, ptr, align));
-    return ans;
-}
-
-const Register* InstrBuilder::InsertLoadInstr(
-    const std::string& result, const Register* ptr, size_t align, bool vol)
-{
-    auto ans = Register::CreateRegister(Container(), result, ptr->Type()->As<PtrType>()->Point2());
-    Insert(std::make_unique<LoadInstr>(ans, ptr, align, vol));
+    Insert(std::make_unique<LoadInstr>(ans, ptr, vol));
     return ans;
 }
 
 
 void InstrBuilder::InsertStoreInstr(const IROperand* val, const Register* ptr, bool vol)
 {
+    MatchArithmType(ptr->Type()->As<PtrType>()->Point2(), val);
     auto pstore = std::make_unique<StoreInstr>(val, ptr, vol);
     Insert(std::move(pstore));
 }
