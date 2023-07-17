@@ -91,8 +91,8 @@ public:
     void EmitCMov(const std::string& cond, const x64* op1, const x64* op2);
 
     void EmitCmp(const x64* op1, const x64* op2);
-    void EmitCmp(RegTag op1, const x64* op2);
-    void EmitCmp(const x64* op1, unsigned long);
+    void EmitCmp(const x64* op1, RegTag op2);
+    void EmitCmp(unsigned long, const x64* op);
     void EmitTest(const x64* op1, const x64* op2);
     void EmitTest(RegTag op1, const x64* op2);
     void EmitTest(const x64* op1, unsigned long);

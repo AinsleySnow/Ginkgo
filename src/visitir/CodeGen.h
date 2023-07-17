@@ -163,6 +163,8 @@ private:
 
     void BinaryGenHelper(const std::string&, const BinaryInstr*);
     void VarithmGenHelper(const std::string&, const BinaryInstr*);
+    void ShiftGenHelper(const std::string&, const BinaryInstr*);
+    const x64* PrepareDivMod(const BinaryInstr*);
 
     void LeaqEmitHelper(const x64*, const x64*);
     void MovEmitHelper(const x64*, const x64*);

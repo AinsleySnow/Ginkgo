@@ -84,7 +84,7 @@ void EmitAsm::EmitPseudoInstr(
 void EmitAsm::EmitCxtx(size_t size)
 {
     char from = size == 4 ? 'l' : 'q';
-    char to = from == 'q' ? 'o' : 'l';
+    char to = size == 4 ? 'd' : 'o';
     EmitInstr(fmt::format(INDENT "c{}t{}\n", from, to));
 }
 
@@ -396,15 +396,15 @@ void EmitAsm::EmitCmp(const x64* op1, const x64* op2)
         GetIntTag(op1), op1->ToString(), op2->ToString()));
 }
 
-void EmitAsm::EmitCmp(RegTag op1, const x64* op2)
+void EmitAsm::EmitCmp(const x64* op1, RegTag op2)
 {
-    x64Reg reg{ op1, op2->Size() };
-    EmitCmp(&reg, op2);
+    x64Reg reg{ op2, op1->Size() };
+    EmitCmp(op1, &reg);
 }
 
-void EmitAsm::EmitCmp(const x64* op1, unsigned long c)
+void EmitAsm::EmitCmp(unsigned long c, const x64* op1)
 {
-    EmitInstr(fmt::format(INDENT "cmp{} {}, ${}\n",
+    EmitInstr(fmt::format(INDENT "cmp{} ${}, {}\n",
         GetIntTag(op1), op1->ToString(), std::to_string(c)));
 }
 
@@ -423,7 +423,7 @@ void EmitAsm::EmitTest(RegTag op1, const x64* op2)
 void EmitAsm::EmitTest(const x64* op1, unsigned long c)
 {
     EmitInstr(fmt::format(INDENT "test{} {}, ${}\n",
-        GetIntTag(op1), op1->ToString(), std::to_string(c)));
+        GetIntTag(op1), std::to_string(c), op1->ToString()));
 }
 
 void EmitAsm::EmitSet(const std::string& cond, const x64* dest)

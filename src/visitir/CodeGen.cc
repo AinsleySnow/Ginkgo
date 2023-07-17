@@ -398,9 +398,28 @@ void CodeGen::BinaryGenHelper(
     auto rhs = alloc_.GetIROpMap(bi->Rhs());
     auto ans = alloc_.GetIROpMap(bi->Result());
 
-    asmfile_.EmitBinary(name, rhs, lhs);
-    if (lhs->operator!=(*ans))
-        asmfile_.EmitMov(lhs, ans);
+    if (*rhs == *ans)
+    {
+        auto tag = GetSpareIntReg(0);
+        asmfile_.EmitMov(lhs, tag);
+        x64Reg temp{ tag, rhs->Size() };
+        asmfile_.EmitBinary(name, rhs, &temp);
+        asmfile_.EmitMov(&temp, ans);
+        return;
+    }
+
+    if (*lhs != *ans)
+        MovEmitHelper(lhs, ans);
+
+    if (ans->Is<x64Reg>() || rhs->Is<x64Reg>())
+        asmfile_.EmitBinary(name, rhs, ans);
+    else
+    {
+        auto tag = GetSpareIntReg(0);
+        x64Reg temp{ tag, rhs->Size() };
+        asmfile_.EmitMov(rhs, &temp);
+        asmfile_.EmitBinary(name, &temp, ans);
+    }
 }
 
 void CodeGen::VarithmGenHelper(
@@ -409,7 +428,79 @@ void CodeGen::VarithmGenHelper(
     auto lhs = MapPossibleFloat(bi->Lhs());
     auto rhs = MapPossibleFloat(bi->Rhs());
     auto ans = alloc_.GetIROpMap(bi->Result());
-    asmfile_.EmitVarithm(name, lhs, rhs, ans);
+
+    if (lhs->Is<x64Reg>() && ans->Is<x64Reg>())
+        asmfile_.EmitVarithm(name, rhs, lhs, ans);
+    else if (!ans->Is<x64Reg>())
+    {
+        x64Reg temp{ GetSpareVecReg(0), ans->Size() };
+        asmfile_.EmitVarithm(name, rhs, lhs, &temp);
+        asmfile_.EmitVmov(&temp, ans);
+    }
+    else // if (!lhs->Is<x64Reg>())
+    {
+        x64Reg temp{ GetSpareVecReg(0), ans->Size() };
+        asmfile_.EmitVmov(lhs, &temp);
+        asmfile_.EmitVarithm(name, rhs, &temp, ans);
+    }
+}
+
+void CodeGen::ShiftGenHelper(const std::string& name, const BinaryInstr* bin)
+{
+    auto lhs = alloc_.GetIROpMap(bin->Lhs());
+    auto rhs = alloc_.GetIROpMap(bin->Rhs());
+    auto ans = alloc_.GetIROpMap(bin->Result());
+
+    if (!(rhs->Is<x64Reg>() && *rhs == RegTag::rcx))
+        asmfile_.EmitMov(rhs, RegTag::rcx);
+    if (*lhs != *ans)
+        MovEmitHelper(lhs, ans);
+
+    x64Reg rcx{ RegTag::rcx, rhs->Size() };
+    asmfile_.EmitBinary(name, &rcx, ans);
+}
+
+const x64* CodeGen::PrepareDivMod(const BinaryInstr* bin)
+{
+    auto lhs = alloc_.GetIROpMap(bin->Lhs());
+    auto rhs = alloc_.GetIROpMap(bin->Rhs());
+    auto ans = alloc_.GetIROpMap(bin->Result());
+    bool sign =
+        bin->Lhs()->Type()->As<IntType>()->IsSigned() ||
+        bin->Rhs()->Type()->As<IntType>()->IsSigned();
+
+    // the first op in DivInstr may not be in %*ax.
+    // move it to %*ax if it is not.
+    if (lhs->Size() < 4)
+    {
+        x64Reg rax{ RegTag::rax, 4 };
+        if (sign)
+            asmfile_.EmitMovs(lhs->Size(), 4, &rax);
+        else
+            asmfile_.EmitMovz(lhs->Size(), 4, &rax);
+    }
+    else if (!(*lhs == RegTag::rax))
+        asmfile_.EmitMov(lhs, RegTag::rax);
+
+    bool usetemp = false;
+    x64Reg temp{ GetSpareIntReg(1), 4 };
+    if (rhs->Size() < 4)
+    {
+        if (sign)
+            asmfile_.EmitMovs(rhs->Size(), 4, &temp);
+        else
+            asmfile_.EmitMovz(rhs->Size(), 4, &temp);
+        usetemp = true;
+    }
+    else if (rhs->Is<x64Imm>())
+    {
+        asmfile_.EmitMov(rhs, &temp);
+        usetemp = true;
+    }
+
+    asmfile_.EmitCxtx(lhs->Size() < 4 ? 4 : lhs->Size());
+    asmfile_.EmitUnary(sign ? "idiv" : "div", usetemp ? &temp : rhs);
+    return ans;
 }
 
 
@@ -639,14 +730,14 @@ void CodeGen::CMovEmitHelper(Condition cond, bool issigned, const x64* op1, cons
 
 void CodeGen::CmpEmitHelper(const x64* op1, const x64* op2)
 {
-    if (!(op1->Is<x64Mem>() && op2->Is<x64Mem>()))
+    if (!(op2->Is<x64Imm>() || (op1->Is<x64Mem>() && op2->Is<x64Mem>())))
     {
         asmfile_.EmitCmp(op1, op2);
         return;
     }
     auto tag = GetSpareIntReg(0);
-    asmfile_.EmitMov(op1, tag);
-    asmfile_.EmitCmp(tag, op2);
+    asmfile_.EmitMov(op2, tag);
+    asmfile_.EmitCmp(op1, tag);
 }
 
 void CodeGen::SetEmitHelper(Condition cond, bool issigned, const x64* op)
@@ -897,7 +988,7 @@ void CodeGen::VisitBrInstr(BrInstr* inst)
     if (inst->Cond())
     {
         auto cond = MapPossibleFloat(inst->Cond());
-        asmfile_.EmitCmp(cond, (unsigned long)0);
+        asmfile_.EmitCmp((unsigned long)0, cond);
         asmfile_.EmitJmp("ne", GetLabel(inst->GetTrueBlk()));
         asmfile_.EmitJmp("", GetLabel(inst->GetFalseBlk()));
     }
@@ -913,7 +1004,7 @@ void CodeGen::VisitSwitchInstr(SwitchInstr* inst)
     auto ident = alloc_.GetIROpMap(inst->GetIdent());
     for (auto [tag, bb] : inst->GetValueBlkPairs())
     {
-        asmfile_.EmitCmp(ident, alloc_.GetIROpMap(tag));
+        CmpEmitHelper(ident, alloc_.GetIROpMap(tag));
         asmfile_.EmitJmp("z", GetLabel(bb));
     }
     asmfile_.EmitJmp("", GetLabel(inst->GetDefault()));
@@ -981,57 +1072,34 @@ void CodeGen::VisitAddInstr(AddInstr* inst)     { BinaryGenHelper("add", inst); 
 void CodeGen::VisitFaddInstr(FaddInstr* inst)   { VarithmGenHelper("add", inst); }
 void CodeGen::VisitSubInstr(SubInstr* inst)     { BinaryGenHelper("sub", inst); }
 void CodeGen::VisitFsubInstr(FsubInstr* inst)   { VarithmGenHelper("sub", inst); }
-void CodeGen::VisitMulInstr(MulInstr* inst)     { BinaryGenHelper("imul", inst); }
 void CodeGen::VisitFmulInstr(FmulInstr* inst)   { VarithmGenHelper("mul", inst); }
 void CodeGen::VisitFdivInstr(FdivInstr* inst)   { VarithmGenHelper("div", inst); }
-void CodeGen::VisitShlInstr(ShlInstr* inst)     { BinaryGenHelper("shl", inst); }
-void CodeGen::VisitLshrInstr(LshrInstr* inst)   { BinaryGenHelper("shr", inst); }
-void CodeGen::VisitAshrInstr(AshrInstr* inst)   { BinaryGenHelper("sar", inst); }
+void CodeGen::VisitShlInstr(ShlInstr* inst)     { ShiftGenHelper("shl", inst); }
+void CodeGen::VisitLshrInstr(LshrInstr* inst)   { ShiftGenHelper("shr", inst); }
+void CodeGen::VisitAshrInstr(AshrInstr* inst)   { ShiftGenHelper("sar", inst); }
 void CodeGen::VisitAndInstr(AndInstr* inst)     { BinaryGenHelper("and", inst); }
 void CodeGen::VisitOrInstr(OrInstr* inst)       { BinaryGenHelper("or", inst); }
 void CodeGen::VisitXorInstr(XorInstr* inst)     { BinaryGenHelper("xor", inst); }
 
+void CodeGen::VisitMulInstr(MulInstr* inst)
+{
+    bool issigned =
+        inst->Lhs()->Type()->As<IntType>()->IsSigned() ||
+        inst->Rhs()->Type()->As<IntType>()->IsSigned();
+    BinaryGenHelper(issigned ? "imul" : "mul", inst);
+}
+
 void CodeGen::VisitDivInstr(DivInstr* inst)
 {
-    auto lhs = alloc_.GetIROpMap(inst->Lhs());
-    auto rhs = alloc_.GetIROpMap(inst->Rhs());
-    auto ans = alloc_.GetIROpMap(inst->Result());
-
-    // the first op in DivInstr may not be in %*ax.
-    // move it to %*ax if it is not.
-    if (!(*lhs == RegTag::rax))
-        asmfile_.EmitMov(lhs, RegTag::rax);
-
-    asmfile_.EmitCxtx(lhs->Size());
-
-    bool issigned = inst->Lhs()->Type()->As<IntType>()->IsSigned() ||
-        inst->Rhs()->Type()->As<IntType>()->IsSigned();
-    std::string name = issigned ? "idiv" : "div";
-    asmfile_.EmitUnary(name, rhs);
-
+    auto ans = PrepareDivMod(inst);
     // if result register is not %*ax, move it to the result register.
-    if (!(*alloc_.GetIROpMap(inst->Result()) == RegTag::rax))
+    if (!(*ans == RegTag::rax))
         asmfile_.EmitMov(RegTag::rax, ans);
 }
 
 void CodeGen::VisitModInstr(ModInstr* inst)
 {
-    auto lhs = alloc_.GetIROpMap(inst->Lhs());
-    auto rhs = alloc_.GetIROpMap(inst->Rhs());
-    auto ans = alloc_.GetIROpMap(inst->Result());
-
-    // the first op in DivInstr may not be in %*ax.
-    // move it to %*ax if it is not.
-    if (!(*lhs == RegTag::rax))
-        asmfile_.EmitMov(lhs, RegTag::rax);
-
-    asmfile_.EmitCxtx(lhs->Size());
-
-    bool issigned = inst->Lhs()->Type()->As<IntType>()->IsSigned() ||
-        inst->Rhs()->Type()->As<IntType>()->IsSigned();
-    std::string name = issigned ? "idiv" : "div";
-    asmfile_.EmitUnary(name, rhs);
-
+    auto ans = PrepareDivMod(inst);
     // if result register is not %*dx, move it to the result register.
     if (!(*alloc_.GetIROpMap(inst->Result()) == RegTag::rdx))
         asmfile_.EmitMov(RegTag::rdx, ans);
@@ -1091,10 +1159,32 @@ void CodeGen::VisitTruncInstr(TruncInstr* inst)
     auto from = alloc_.GetIROpMap(inst->Value());
     auto to = alloc_.GetIROpMap(inst->Dest());
 
-    if (inst->Type()->As<IntType>()->IsSigned())
-        MovsEmitHelper(from, to);
+    // Cannot use MovEmitHelper here, since the helping
+    // method supposes its two operands have the same size.
+    x64Reg temp{ RegTag::none };
+    if (to->Is<x64Reg>())
+        temp = x64Reg(to->As<x64Reg>()->Tag(), from->Size());
+    else // if (to->Is<x64Mem>())
+        temp = x64Reg(GetSpareIntReg(0), from->Size());
+
+    asmfile_.EmitMov(from, &temp);
+    if (to->Size() == 4)
+    {
+        temp.Size() = 4;
+        asmfile_.EmitMov(&temp, &temp);
+    }
     else
-        MovzEmitHelper(from, to);
+    {
+        temp.Size() = 8;
+        auto mask = ~(0x8000000000000000 >> (64 - to->Size() * 8));
+        asmfile_.EmitBinary("and", mask, &temp);
+    }
+
+    if (to->Is<x64Mem>())
+    {
+        temp.Size() = to->Size();
+        asmfile_.EmitMov(&temp, to);
+    }
 }
 
 void CodeGen::VisitFtruncInstr(FtruncInstr* inst)
@@ -1216,7 +1306,7 @@ void CodeGen::VisitIcmpInstr(IcmpInstr* inst)
     auto issigned = inst->Op1()->Type()->As<IntType>()->IsSigned() ||
         inst->Op2()->Type()->As<IntType>()->IsSigned();
 
-    asmfile_.EmitCmp(rhs, lhs);
+    CmpEmitHelper(rhs, lhs);
     SetEmitHelper(inst->Cond(), issigned, ans);
     if (ans->Size() != 1)
         MovzEmitHelper(1, ans->Size(), ans);
