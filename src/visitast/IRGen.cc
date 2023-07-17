@@ -206,10 +206,7 @@ void IRGen::VisitDeclList(DeclList* list)
                 if (env_.InFunction())
                 {
                     auto val = LoadVal(initdecl->initalizer_.get());
-                    auto casted = ibud_.InsertArithmCastInstr(
-                        initdecl->base_->Type()->As<PtrType>()->Point2(), val);
-                    ibud_.InsertStoreInstr(
-                        casted, initdecl->base_, false);
+                    ibud_.InsertStoreInstr(val, initdecl->base_, false);
                 }
                 else
                     env_.GetGlobalVar()->Dump2Tree();
