@@ -94,9 +94,11 @@ void SimpleAlloc::BinaryAllocaHelper(BinaryInstr* i)
     auto lhs = MapConstAndGlobalVar(i->Lhs());
     auto rhs = MapConstAndGlobalVar(i->Rhs());
 
+    // Make sure that 'result' never share
+    // the same register with 'rhs'.
     if (!lhs) stackcache_.Access(i->Lhs()->As<Register>());
-    if (!rhs) stackcache_.Access(i->Rhs()->As<Register>());
     Allocate(i->Result()->As<Register>());
+    if (!rhs) stackcache_.Access(i->Rhs()->As<Register>());
 }
 
 void SimpleAlloc::ConvertAllocaHelper(ConvertInstr* i)
