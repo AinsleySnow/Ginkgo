@@ -2,6 +2,7 @@
 #include "visitir/SysVConv.h"
 #include "visitir/x64.h"
 #include "IR/Value.h"
+#include <climits>
 #include <memory>
 #include <string>
 
@@ -520,12 +521,19 @@ void CodeGen::LeaqEmitHelper(const x64* addr, const x64* dest)
 
 void CodeGen::MovEmitHelper(const x64* from, const x64* to)
 {
+    if (auto imm = from->As<x64Imm>(); imm && to->Is<x64Mem>())
+    {
+        auto val = imm->GetRepr().first;
+        if (val > UINT32_MAX)
+            goto usereg;
+    }
     if (from->Is<x64Reg>() || from->Is<x64Imm>() || to->Is<x64Reg>())
     {
         asmfile_.EmitMov(from, to);
         return;
     }
 
+usereg:
     auto tag = GetSpareIntReg(0);
     asmfile_.EmitMov(from, tag);
     asmfile_.EmitMov(tag, to);
@@ -718,6 +726,13 @@ void CodeGen::CMovEmitHelper(Condition cond, bool issigned, const x64* op1, cons
 {
     if (op2->Is<x64Reg>())
     {
+        x64Reg reg{ RegTag::none };
+        if (auto imm = op1->As<x64Imm>(); imm)
+        {
+            reg = GetSpareIntReg(0);
+            op1 = &reg;
+            asmfile_.EmitMov(imm, op1);
+        }
         asmfile_.EmitCMov(Cond2Str(cond, issigned), op1, op2);
         return;
     }
@@ -730,12 +745,20 @@ void CodeGen::CMovEmitHelper(Condition cond, bool issigned, const x64* op1, cons
 
 void CodeGen::CmpEmitHelper(const x64* op1, const x64* op2)
 {
+    x64Reg reg{ RegTag::none };
+    if (auto imm = op1->As<x64Imm>(); imm && imm->GetRepr().first > UINT32_MAX)
+    {
+        reg = GetSpareIntReg(0);
+        op1 = &reg;
+        asmfile_.EmitMov(imm, op1);
+    }
+
     if (!(op2->Is<x64Imm>() || (op1->Is<x64Mem>() && op2->Is<x64Mem>())))
     {
         asmfile_.EmitCmp(op1, op2);
         return;
     }
-    auto tag = GetSpareIntReg(0);
+    auto tag = GetSpareIntReg(1);
     asmfile_.EmitMov(op2, tag);
     asmfile_.EmitCmp(op1, tag);
 }
@@ -762,6 +785,13 @@ void CodeGen::TestEmitHelper(const x64* op1, const x64* op2)
 {
     if (!(op1->Is<x64Mem>() && op2->Is<x64Mem>()))
     {
+        x64Reg reg{ RegTag::none };
+        if (auto imm = op1->As<x64Imm>(); imm && imm->GetRepr().first > UINT32_MAX)
+        {
+            reg = GetSpareIntReg(0);
+            op1 = &reg;
+            asmfile_.EmitMov(imm, op1);
+        }
         asmfile_.EmitTest(op1, op2);
         return;
     }
