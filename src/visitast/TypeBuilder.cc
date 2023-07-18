@@ -63,9 +63,30 @@ std::shared_ptr<CType> TypeBuilder::GetCTypeByValue(
 }
 
 
+static int MatchCArithmType(const CType* lhs, const CType* rhs)
+{
+    auto la = lhs->As<CArithmType>();
+    auto ra = rhs->As<CArithmType>();
+
+    if (la->IsFloat() && ra->IsInteger()) return 0;
+    else if (la->IsInteger() && ra->IsFloat()) return 1;
+    else if (la->operator>(*ra)) return 0;
+    else if (la->operator<(*ra)) return 1;
+
+    // the two types are compatible
+    if (la->IsFloat() && ra->IsFloat()) return 0;
+    if ((la->IsUnsigned() && ra->IsUnsigned()) ||
+        (!la->IsUnsigned() && !ra->IsUnsigned())) return 0;
+    return la->IsUnsigned() ? 0 : 1;
+}
+
 std::shared_ptr<CType> TypeBuilder::MatchCType(
     std::shared_ptr<CType> lhs, std::shared_ptr<CType> rhs)
 {
+    auto matchedarithm = [&lhs, &rhs] (const CType* l, const CType* r) {
+        return MatchCArithmType(l, r) == 0 ? lhs : rhs;
+    };
+
     // for things like int* + 2, int* = 2
     if (lhs->Is<CPtrType>() && rhs->Is<CArithmType>())
         return lhs;
@@ -84,20 +105,25 @@ std::shared_ptr<CType> TypeBuilder::MatchCType(
     // for things like PtrName = ArrayName
     else if (lhs->Is<CPtrType>() && rhs->Is<CArrayType>())
         return lhs;
+    // What about the variables with enum type?
+    else if (lhs->Is<CEnumType>() && rhs->Is<CEnumType>())
+    {
+        auto left = lhs->As<CEnumType>()->Underlying();
+        auto right = rhs->As<CEnumType>()->Underlying();
+        return matchedarithm(left, right);
+    }
+    else if (lhs->Is<CEnumType>())
+    {
+        auto left = lhs->As<CEnumType>()->Underlying();
+        return matchedarithm(left, rhs.get());
+    }
+    else if (rhs->Is<CEnumType>())
+    {
+        auto right = rhs->As<CEnumType>()->Underlying();
+        return matchedarithm(lhs.get(), right);
+    }
 
-    auto la = lhs->As<CArithmType>();
-    auto ra = rhs->As<CArithmType>();
-
-    if (la->IsFloat() && ra->IsInteger()) return lhs;
-    else if (la->IsInteger() && ra->IsFloat()) return rhs;
-    else if (la->operator>(*ra)) return lhs;
-    else if (la->operator<(*ra)) return rhs;
-
-    // the two types are compatible
-    if (la->IsFloat() && ra->IsFloat()) return lhs;
-    if ((la->IsUnsigned() && ra->IsUnsigned()) ||
-        (!la->IsUnsigned() && !ra->IsUnsigned())) return lhs;
-    return la->IsUnsigned() ? lhs : rhs;
+    return matchedarithm(lhs.get(), rhs.get());
 }
 
 
