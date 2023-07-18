@@ -1,4 +1,4 @@
-int putchar(int);
+#include "test.h"
 
 enum e
 {
@@ -33,18 +33,32 @@ void t1()
     int b = F_A + F_B + F_C + F_D;
     unsigned long c = G_A + G_B + G_C;
     int d = H_A + H_B + H_C;
+
+    assert(a == 3);
+    assert(b == 29);
+    assert(c == 12884901891);
+    assert(d == 3);
 }
 
 void t2()
 {
     enum { t2_1, t2_2 } a = t2_1;
-    putchar(a);
+    assert(a == 0);
 }
 
 void t3()
 {
     enum t3_e { t3_1, t3_2 } a = t3_1;
-    putchar(a);
+    assert(a == 0);
     enum t3_e c = t3_2;
-    putchar(c);
+    assert(c == 1);
+}
+
+int main()
+{
+    t1();
+    t2();
+    t3();
+
+    SUCCESS;
 }
