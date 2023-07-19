@@ -81,12 +81,12 @@ const x64* CodeGen::MapPossibleFloat(const IROperand* op)
 {
     auto fp = op->As<FloatConst>();
     if (!fp)
-        return alloc_.GetIROpMap(op);
+        return alloc_->GetIROpMap(op);
 
     if (auto res = tempmap_.find(op); res != tempmap_.end())
         return res->second.get();
 
-    auto imm = alloc_.GetIROpMap(op)->As<x64Imm>();
+    auto imm = alloc_->GetIROpMap(op)->As<x64Imm>();
     tempmap_[op] = std::make_unique<x64Mem>(
         op->Type()->Size(), GetFpLabel(imm->GetRepr(), imm->Size()));
     return tempmap_[op].get();
@@ -95,9 +95,9 @@ const x64* CodeGen::MapPossibleFloat(const IROperand* op)
 const x64* CodeGen::MapPossibleRegister(const IROperand* op)
 {
     if (!op->Type()->Is<PtrType>())
-        return alloc_.GetIROpMap(op);
+        return alloc_->GetIROpMap(op);
 
-    auto mappedop = alloc_.GetIROpMap(op);
+    auto mappedop = alloc_->GetIROpMap(op);
     if (mappedop->Is<x64Reg>())
     {
         // Address in a register. Convert it to a x64Mem.
@@ -111,7 +111,7 @@ const x64* CodeGen::MapPossibleRegister(const IROperand* op)
 
 const x64* CodeGen::LoadPointer(const Register* reg)
 {
-    auto mapped = alloc_.GetIROpMap(reg);
+    auto mapped = alloc_->GetIROpMap(reg);
     if (auto m = mapped->As<x64Reg>(); m)
     {
         tempmap_[reg] = std::make_unique<x64Mem>(8, 0, *m, RegTag::none, 0);
@@ -255,7 +255,7 @@ static bool IsVecReg(x64Phys phys)
 
 void CodeGen::SaveCalleeSaved()
 {
-    auto regs = alloc_.UsedCalleeSaved();
+    auto regs = alloc_->UsedCalleeSaved();
     for (auto reg : regs)
     {
         if (IsVecReg(reg))
@@ -267,7 +267,7 @@ void CodeGen::SaveCalleeSaved()
 
 void CodeGen::RestoreCalleeSaved()
 {
-    auto regs = alloc_.UsedCalleeSaved();
+    auto regs = alloc_->UsedCalleeSaved();
     for (auto i = regs.rbegin(); i != regs.rend(); ++i)
     {
         if (IsVecReg(*i))
@@ -279,7 +279,7 @@ void CodeGen::RestoreCalleeSaved()
 
 void CodeGen::SaveCallerSaved()
 {
-    auto regs = alloc_.UsedCallerSaved();
+    auto regs = alloc_->UsedCallerSaved();
     for (auto reg: regs)
     {
         if (IsVecReg(reg))
@@ -291,7 +291,7 @@ void CodeGen::SaveCallerSaved()
 
 void CodeGen::RestoreCallerSaved()
 {
-    auto regs = alloc_.UsedCallerSaved();
+    auto regs = alloc_->UsedCallerSaved();
     for (auto i = regs.rbegin(); i != regs.rend(); ++i)
     {
         if (IsVecReg(*i))
@@ -304,7 +304,7 @@ void CodeGen::RestoreCallerSaved()
 
 RegTag CodeGen::GetSpareIntReg(int i) const
 {
-    auto notused = alloc_.NotUsedIntReg();
+    auto notused = alloc_->NotUsedIntReg();
     if (notused.empty() && i == 0)
         return RegTag::rax;
     else if (notused.empty() && i == 1)
@@ -317,7 +317,7 @@ RegTag CodeGen::GetSpareIntReg(int i) const
 
 RegTag CodeGen::GetSpareVecReg(int i) const
 {
-    auto notused = alloc_.NotUsedVecReg();
+    auto notused = alloc_->NotUsedVecReg();
     if (notused.empty())
         return RegTag::xmm0;
     else if (i == 0)
@@ -395,9 +395,9 @@ void CodeGen::GetElePtrMemHelper(
 void CodeGen::BinaryGenHelper(
     const std::string& name, const BinaryInstr* bi)
 {
-    auto lhs = alloc_.GetIROpMap(bi->Lhs());
-    auto rhs = alloc_.GetIROpMap(bi->Rhs());
-    auto ans = alloc_.GetIROpMap(bi->Result());
+    auto lhs = alloc_->GetIROpMap(bi->Lhs());
+    auto rhs = alloc_->GetIROpMap(bi->Rhs());
+    auto ans = alloc_->GetIROpMap(bi->Result());
 
     if (*rhs == *ans)
     {
@@ -428,7 +428,7 @@ void CodeGen::VarithmGenHelper(
 {
     auto lhs = MapPossibleFloat(bi->Lhs());
     auto rhs = MapPossibleFloat(bi->Rhs());
-    auto ans = alloc_.GetIROpMap(bi->Result());
+    auto ans = alloc_->GetIROpMap(bi->Result());
 
     if (lhs->Is<x64Reg>() && ans->Is<x64Reg>())
         asmfile_.EmitVarithm(name, rhs, lhs, ans);
@@ -448,9 +448,9 @@ void CodeGen::VarithmGenHelper(
 
 void CodeGen::ShiftGenHelper(const std::string& name, const BinaryInstr* bin)
 {
-    auto lhs = alloc_.GetIROpMap(bin->Lhs());
-    auto rhs = alloc_.GetIROpMap(bin->Rhs());
-    auto ans = alloc_.GetIROpMap(bin->Result());
+    auto lhs = alloc_->GetIROpMap(bin->Lhs());
+    auto rhs = alloc_->GetIROpMap(bin->Rhs());
+    auto ans = alloc_->GetIROpMap(bin->Result());
 
     if (!(rhs->Is<x64Reg>() && *rhs == RegTag::rcx))
         asmfile_.EmitMov(rhs, RegTag::rcx);
@@ -463,9 +463,9 @@ void CodeGen::ShiftGenHelper(const std::string& name, const BinaryInstr* bin)
 
 const x64* CodeGen::PrepareDivMod(const BinaryInstr* bin)
 {
-    auto lhs = alloc_.GetIROpMap(bin->Lhs());
-    auto rhs = alloc_.GetIROpMap(bin->Rhs());
-    auto ans = alloc_.GetIROpMap(bin->Result());
+    auto lhs = alloc_->GetIROpMap(bin->Lhs());
+    auto rhs = alloc_->GetIROpMap(bin->Rhs());
+    auto ans = alloc_->GetIROpMap(bin->Result());
     bool sign =
         bin->Lhs()->Type()->As<IntType>()->IsSigned() ||
         bin->Rhs()->Type()->As<IntType>()->IsSigned();
@@ -891,7 +891,7 @@ void CodeGen::VisitFunction(Function* func)
     if (func->Empty())
         return;
 
-    alloc_.EnterFunction(func);
+    alloc_->EnterFunction(func);
     auto name = func->Name().substr(1);
 
     asmfile_.EmitPseudoInstr(".text");
@@ -904,7 +904,7 @@ void CodeGen::VisitFunction(Function* func)
     x64Reg rsp{ RegTag::rsp };
     x64Reg rbp{ RegTag::rbp };
     asmfile_.EmitMov(&rsp, &rbp);
-    AdjustRsp(-alloc_.RspOffset());
+    AdjustRsp(-alloc_->RspOffset());
 
     if (func->Variadic())
     {
@@ -1003,7 +1003,7 @@ void CodeGen::VisitRetInstr(RetInstr* inst)
         goto ret;
     else if (inst->ReturnValue()->Type()->Is<IntType>())
     {
-        auto mapped = alloc_.GetIROpMap(inst->ReturnValue());
+        auto mapped = alloc_->GetIROpMap(inst->ReturnValue());
         if (mapped->Is<x64Reg>() && *mapped->As<x64Reg>() == RegTag::rax)
             goto ret;
         asmfile_.EmitMov(mapped, RegTag::rax);
@@ -1046,10 +1046,10 @@ void CodeGen::VisitSwitchInstr(SwitchInstr* inst)
     // I use a somewhat straight forward way to translate
     // the switch instruction. no jump table is used, though.
 
-    auto ident = alloc_.GetIROpMap(inst->GetIdent());
+    auto ident = alloc_->GetIROpMap(inst->GetIdent());
     for (auto [tag, bb] : inst->GetValueBlkPairs())
     {
-        CmpEmitHelper(ident, alloc_.GetIROpMap(tag));
+        CmpEmitHelper(ident, alloc_->GetIROpMap(tag));
         asmfile_.EmitJmp("z", GetLabel(bb));
     }
     asmfile_.EmitJmp("", GetLabel(inst->GetDefault()));
@@ -1090,7 +1090,7 @@ void CodeGen::VisitCallInstr(CallInstr* inst)
     AdjustRsp(-(conv.Padding() + extra));
     PassParam(conv, inst->ArgvList());
     if (inst->FuncAddr())
-        asmfile_.EmitCall(alloc_.GetIROpMap(inst->FuncAddr()));
+        asmfile_.EmitCall(alloc_->GetIROpMap(inst->FuncAddr()));
     else
         asmfile_.EmitCall(inst->FuncName().substr(1) + "@PLT");
     // adjust rsp directly here since conv.StackSize()
@@ -1100,13 +1100,13 @@ void CodeGen::VisitCallInstr(CallInstr* inst)
 
     if (inst->Result() && inst->Result()->Type()->Is<IntType>())
     {
-        auto x64reg = alloc_.GetIROpMap(inst->Result());
+        auto x64reg = alloc_->GetIROpMap(inst->Result());
         if (!x64reg->Is<x64Reg>() || x64reg->As<x64Reg>()->Tag() != RegTag::rax)
             asmfile_.EmitMov(RegTag::rax, x64reg);
     }
     else if (inst->Result() && inst->Result()->Type()->Is<FloatType>())
     {
-        auto vecreg = alloc_.GetIROpMap(inst->Result());
+        auto vecreg = alloc_->GetIROpMap(inst->Result());
         if (!vecreg->Is<x64Reg>() || vecreg->As<x64Reg>()->Tag() != RegTag::xmm0)
             VecMovEmitHelper(RegTag::xmm0, vecreg);
     }
@@ -1146,7 +1146,7 @@ void CodeGen::VisitModInstr(ModInstr* inst)
 {
     auto ans = PrepareDivMod(inst);
     // if result register is not %*dx, move it to the result register.
-    if (!(*alloc_.GetIROpMap(inst->Result()) == RegTag::rdx))
+    if (!(*alloc_->GetIROpMap(inst->Result()) == RegTag::rdx))
         asmfile_.EmitMov(RegTag::rdx, ans);
 }
 
@@ -1163,7 +1163,7 @@ void CodeGen::VisitStoreInstr(StoreInstr* inst)
         return;
     }
 
-    auto mappedval = alloc_.GetIROpMap(value);
+    auto mappedval = alloc_->GetIROpMap(value);
     if (value->Type()->Is<PtrType>() &&
         mappedval->Is<x64Mem>() && !mappedval->As<x64Mem>()->LoadTwice())
         LeaqEmitHelper(mappedval, mappeddest);
@@ -1179,7 +1179,7 @@ void CodeGen::VisitLoadInstr(LoadInstr* inst)
     if (result->Type()->Is<FloatType>())
         VecMovEmitHelper(mappedptr, MapPossibleFloat(result));
     else
-        MovEmitHelper(mappedptr, alloc_.GetIROpMap(result));
+        MovEmitHelper(mappedptr, alloc_->GetIROpMap(result));
 }
 
 void CodeGen::VisitGetElePtrInstr(GetElePtrInstr* inst)
@@ -1187,8 +1187,8 @@ void CodeGen::VisitGetElePtrInstr(GetElePtrInstr* inst)
     // inst->Result() must be a pointer.
     auto size = inst->Result()->Type()->As<PtrType>()->Point2()->Size();
     auto pointer = MapPossibleRegister(inst->Pointer())->As<x64Mem>();
-    auto index = alloc_.GetIROpMap(inst->OpIndex());
-    auto result = alloc_.GetIROpMap(inst->Result());
+    auto index = alloc_->GetIROpMap(inst->OpIndex());
+    auto result = alloc_->GetIROpMap(inst->Result());
 
     if (index->Is<x64Imm>())
         GetElePtrImmHelper(pointer, index->As<x64Imm>(), result, size);
@@ -1201,8 +1201,8 @@ void CodeGen::VisitGetElePtrInstr(GetElePtrInstr* inst)
 
 void CodeGen::VisitTruncInstr(TruncInstr* inst)
 {
-    auto from = alloc_.GetIROpMap(inst->Value());
-    auto to = alloc_.GetIROpMap(inst->Dest());
+    auto from = alloc_->GetIROpMap(inst->Value());
+    auto to = alloc_->GetIROpMap(inst->Dest());
 
     // Cannot use MovEmitHelper here, since the helping
     // method supposes its two operands have the same size.
@@ -1235,49 +1235,49 @@ void CodeGen::VisitTruncInstr(TruncInstr* inst)
 void CodeGen::VisitFtruncInstr(FtruncInstr* inst)
 {
     auto from = MapPossibleFloat(inst->Value());
-    auto to = alloc_.GetIROpMap(inst->Dest());
+    auto to = alloc_->GetIROpMap(inst->Dest());
     VcvtEmitHelper(from, to);
 }
 
 void CodeGen::VisitZextInstr(ZextInstr* inst)
 {
-    auto from = alloc_.GetIROpMap(inst->Value());
-    auto to = alloc_.GetIROpMap(inst->Dest());
+    auto from = alloc_->GetIROpMap(inst->Value());
+    auto to = alloc_->GetIROpMap(inst->Dest());
     MovzEmitHelper(from, to);
 }
 
 void CodeGen::VisitSextInstr(SextInstr* inst)
 {
-    auto from = alloc_.GetIROpMap(inst->Value());
-    auto to = alloc_.GetIROpMap(inst->Dest());
+    auto from = alloc_->GetIROpMap(inst->Value());
+    auto to = alloc_->GetIROpMap(inst->Dest());
     MovsEmitHelper(from, to);
 }
 
 void CodeGen::VisitFextInstr(FextInstr* inst)
 {
     auto from = MapPossibleFloat(inst->Value());
-    auto to = alloc_.GetIROpMap(inst->Dest());
+    auto to = alloc_->GetIROpMap(inst->Dest());
     VcvtEmitHelper(from, to);
 }
 
 void CodeGen::VisitFtoUInstr(FtoUInstr* inst)
 {
     auto from = MapPossibleFloat(inst->Value());
-    auto to = alloc_.GetIROpMap(inst->Dest());
+    auto to = alloc_->GetIROpMap(inst->Dest());
     VcvttEmitHelper(from, to);
 }
 
 void CodeGen::VisitFtoSInstr(FtoSInstr* inst)
 {
     auto from = MapPossibleFloat(inst->Value());
-    auto to = alloc_.GetIROpMap(inst->Dest());
+    auto to = alloc_->GetIROpMap(inst->Dest());
     VcvttEmitHelper(from, to);
 }
 
 void CodeGen::VisitUtoFInstr(UtoFInstr* inst)
 {
-    auto from = alloc_.GetIROpMap(inst->Value());
-    auto to = alloc_.GetIROpMap(inst->Dest());
+    auto from = alloc_->GetIROpMap(inst->Value());
+    auto to = alloc_->GetIROpMap(inst->Dest());
     if (from->Size() != 8)
     {
         MovzEmitHelper(from->Size(), 8, from);
@@ -1313,16 +1313,16 @@ void CodeGen::VisitUtoFInstr(UtoFInstr* inst)
 
 void CodeGen::VisitStoFInstr(StoFInstr* inst)
 {
-    auto from = alloc_.GetIROpMap(inst->Value());
-    auto to = alloc_.GetIROpMap(inst->Dest());
+    auto from = alloc_->GetIROpMap(inst->Value());
+    auto to = alloc_->GetIROpMap(inst->Dest());
     VcvtsiEmitHelper(from, to);
 }
 
 
 void CodeGen::VisitPtrtoIInstr(PtrtoIInstr* inst)
 {
-    auto from = alloc_.GetIROpMap(inst->Value());
-    auto to = alloc_.GetIROpMap(inst->Dest());
+    auto from = alloc_->GetIROpMap(inst->Value());
+    auto to = alloc_->GetIROpMap(inst->Dest());
 
     auto mem = from->As<x64Mem>();
     if ((mem && mem->LoadTwice()) || !mem)
@@ -1333,8 +1333,8 @@ void CodeGen::VisitPtrtoIInstr(PtrtoIInstr* inst)
 
 void CodeGen::VisitItoPtrInstr(ItoPtrInstr* inst)
 {
-    auto from = alloc_.GetIROpMap(inst->Value());
-    auto to = alloc_.GetIROpMap(inst->Dest());
+    auto from = alloc_->GetIROpMap(inst->Value());
+    auto to = alloc_->GetIROpMap(inst->Dest());
     // LoadTwice has been set in the register allocator,
     // and the destination of itoptr must be a load-twice
     // pointer if it is mapped onto the stack. So its value
@@ -1345,9 +1345,9 @@ void CodeGen::VisitItoPtrInstr(ItoPtrInstr* inst)
 
 void CodeGen::VisitIcmpInstr(IcmpInstr* inst)
 {
-    auto lhs = alloc_.GetIROpMap(inst->Op1());
-    auto rhs = alloc_.GetIROpMap(inst->Op2());
-    auto ans = alloc_.GetIROpMap(inst->Result());
+    auto lhs = alloc_->GetIROpMap(inst->Op1());
+    auto rhs = alloc_->GetIROpMap(inst->Op2());
+    auto ans = alloc_->GetIROpMap(inst->Result());
     auto issigned = inst->Op1()->Type()->As<IntType>()->IsSigned() ||
         inst->Op2()->Type()->As<IntType>()->IsSigned();
 
@@ -1362,7 +1362,7 @@ void CodeGen::VisitFcmpInstr(FcmpInstr* inst)
 {
     auto lhs = MapPossibleFloat(inst->Op1());
     auto rhs = MapPossibleFloat(inst->Op2());
-    auto ans = alloc_.GetIROpMap(inst->Result());
+    auto ans = alloc_->GetIROpMap(inst->Result());
 
     UcomEmitHelper(rhs, lhs);
     asmfile_.EmitSet(Cond2Str(inst->Cond(), true), ans);
@@ -1377,7 +1377,7 @@ void CodeGen::VisitSelectInstr(SelectInstr* inst)
     auto mappedcond = MapPossibleFloat(cond);
     auto v1 = MapPossibleFloat(inst->Value1());
     auto v2 = MapPossibleFloat(inst->Value2());
-    auto ans = alloc_.GetIROpMap(inst->Result());
+    auto ans = alloc_->GetIROpMap(inst->Result());
 
     if (cond->Type()->Is<IntType>())
         asmfile_.EmitTest(mappedcond, mappedcond);
@@ -1416,14 +1416,14 @@ void CodeGen::VisitPhiInstr(PhiInstr* inst)
     // mem2reg pass is actually implemented.
 
     auto curbb = asmfile_.CurBlock();
-    auto mappedres = alloc_.GetIROpMap(inst->Result());
+    auto mappedres = alloc_->GetIROpMap(inst->Result());
 
     for (auto [bb, op] : inst->GetBlockValPair())
     {
         asmfile_.SwitchBlock(bb);
 
         if (op->Type()->Is<IntType>())
-            MovEmitHelper(alloc_.GetIROpMap(op), mappedres);
+            MovEmitHelper(alloc_->GetIROpMap(op), mappedres);
         else if (op->Type()->Is<FloatType>())
             VecMovEmitHelper(MapPossibleFloat(op), mappedres);
     }

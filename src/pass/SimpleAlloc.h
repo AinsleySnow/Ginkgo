@@ -5,11 +5,14 @@
 #include "pass/x64Alloc.h"
 #include "visitir/IRVisitor.h"
 #include "visitir/x64.h"
+#include <cassert>
 #include <set>
 #include <unordered_map>
 
 class BinaryInstr;
 class ConvertInstr;
+class DUChains;
+class Instr;
 class Register;
 
 
@@ -30,23 +33,29 @@ class Register;
 class SimpleAlloc : public x64Alloc
 {
 public:
-    SimpleAlloc(Module* m) : x64Alloc(m) {}
+    SimpleAlloc(Module* m, Pass* du) : x64Alloc(m),
+        stackcache_(*this, [&]{
+            auto chain = dynamic_cast<DUChains*>(du);
+            assert(chain);
+            return chain;
+        }()) {}
 
 private:
     class StackCache
     {
     public:
-        StackCache(SimpleAlloc& sa) : alloc_(sa) {}
+        StackCache(SimpleAlloc& sa, DUChains* c) : alloc_(sa), chain_(c) {}
 
         RegTag SpareReg() const;
         RegTag SpareFReg() const;
-        void Access(const Register*) const;
+        void Access(const Register*, const Instr*) const;
         void Map2Reg(const Register*, RegTag);
         void Map2Stack(const Register*, long offset);
         void Map2Stack(const Register*, size_t size, long offset);
 
     private:
         SimpleAlloc& alloc_;
+        DUChains* chain_{};
 
         // map virtual registers to where? the value can be
         // either a register or a stack address.
@@ -65,7 +74,7 @@ private:
     void ConvertAllocaHelper(ConvertInstr*);
 
     Function* curfunc_{};
-    StackCache stackcache_{ *this };
+    StackCache stackcache_{ *this, nullptr };
 
 private:
     void VisitFunction(Function*) override;

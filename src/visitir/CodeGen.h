@@ -25,8 +25,8 @@ enum class RegTag;
 class CodeGen : public IRVisitor
 {
 public:
-    CodeGen(x64Alloc& a) : alloc_(a) {}
-    CodeGen(const std::string& f, x64Alloc& a) : asmfile_(f), alloc_(a) {}
+    CodeGen(x64Alloc* a) : alloc_(a) {}
+    CodeGen(const std::string& f, x64Alloc* a) : asmfile_(f), alloc_(a) {}
 
     std::string GetAsmName() const { return asmfile_.AsmName(); }
 
@@ -202,7 +202,7 @@ private:
         const IROperand*, std::unique_ptr<const x64>> tempmap_{};
     std::unordered_map<FpRepr, std::string, FpRepr::Hash, FpRepr::Equal> fpconst_{};
 
-    x64Alloc& alloc_;
+    x64Alloc* alloc_{};
     EmitAsm asmfile_{ "" };
 };
 

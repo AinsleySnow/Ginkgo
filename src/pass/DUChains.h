@@ -3,8 +3,11 @@
 
 #include "pass/Pass.h"
 #include "visitir/IRVisitor.h"
+#include <list>
 #include <unordered_map>
 
+class BinaryInstr;
+class ConvertInstr;
 class IROperand;
 class Instr;
 
@@ -12,21 +15,28 @@ class Instr;
 class DUChains : public FunctionPass, private IRVisitor
 {
 public:
-    void Execute() override
-    {
-        for (auto v : *CurModule())
-            if (auto f = v->As<Function>(); f)
-                ExecuteOnFunction(f);
-    }
+    DUChains(Module* m) : FunctionPass(m) {}
+
+    void Execute() override;
     void ExecuteOnFunction(Function* func) override { VisitFunction(func); }
     void EnterFunction(Function*) override {}
+
+    const Instr* GetDef(const IROperand* op) const { return def_.at(op); }
+    const auto& GetUse(const IROperand* op) const { return uses_.at(op); }
+    bool IsLastUse(const IROperand* op, const Instr* i) const { return uses_.at(op).back() == i; }
+
+    void AddDef(const IROperand* op, const Instr* i) { def_.emplace(op, i); }
+    void AddUse(const IROperand* op, const Instr* i) { uses_[op].push_back(i); }
+    void DelDef(const IROperand* op) { def_.erase(op); }
+    void DelUse(const IROperand* op) { uses_.erase(op); }
+    void DelUse(const IROperand* op, const Instr* i) { uses_.at(op).remove(i); }
 
 private:
     void BinaryDUHelper(BinaryInstr*);
     void ConvertDUHelper(ConvertInstr*);
 
     std::unordered_map<const IROperand*, const Instr*> def_{};
-    std::unordered_multimap<const IROperand*, const Instr*> uses_{};
+    std::unordered_map<const IROperand*, std::list<const Instr*>> uses_{};
 
 private:
     void VisitFunction(Function*) override;

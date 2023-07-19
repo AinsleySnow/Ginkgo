@@ -21,12 +21,12 @@ RegTag SimpleAlloc::StackCache::SpareFReg() const
     return tag;
 }
 
-void SimpleAlloc::StackCache::Access(const Register* reg) const
+void SimpleAlloc::StackCache::Access(const Register* reg, const Instr* i) const
 {
     auto it = regmap_.find(reg);
     if (it == regmap_.end()) return;
 
-    if (auto pos = it->second->As<x64Reg>(); pos)
+    if (auto pos = it->second->As<x64Reg>(); pos && chain_->IsLastUse(reg, i))
     {
         if (static_cast<int>(pos->Tag()) <= 15)
             intreg_.emplace(pos->Tag());
@@ -34,7 +34,6 @@ void SimpleAlloc::StackCache::Access(const Register* reg) const
             vecreg_.emplace(pos->Tag());
         alloc_.Unmark(static_cast<x64Phys>(static_cast<int>(pos->Tag()) - 2));
     }
-    return;
 }
 
 
@@ -96,15 +95,15 @@ void SimpleAlloc::BinaryAllocaHelper(BinaryInstr* i)
 
     // Make sure that 'result' never share
     // the same register with 'rhs'.
-    if (!lhs) stackcache_.Access(i->Lhs()->As<Register>());
+    if (!lhs) stackcache_.Access(i->Lhs()->As<Register>(), i);
     Allocate(i->Result()->As<Register>());
-    if (!rhs) stackcache_.Access(i->Rhs()->As<Register>());
+    if (!rhs) stackcache_.Access(i->Rhs()->As<Register>(), i);
 }
 
 void SimpleAlloc::ConvertAllocaHelper(ConvertInstr* i)
 {
     if (!MapConstAndGlobalVar(i->Value()))
-        stackcache_.Access(i->Value()->As<Register>());
+        stackcache_.Access(i->Value()->As<Register>(), i);
     Allocate(i->Dest()->As<Register>());
 }
 
@@ -150,27 +149,27 @@ void SimpleAlloc::VisitRetInstr(RetInstr* i)
     if (!i->ReturnValue())
         return;
     if (!MapConstAndGlobalVar(i->ReturnValue()))
-        stackcache_.Access(i->ReturnValue()->As<Register>());
+        stackcache_.Access(i->ReturnValue()->As<Register>(), i);
 }
 
 void SimpleAlloc::VisitBrInstr(BrInstr* i)
 {
     if (!i->Cond()) return;
     if (!MapConstAndGlobalVar(i->Cond()))
-        stackcache_.Access(i->Cond()->As<Register>());
+        stackcache_.Access(i->Cond()->As<Register>(), i);
 }
 
 void SimpleAlloc::VisitSwitchInstr(SwitchInstr* i)
 {
     if (!MapConstAndGlobalVar(i->GetIdent()))
-        stackcache_.Access(i->GetIdent()->As<Register>());
+        stackcache_.Access(i->GetIdent()->As<Register>(), i);
 }
 
 void SimpleAlloc::VisitCallInstr(CallInstr* i)
 {
     for (auto op : i->ArgvList())
         if (!MapConstAndGlobalVar(op))
-            stackcache_.Access(op->As<Register>());
+            stackcache_.Access(op->As<Register>(), i);
     if (i->Result())
         Allocate(i->Result()->As<Register>());
 }
@@ -214,7 +213,7 @@ void SimpleAlloc::VisitAllocaInstr(AllocaInstr* i)
 void SimpleAlloc::VisitLoadInstr(LoadInstr* i)
 {
     if (!MapConstAndGlobalVar(i->Pointer()))
-        stackcache_.Access(i->Pointer()->As<Register>());
+        stackcache_.Access(i->Pointer()->As<Register>(), i);
     Allocate(i->Result()->As<Register>());
     if (i->Result()->Type()->Is<PtrType>())
         MarkLoadTwice(i->Result());
@@ -223,17 +222,17 @@ void SimpleAlloc::VisitLoadInstr(LoadInstr* i)
 void SimpleAlloc::VisitStoreInstr(StoreInstr* i)
 {
     if (!MapConstAndGlobalVar(i->Dest()))
-        stackcache_.Access(i->Dest()->As<Register>());
+        stackcache_.Access(i->Dest()->As<Register>(), i);
     if (!MapConstAndGlobalVar(i->Value()))
-        stackcache_.Access(i->Value()->As<Register>());
+        stackcache_.Access(i->Value()->As<Register>(), i);
 }
 
 void SimpleAlloc::VisitGetElePtrInstr(GetElePtrInstr* i)
 {
     if (!MapConstAndGlobalVar(i->OpIndex()))
-        stackcache_.Access(i->OpIndex()->As<Register>());
+        stackcache_.Access(i->OpIndex()->As<Register>(), i);
     if (!MapConstAndGlobalVar(i->Pointer()))
-        stackcache_.Access(i->Pointer()->As<Register>());
+        stackcache_.Access(i->Pointer()->As<Register>(), i);
     Allocate(i->Result()->As<Register>());
     MarkLoadTwice(i->Result());
 }
@@ -267,11 +266,11 @@ void SimpleAlloc::VisitBitcastInstr(BitcastInstr* i)
 }
 
 
-#define CMP_HELPER                                  \
-if (!MapConstAndGlobalVar(i->Op1()))                \
-    stackcache_.Access(i->Op1()->As<Register>());   \
-if (!MapConstAndGlobalVar(i->Op2()))                \
-    stackcache_.Access(i->Op2()->As<Register>());   \
+#define CMP_HELPER                                      \
+if (!MapConstAndGlobalVar(i->Op1()))                    \
+    stackcache_.Access(i->Op1()->As<Register>(), i);    \
+if (!MapConstAndGlobalVar(i->Op2()))                    \
+    stackcache_.Access(i->Op2()->As<Register>(), i);    \
 Allocate(i->Result())
 
 void SimpleAlloc::VisitIcmpInstr(IcmpInstr* i) { CMP_HELPER; }
@@ -282,11 +281,11 @@ void SimpleAlloc::VisitFcmpInstr(FcmpInstr* i) { CMP_HELPER; }
 void SimpleAlloc::VisitSelectInstr(SelectInstr* i)
 {
     if (!MapConstAndGlobalVar(i->SelType()))
-        stackcache_.Access(i->SelType()->As<Register>());
+        stackcache_.Access(i->SelType()->As<Register>(), i);
     if (!MapConstAndGlobalVar(i->Value1()))
-        stackcache_.Access(i->Value1()->As<Register>());
-    if (!MapConstAndGlobalVar(i->Value1()))
-        stackcache_.Access(i->Value2()->As<Register>());
+        stackcache_.Access(i->Value1()->As<Register>(), i);
+    if (!MapConstAndGlobalVar(i->Value2()))
+        stackcache_.Access(i->Value2()->As<Register>(), i);
     Allocate(i->Result());
 }
 
@@ -294,6 +293,6 @@ void SimpleAlloc::VisitPhiInstr(PhiInstr* i)
 {
     for (auto [_, op] : i->GetBlockValPair())
         if (!MapConstAndGlobalVar(op))
-            stackcache_.Access(op->As<Register>());
+            stackcache_.Access(op->As<Register>(), i);
     Allocate(i->Result());
 }

@@ -6,17 +6,25 @@
 
 void DUChains::BinaryDUHelper(BinaryInstr* bin)
 {
-    def_.emplace(bin->Result(), bin);
+    AddDef(bin->Result(), bin);
     if (bin->Lhs()->Is<Register>())
-        uses_.emplace(bin->Lhs(), bin);
+        AddUse(bin->Lhs(), bin);
     if (bin->Rhs()->Is<Register>())
-        uses_.emplace(bin->Rhs(), bin);
+        AddUse(bin->Rhs(), bin);
 }
 
 void DUChains::ConvertDUHelper(ConvertInstr* cvt)
 {
-    def_.emplace(cvt->Dest(), cvt);
-    uses_.emplace(cvt->Value(), cvt);
+    AddDef(cvt->Dest(), cvt);
+    AddUse(cvt->Value(), cvt);
+}
+
+
+void DUChains::Execute()
+{
+    for (auto v : *CurModule())
+        if (auto f = v->As<Function>(); f)
+            ExecuteOnFunction(f);
 }
 
 
@@ -36,28 +44,28 @@ void DUChains::VisitBasicBlock(BasicBlock* b)
 void DUChains::VisitRetInstr(RetInstr* ret)
 {
     if (ret->ReturnValue() && ret->ReturnValue()->Is<Register>())
-        uses_.emplace(ret->ReturnValue(), ret);
+        AddUse(ret->ReturnValue(), ret);
 }
 
 void DUChains::VisitBrInstr(BrInstr* br)
 {
     if (br->Cond() && br->Cond()->Is<Register>())
-        uses_.emplace(br->Cond(), br);
+        AddUse(br->Cond(), br);
 }
 
 void DUChains::VisitSwitchInstr(SwitchInstr* swtch)
 {
     if (swtch->GetIdent()->Is<Register>())
-        uses_.emplace(swtch->GetIdent(), swtch);
+        AddUse(swtch->GetIdent(), swtch);
 }
 
 void DUChains::VisitCallInstr(CallInstr* call)
 {
     if (call->Result())
-        def_.emplace(call->Result(), call);
+        AddDef(call->Result(), call);
     for (auto op : call->ArgvList())
         if (op->Is<Register>())
-            uses_.emplace(op, call);
+            AddUse(op, call);
 }
 
 void DUChains::VisitAddInstr(AddInstr* i)   { BinaryDUHelper(i); }
@@ -78,28 +86,28 @@ void DUChains::VisitXorInstr(XorInstr* i)   { BinaryDUHelper(i); }
 
 void DUChains::VisitAllocaInstr(AllocaInstr* alloca)
 {
-    def_.emplace(alloca->Result(), alloca);
+    AddDef(alloca->Result(), alloca);
 }
 
 void DUChains::VisitLoadInstr(LoadInstr* load)
 {
-    def_.emplace(load->Result(), load);
-    uses_.emplace(load->Pointer(), load);
+    AddDef(load->Result(), load);
+    AddUse(load->Pointer(), load);
 }
 
 void DUChains::VisitStoreInstr(StoreInstr* store)
 {
     if (store->Value()->Is<Register>())
-        uses_.emplace(store->Value(), store);
-    uses_.emplace(store->Dest(), store);
+        AddUse(store->Value(), store);
+    AddUse(store->Dest(), store);
 }
 
 void DUChains::VisitGetElePtrInstr(GetElePtrInstr* gep)
 {
-    def_.emplace(gep->Result(), gep);
+    AddDef(gep->Result(), gep);
     if (!gep->HoldsInt() && gep->OpIndex()->Is<Register>())
-        uses_.emplace(gep->OpIndex(), gep);
-    uses_.emplace(gep->OpIndex(), gep);
+        AddUse(gep->OpIndex(), gep);
+    AddUse(gep->OpIndex(), gep);
 }
 
 void DUChains::VisitTruncInstr(TruncInstr* i)       { ConvertDUHelper(i); }
@@ -116,28 +124,32 @@ void DUChains::VisitItoPtrInstr(ItoPtrInstr* i)     { ConvertDUHelper(i); }
 void DUChains::VisitBitcastInstr(BitcastInstr* i)   { ConvertDUHelper(i); }
 
 #define CMP_HELPER                  \
-def_.emplace(cmp->Result(), cmp);   \
+AddDef(cmp->Result(), cmp);         \
 if (cmp->Op1()->Is<Register>())     \
-    uses_.emplace(cmp->Op1(), cmp); \
+    AddUse(cmp->Op1(), cmp);        \
 if (cmp->Op2()->Is<Register>())     \
-    uses_.emplace(cmp->Op2(), cmp)
+    AddUse(cmp->Op2(), cmp)
 
 void DUChains::VisitIcmpInstr(IcmpInstr* cmp) { CMP_HELPER; }
 void DUChains::VisitFcmpInstr(FcmpInstr* cmp) { CMP_HELPER; }
 
+#undef CMP_HELPER
+
 void DUChains::VisitSelectInstr(SelectInstr* sel)
 {
-    def_.emplace(sel->Result(), sel);
+    AddDef(sel->Result(), sel);
+    if (sel->SelType()->Is<Register>())
+        AddUse(sel->SelType(), sel);
     if (sel->Value1()->Is<Register>())
-        uses_.emplace(sel->Value1(), sel);
+        AddUse(sel->Value1(), sel);
     if (sel->Value2()->Is<Register>())
-        uses_.emplace(sel->Value2(), sel);
+        AddUse(sel->Value2(), sel);
 }
 
 void DUChains::VisitPhiInstr(PhiInstr* phi)
 {
-    def_.emplace(phi->Result(), phi);
+    AddDef(phi->Result(), phi);
     for (auto [_, op] : phi->GetBlockValPair())
         if (op->Is<Register>())
-            uses_.emplace(op, phi);
+            AddUse(op, phi);
 }
