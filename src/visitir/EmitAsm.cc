@@ -180,7 +180,7 @@ void EmitAsm::EmitVcvtsi(const x64* op1, const x64* dest)
     auto suffix = GetIntTag(op1);
     auto sdest = dest->ToString();
 
-    EmitInstr(fmt::format(INDENT "vcvtsi2{}{}{}, {}, {}\n",
+    EmitInstr(fmt::format(INDENT "vcvtsi2{}{} {}, {}, {}\n",
         t2, suffix, op1->ToString(), sdest, sdest));
 }
 

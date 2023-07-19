@@ -62,11 +62,47 @@ void flt_arithm()
     g = a /= 5923346.0; assert(g == 1.0);
 }
 
+void flt_inc()
+{
+    double a = 3.0;
+    double b = 4.0;
+    double c = 5.0;
+    b = a++;        assert(b == 3.0);
+    b = ++c;        assert(b == 6.0);
+    b = a++ + c;    assert(b == 10.0);
+    b = ++a + c;    assert(b == 12.0);
+    b = a++ + 20;   assert(b == 26.0);
+    b = ++a + 30;   assert(b == 38.0);
+    b = c + a++;    assert(b == 14.0);
+    b = c + ++a;    assert(b == 16.0);
+    b = 15 + a++;   assert(b == 25.0);
+    b = 20 + ++a;   assert(b == 32.0);
+}
+
+void flt_dec()
+{
+    double a = 3.0;
+    double b = 4.0;
+    double c = 5.0;
+    b = a--;        assert(b == 3.0);
+    b = --c;        assert(b == 4.0);
+    b = a-- + c;    assert(b == 6.0);
+    b = --a + c;    assert(b == 4.0);
+    b = a-- + 20;   assert(b == 20.0);
+    b = --a + 30;   assert(b == 28.0);
+    b = c + a--;    assert(b == 2.0);
+    b = c + --a;    assert(b == 0.0);
+    b = 15 + a--;   assert(b == 11.0);
+    b = 20 + --a;   assert(b == 14.0);
+}
+
 int main()
 {
     flt_var();
     flt_cmp();
     flt_arithm();
+    flt_inc();
+    flt_dec();
 
     SUCCESS;
 }

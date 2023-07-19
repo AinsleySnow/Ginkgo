@@ -177,7 +177,7 @@ private:
     void VecMovEmitHelper(RegTag, const x64*);
 
     void VcvtEmitHelper(const x64*, const x64*);
-    void VcvtsiEmitHelper(const x64*, const x64*);
+    void VcvtsiEmitHelper(bool, const x64*, const x64*);
     void VcvttEmitHelper(const x64*, const x64*);
     void UcomEmitHelper(const x64*, const x64*);
 

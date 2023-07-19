@@ -619,16 +619,30 @@ void CodeGen::VcvtEmitHelper(const x64* op1, const x64* op2)
     asmfile_.EmitVmov(tag, op2);
 }
 
-void CodeGen::VcvtsiEmitHelper(const x64* op1, const x64* op2)
+void CodeGen::VcvtsiEmitHelper(bool sign, const x64* op1, const x64* op2)
 {
-    if (op2->Is<x64Reg>())
+    size_t oldsz = 0;
+    if (op1->Size() != 4 || op1->Size() != 8)
     {
-        asmfile_.EmitVcvtsi(op1, op2);
-        return;
+        if (op1->Is<x64Reg>() && sign)
+            asmfile_.EmitMovs(op1->Size(), 8, op1);
+        else if (op1->Is<x64Reg>() && !sign)
+            asmfile_.EmitMovz(op1->Size(), 8, op1);
+        oldsz = op1->Size();
+        const_cast<x64*>(op1)->Size() = 8;
     }
-    auto tag = GetSpareVecReg(0);
-    asmfile_.EmitVcvtsi(op1, tag);
-    asmfile_.EmitVmov(tag, op2);
+
+    if (op2->Is<x64Reg>())
+        asmfile_.EmitVcvtsi(op1, op2);
+    else
+    {
+        auto tag = GetSpareVecReg(0);
+        asmfile_.EmitVcvtsi(op1, tag);
+        asmfile_.EmitVmov(tag, op2);
+    }
+
+    if (oldsz)
+        const_cast<x64*>(op1)->Size() = oldsz;
 }
 
 void CodeGen::VcvttEmitHelper(const x64* op1, const x64* op2)
@@ -1281,7 +1295,7 @@ void CodeGen::VisitUtoFInstr(UtoFInstr* inst)
     if (from->Size() != 8)
     {
         MovzEmitHelper(from->Size(), 8, from);
-        VcvtsiEmitHelper(from, to);
+        VcvtsiEmitHelper(false, from, to);
         return;
     }
 
@@ -1291,7 +1305,7 @@ void CodeGen::VisitUtoFInstr(UtoFInstr* inst)
     asmfile_.EmitJmp("s", movebiguint);
     // For uint less than 64 bit,
     // just use a single vcvtsixx2xx instruction
-    VcvtsiEmitHelper(from, to);
+    VcvtsiEmitHelper(false, from, to);
     asmfile_.EmitJmp("", end);
     // The case that the uint occupies all the
     // 64 bits of the GP register.
@@ -1307,7 +1321,7 @@ void CodeGen::VisitUtoFInstr(UtoFInstr* inst)
     asmfile_.EmitMov(from, &temp2);
     asmfile_.EmitBinary("and", 1, &temp2);
     asmfile_.EmitBinary("add", &temp2, &temp1);
-    VcvtsiEmitHelper(&temp1, to);
+    VcvtsiEmitHelper(false, &temp1, to);
     asmfile_.EmitLabel(end);
 }
 
@@ -1315,7 +1329,7 @@ void CodeGen::VisitStoFInstr(StoFInstr* inst)
 {
     auto from = alloc_->GetIROpMap(inst->Value());
     auto to = alloc_->GetIROpMap(inst->Dest());
-    VcvtsiEmitHelper(from, to);
+    VcvtsiEmitHelper(true, from, to);
 }
 
 
@@ -1365,7 +1379,7 @@ void CodeGen::VisitFcmpInstr(FcmpInstr* inst)
     auto ans = alloc_->GetIROpMap(inst->Result());
 
     UcomEmitHelper(rhs, lhs);
-    asmfile_.EmitSet(Cond2Str(inst->Cond(), true), ans);
+    asmfile_.EmitSet(Cond2Str(inst->Cond(), false), ans);
     if (ans->Size() != 1)
         MovzEmitHelper(1, ans->Size(), ans);
 }

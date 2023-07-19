@@ -1047,12 +1047,24 @@ void IRGen::VisitUnaryExpr(UnaryExpr* unary)
     {
         auto addr = LoadAddr(unary->content_.get());
         auto val = LoadVal(unary->content_.get());
-        auto one = IntConst::CreateIntConst(ibud_.Container(), 1);
         const Register* newval = nullptr;
 
-        if (unary->op_ == Tag::inc || unary->op_ == Tag::postfix_inc)
-            newval = ibud_.InsertAddInstr(env_.GetRegName(), val, one);
-        else newval = ibud_.InsertSubInstr(env_.GetRegName(), val, one);
+        if (val->Type()->Is<FloatType>())
+        {
+            auto one = FloatConst::CreateFloatConst(ibud_.Container(), 1, val->Type()->As<FloatType>());
+            if (unary->op_ == Tag::inc || unary->op_ == Tag::postfix_inc)
+                newval = ibud_.InsertFaddInstr(env_.GetRegName(), val, one);
+            else
+                newval = ibud_.InsertFsubInstr(env_.GetRegName(), val, one);
+        }
+        else
+        {
+            auto one = IntConst::CreateIntConst(ibud_.Container(), 1, val->Type()->As<IntType>());
+            if (unary->op_ == Tag::inc || unary->op_ == Tag::postfix_inc)
+                newval = ibud_.InsertAddInstr(env_.GetRegName(), val, one);
+            else
+                newval = ibud_.InsertSubInstr(env_.GetRegName(), val, one);
+        }
 
         ibud_.InsertStoreInstr(newval, addr, false);
         if (unary->op_ == Tag::postfix_inc || unary->op_ == Tag::postfix_dec)
