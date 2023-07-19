@@ -8,6 +8,8 @@
 #include "ast/Statement.h"
 #include "IR/Value.h"
 
+class Pipeline;
+
 
 enum class OutputType
 {
@@ -39,6 +41,7 @@ private:
     const auto& GetAST();
     bool CheckAST();
     void GenerateIR();
+    Pipeline InitPipeline();
     void GenerateAsm(const std::string&);
     std::string Assemble(const std::string&);
     void Link(const std::string&);

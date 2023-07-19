@@ -15,15 +15,23 @@ public:
     Pipeline(Module* m) : module_(m) {}
 
     template <class PASS, typename... IPASS,
-    typename = std::enable_if_t<std::conjunction_v<std::is_integral<IPASS>...>>
-    >
+    typename = std::enable_if_t<std::conjunction_v<std::is_integral<IPASS>...>>>
     void AddPass(int i, IPASS&&... dep)
     {
-        auto index2pass = [] (auto&& i) {
+        auto index2pass = [&] (auto&& i) {
             assert(passes_.count(i));
             return passes_.at(i).get();
         };
-        passes_[i] = std::make_unique<PASS>(m, index2pass(std::forward<IPASS>(dep))...);
+        passes_[i] = std::make_unique<PASS>(module_, index2pass(std::forward<IPASS>(dep))...);
+    }
+
+    template <class PASS = Pass>
+    PASS* GetPass(int i)
+    {
+        assert(passes_.at(i));
+        auto p = dynamic_cast<PASS*>(passes_.at(i).get());
+        assert(p);
+        return p;
     }
 
     void ExecuteAll()

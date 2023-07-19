@@ -1,4 +1,6 @@
 #include "main/Driver.h"
+#include "pass/DUChains.h"
+#include "pass/Pipeline.h"
 #include "pass/SimpleAlloc.h"
 #include "parser/yacc.hh"
 #include "visitast/CodeChk.h"
@@ -117,13 +119,21 @@ void Driver::GenerateIR()
     module_ = std::move(irgen.GetModule());
 }
 
+Pipeline Driver::InitPipeline()
+{
+    Pipeline simple{ module_.get() };
+    simple.AddPass<DUChains>(0);
+    simple.AddPass<SimpleAlloc>(1, 0);
+    return std::move(simple);
+}
+
 void Driver::GenerateAsm(const std::string& output)
 {
     // Note here that the parameter stands for output
     // file name, not input as in the other methods.
-    SimpleAlloc alloc{ module_.get() };
-    alloc.Execute();
-    CodeGen codegen{ output, alloc };
+    Pipeline pl = InitPipeline();
+    pl.ExecuteAll();
+    CodeGen codegen{ output, pl.GetPass<SimpleAlloc>(1) };
     codegen.VisitModule(module_.get());
 }
 
