@@ -302,7 +302,7 @@ void SelectInstr::Accept(IRVisitor* v)
 
 std::string SelectInstr::ToString() const
 {
-    return result_->ToString() + " = select " + selty_->ToString() + " ? " +
+    return result_->Name() + " = select " + selty_->ToString() + " ? " +
         value1_->ToString() + " : " + value2_->ToString();
 }
 
@@ -314,7 +314,7 @@ void PhiInstr::Accept(IRVisitor* v)
 
 std::string PhiInstr::ToString() const
 {
-    std::string line = result_->ToString() + " = phi " + type_->ToString() + ' ';
+    std::string line = result_->Name() + " = phi " + type_->ToString() + ' ';
     for (auto l = labels_.begin(); l < labels_.end() - 1; ++l)
         line += '[' + l->first->Name() + ", " +
             l->second->ToString() + "] ";
