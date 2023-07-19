@@ -726,21 +726,36 @@ void CodeGen::CMovEmitHelper(Condition cond, bool issigned, const x64* op1, cons
 {
     if (op2->Is<x64Reg>())
     {
+        auto size = op1->Size() == 1 ? 2 : op1->Size();
         x64Reg reg{ RegTag::none };
         if (auto imm = op1->As<x64Imm>(); imm)
         {
-            reg = GetSpareIntReg(0);
+            reg = x64Reg(GetSpareIntReg(0), op2->Size());
             op1 = &reg;
             asmfile_.EmitMov(imm, op1);
         }
+        if (op1->Size() != size)
+        {
+            auto temp = op1->Size();
+            const_cast<x64*>(op1)->Size() = size;
+            const_cast<x64*>(op2)->Size() = size;
+            size = temp;
+        }
         asmfile_.EmitCMov(Cond2Str(cond, issigned), op1, op2);
-        return;
+        if (op1->Size() != size)
+        {
+            const_cast<x64*>(op1)->Size() = size;
+            const_cast<x64*>(op2)->Size() = size;
+        }
     }
-    // We can't use cmov if op2 is a mem reference.
-    auto label = GetLabel();
-    asmfile_.EmitJmp(Cond2Str(NotCond(cond), issigned), label);
-    MovEmitHelper(op1, op2);
-    asmfile_.EmitLabel(label);
+    else
+    {
+        // We can't use cmov if op2 is a mem reference.
+        auto label = GetLabel();
+        asmfile_.EmitJmp(Cond2Str(NotCond(cond), issigned), label);
+        MovEmitHelper(op1, op2);
+        asmfile_.EmitLabel(label);        
+    }
 }
 
 void CodeGen::CmpEmitHelper(const x64* op1, const x64* op2)
@@ -748,7 +763,7 @@ void CodeGen::CmpEmitHelper(const x64* op1, const x64* op2)
     x64Reg reg{ RegTag::none };
     if (auto imm = op1->As<x64Imm>(); imm && imm->GetRepr().first > UINT32_MAX)
     {
-        reg = GetSpareIntReg(0);
+        reg = x64Reg(GetSpareIntReg(0), op2->Size());
         op1 = &reg;
         asmfile_.EmitMov(imm, op1);
     }
@@ -1372,10 +1387,10 @@ void CodeGen::VisitSelectInstr(SelectInstr* inst)
         asmfile_.EmitUcom(&zero, mappedcond);
     }
 
-    if (inst->Result()->Type()->Is<IntType>())
+    if (auto t = inst->Result()->Type()->As<IntType>(); t)
     {
         asmfile_.EmitMov(v1, ans);
-        asmfile_.EmitCMov(ty ? "e" : "ne", v2, ans);
+        CMovEmitHelper(ty ? Condition::eq : Condition::ne, t->IsSigned(), v2, ans);
     }
     else
     {
