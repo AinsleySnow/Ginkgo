@@ -74,7 +74,6 @@ public:
 
     x64Alloc(Module* m) : FunctionPass(m) {}
 
-    void Execute() override;
     void EnterFunction(Function* func) override
     {
         curfunc_ = func;

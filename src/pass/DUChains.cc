@@ -20,14 +20,6 @@ void DUChains::ConvertDUHelper(ConvertInstr* cvt)
 }
 
 
-void DUChains::Execute()
-{
-    for (auto v : *CurModule())
-        if (auto f = v->As<Function>(); f)
-            ExecuteOnFunction(f);
-}
-
-
 void DUChains::VisitFunction(Function* func)
 {
     for (auto b : *func)

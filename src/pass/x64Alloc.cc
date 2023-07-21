@@ -56,18 +56,6 @@ void x64Alloc::MarkLoadTwice(const IROperand* op)
 }
 
 
-void x64Alloc::Execute()
-{
-    for (auto sym : *CurModule())
-    {
-        if (!sym->Is<Function>()) continue;
-        auto func = sym->As<Function>();
-        EnterFunction(func);
-        ExecuteOnFunction(func);
-    }
-}
-
-
 const x64* x64Alloc::GetIROpMap(const IROperand* op) const
 {
     auto it = irmap_.at(curfunc_).find(op);

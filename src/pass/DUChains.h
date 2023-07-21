@@ -17,7 +17,6 @@ class DUChains : public FunctionPass, private IRVisitor
 public:
     DUChains(Module* m) : FunctionPass(m) {}
 
-    void Execute() override;
     void ExecuteOnFunction(Function* func) override { VisitFunction(func); }
     void EnterFunction(Function*) override {}
 
