@@ -18,7 +18,7 @@ public:
     DUChains(Module* m) : FunctionPass(m) {}
 
     void ExecuteOnFunction(Function* func) override { VisitFunction(func); }
-    void EnterFunction(Function*) override {}
+    void ExitFunction(Function*) override {}
 
     const Instr* GetDef(const IROperand* op) const { return def_.at(op); }
     const auto& GetUse(const IROperand* op) const { return uses_.at(op); }

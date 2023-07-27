@@ -74,13 +74,14 @@ public:
 
     x64Alloc(Module* m) : FunctionPass(m) {}
 
-    void EnterFunction(Function* func) override
+    void ExitFunction(Function* func) override
     {
-        curfunc_ = func;
         ArchInfo() = x64Stack();
+        Clear();
     }
     void ExecuteOnFunction(Function* func) override
     {
+        curfunc_ = func;
         VisitFunction(func);
         regmap_.emplace(func, UsedRegs());
         infomap_.emplace(func, ArchInfo());

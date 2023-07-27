@@ -21,6 +21,8 @@ protected:
     const ARCHINFO& ArchInfo() const { return curfunc_; }
     auto& UsedRegs() const { return used_; }
 
+    void Clear() { inuse_.clear(); used_.clear(); }
+
 private:
     std::set<REGENUM> inuse_{};
     std::set<REGENUM> used_{};

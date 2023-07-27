@@ -40,14 +40,14 @@ public:
         {
             if (auto func = pval->As<Function>(); func)
             {
-                EnterFunction(func);
                 ExecuteOnFunction(func);
+                ExitFunction(func);
             }
         }
     }
 
     virtual void ExecuteOnFunction(Function*) = 0;
-    virtual void EnterFunction(Function*) = 0;
+    virtual void ExitFunction(Function*) = 0;
 };
 
 #endif // _PASS_H_
