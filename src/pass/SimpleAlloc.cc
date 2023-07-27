@@ -32,7 +32,7 @@ void SimpleAlloc::StackCache::Access(const Register* reg, const Instr* i) const
             intreg_.emplace(pos->Tag());
         else
             vecreg_.emplace(pos->Tag());
-        alloc_.Unmark(static_cast<x64Phys>(static_cast<int>(pos->Tag()) - 2));
+        alloc_->Unmark(static_cast<x64Phys>(static_cast<int>(pos->Tag()) - 2));
     }
 }
 
@@ -41,7 +41,7 @@ void SimpleAlloc::StackCache::Map2Reg(const Register* reg, RegTag tag)
 {
     auto px64 = std::make_unique<x64Reg>(tag, reg->Type()->Size());
     auto raw = px64.get();
-    alloc_.MapRegister(reg, std::move(px64));
+    alloc_->MapRegister(reg, std::move(px64));
     regmap_[reg] = raw;
 }
 
@@ -54,7 +54,7 @@ void SimpleAlloc::StackCache::Map2Stack(const Register* reg, size_t size, long o
 {
     auto px64 = std::make_unique<x64Mem>(size, offset, RegTag::rbp, RegTag::none, 0);
     auto raw = px64.get();
-    alloc_.MapRegister(reg, std::move(px64));
+    alloc_->MapRegister(reg, std::move(px64));
     regmap_[reg] = raw;
 }
 
@@ -110,16 +110,6 @@ void SimpleAlloc::ConvertAllocaHelper(ConvertInstr* i)
 
 void SimpleAlloc::VisitFunction(Function* func)
 {
-    // maybe this loop can be eliminated by
-    // interprocedural analysis?
-    for (auto bb : *func)
-        for (auto i : *bb)
-            if (i->Is<CallInstr>())
-            {
-                ArchInfo().leaf_ = false;
-                break;
-            }
-
     for (auto bb : *func)
         for (auto i : *bb)
             if (i->Is<AllocaInstr>())
@@ -133,6 +123,7 @@ void SimpleAlloc::VisitFunction(Function* func)
     auto& info = ArchInfo();
     info.allocated_ = MakeAlign(info.allocated_, 16);
     info.rspoffset_ = info.allocated_;
+    stackcache_ = StackCache(this, chain_);
 }
 
 
