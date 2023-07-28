@@ -7,10 +7,8 @@ void CFG::VisitFunction(Function* func)
 {
     FlowGraph fg{};
 
-    startfrom_[func] = func->At(0);
     for (auto bb : *func)
         fg.AddVertex(bb);
-
     // Stands for exit
     fg.AddVertex(nullptr);
 
@@ -49,10 +47,15 @@ void CFG::VisitBrInstr(Function* func, BasicBlock* bb, BrInstr* br)
             bb, br->GetTrueBlk(), { br->Cond(), true });
         flow_[func].AddValueEdge(
             bb, br->GetFalseBlk(), { br->Cond(), false });
+        preds_[br->GetTrueBlk()].insert(bb);
+        preds_[br->GetFalseBlk()].insert(bb);
     }
     else
+    {
         flow_[func].AddValueEdge(
             bb, br->GetTrueBlk(), { nullptr, true });
+        preds_[br->GetTrueBlk()].insert(bb);
+    }
 }
 
 void CFG::VisitCallInstr(Function* func, BasicBlock* bb, CallInstr* c)
@@ -66,9 +69,14 @@ void CFG::VisitCallInstr(Function* func, BasicBlock* bb, CallInstr* c)
 void CFG::VisitSwitchInstr(Function* func, BasicBlock* bb, SwitchInstr* s)
 {
     for (auto [i, to] : s->GetValueBlkPairs())
+    {
         flow_[func].AddValueEdge(bb, to, { i, true });
+        preds_[to].insert(bb);
+    }
+
     flow_[func].AddValueEdge(
         bb, s->GetDefault(), { s->GetIdent(), false });
+    preds_[s->GetDefault()].insert(bb);
 }
 
 void CFG::VisitRetInstr(Function* func, BasicBlock* bb, RetInstr* r)

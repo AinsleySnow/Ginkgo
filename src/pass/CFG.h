@@ -4,6 +4,7 @@
 #include "pass/Pass.h"
 #include "utils/Graph.h"
 #include <unordered_map>
+#include <unordered_set>
 
 class Module;
 class Function;
@@ -23,6 +24,7 @@ public:
     using CallInfo = std::pair<const BasicBlock*, const CallInstr*>;
     using FlowGraph = Graph<const BasicBlock*, JumpCond>;
     using CallingGraph = Graph<const Function*, CallInfo>;
+    using Predecessors = std::unordered_set<const BasicBlock*>;
 
     CFG(Module* m) : ModulePass(m) {}
     void ExecuteOnModule(Module*) override;
@@ -32,7 +34,9 @@ public:
 
     const FlowGraph& GetFlowGraph(const Function* func) const { return flow_.at(func); }
     FlowGraph& GetFlowGraph(const Function* func) { return flow_.at(func); }
-    const BasicBlock* StartFrom(const Function* func) const { return startfrom_.at(func); }
+
+    const Predecessors& GetPredsOf(const BasicBlock* bb) const { return preds_.at(bb); }
+    Predecessors& GetPredsOf(const BasicBlock* bb) { return preds_.at(bb); }
 
 private:
     void VisitFunction(Function*);
@@ -44,7 +48,7 @@ private:
 
     CallingGraph calling_{};
     std::unordered_map<const Function*, FlowGraph> flow_{};
-    std::unordered_map<const Function*, const BasicBlock*> startfrom_{};
+    std::unordered_map<const BasicBlock*, Predecessors> preds_{};
 };
 
 #endif // _CFG_H_
