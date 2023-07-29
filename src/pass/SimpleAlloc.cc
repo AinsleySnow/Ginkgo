@@ -26,7 +26,7 @@ void SimpleAlloc::StackCache::Access(const Register* reg, const Instr* i) const
     auto it = regmap_.find(reg);
     if (it == regmap_.end()) return;
 
-    if (auto pos = it->second->As<x64Reg>(); pos && chain_->IsLastUse(reg, i))
+    if (auto pos = it->second->As<x64Reg>(); pos && info_->IsLastUse(reg, i))
     {
         if (static_cast<int>(pos->Tag()) <= 15)
             intreg_.emplace(pos->Tag());
@@ -123,7 +123,7 @@ void SimpleAlloc::VisitFunction(Function* func)
     auto& info = ArchInfo();
     info.allocated_ = MakeAlign(info.allocated_, 16);
     info.rspoffset_ = info.allocated_;
-    stackcache_ = StackCache(this, chain_);
+    stackcache_ = StackCache(this, info_);
 }
 
 

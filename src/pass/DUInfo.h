@@ -1,5 +1,5 @@
-#ifndef _DU_CHAIN_H_
-#define _DU_CHAIN_H_
+#ifndef _DU_INFO_H_
+#define _DU_INFO_H_
 
 #include "pass/Pass.h"
 #include "visitir/IRVisitor.h"
@@ -12,10 +12,10 @@ class IROperand;
 class Instr;
 
 
-class DUChains : public FunctionPass, private IRVisitor
+class DUInfo : public FunctionPass, private IRVisitor
 {
 public:
-    DUChains(Module* m) : FunctionPass(m) {}
+    DUInfo(Module* m) : FunctionPass(m) {}
 
     void ExecuteOnFunction(Function* func) override { VisitFunction(func); }
     void ExitFunction(Function*) override {}
@@ -91,4 +91,4 @@ private:
     void VisitPhiInstr(PhiInstr*) override;
 };
 
-#endif // _DU_CHAIN_H_
+#endif // _DU_INFO_H_

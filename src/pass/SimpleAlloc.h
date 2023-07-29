@@ -2,7 +2,7 @@
 #define _SIMPLE_ALLOC_H_
 
 #include "pass/Pass.h"
-#include "pass/DUChains.h"
+#include "pass/DUInfo.h"
 #include "pass/x64Alloc.h"
 #include "visitir/IRVisitor.h"
 #include "visitir/x64.h"
@@ -34,13 +34,13 @@ class SimpleAlloc : public x64Alloc
 {
 public:
     SimpleAlloc(Module* m, Pass* du) : x64Alloc(m),
-        chain_(static_cast<DUChains*>(du)), stackcache_(this, chain_) {}
+        info_(static_cast<DUInfo*>(du)), stackcache_(this, info_) {}
 
 private:
     class StackCache
     {
     public:
-        StackCache(SimpleAlloc* sa, DUChains* c) : alloc_(sa), chain_(c) {}
+        StackCache(SimpleAlloc* sa, DUInfo* d) : alloc_(sa), info_(d) {}
 
         RegTag SpareReg() const;
         RegTag SpareFReg() const;
@@ -51,7 +51,7 @@ private:
 
     private:
         SimpleAlloc* alloc_;
-        DUChains* chain_{};
+        DUInfo* info_{};
 
         // map virtual registers to where? the value can be
         // either a register or a stack address.
@@ -70,7 +70,7 @@ private:
     void ConvertAllocaHelper(ConvertInstr*);
 
     Function* curfunc_{};
-    DUChains* chain_{};
+    DUInfo* info_{};
     StackCache stackcache_{ this, nullptr };
 
 private:

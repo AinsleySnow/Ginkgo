@@ -1,5 +1,5 @@
 #include "main/Driver.h"
-#include "pass/DUChains.h"
+#include "pass/DUInfo.h"
 #include "pass/Pipeline.h"
 #include "pass/SimpleAlloc.h"
 #include "parser/yacc.hh"
@@ -122,7 +122,7 @@ void Driver::GenerateIR()
 Pipeline Driver::InitPipeline()
 {
     Pipeline simple{ module_.get() };
-    simple.AddPass<DUChains>(0);
+    simple.AddPass<DUInfo>(0);
     simple.AddPass<SimpleAlloc>(1, 0);
     return std::move(simple);
 }
