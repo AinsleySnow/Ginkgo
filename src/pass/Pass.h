@@ -38,7 +38,7 @@ public:
     {
         for (auto pval : *CurModule())
         {
-            if (auto func = pval->As<Function>(); func)
+            if (auto func = pval->As<Function>(); func && !func->Empty())
             {
                 ExecuteOnFunction(func);
                 ExitFunction(func);
