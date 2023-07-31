@@ -19,7 +19,7 @@ void Dominators::MapPostorder(const Function* func)
     int poi = 0; // post-order index
 
     for (auto& v : fg.GetVertices())
-        if (auto vv = *v.vertex_; !indexof_.count(vv))
+        if (auto vv = *v; !indexof_.count(vv))
             DFS(fg, vv, poi);
 
     idom_.reserve(poi);
@@ -81,18 +81,16 @@ int Dominators::Intersect(int b1, int b2)
 
 void Dominators::ConstructDoms(const Function* func)
 {
-    Domins domof{};
     auto start = func->At(0);
-    domof[start] = { start };
-    for (auto& [node, index] : indexof_)
+    domins_.emplace(start, start);
+    for (auto& [node, _] : indexof_)
     {
         for (auto current = node; current != start; )
         {
-            domof[node].insert(current);
+            domins_.emplace(node, current);
             current = bbvia_[idom_[indexof_[current]]];
         }
     }
-    domins_[func] = std::move(domof);
 }
 
 

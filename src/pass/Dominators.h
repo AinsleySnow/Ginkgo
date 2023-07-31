@@ -18,16 +18,13 @@ class Module;
 class Dominators : public FunctionPass
 {
 public:
-    using Domins = std::unordered_map<
-        const BasicBlock*, std::unordered_set<const BasicBlock*>>;
-
     Dominators(Module* m, Pass* cfg) :
         FunctionPass(m), graphs_(static_cast<CFG*>(cfg)) {}
 
     void ExecuteOnFunction(Function*) override;
     void ExitFunction(Function*) override;
 
-    const Domins& GetDominators(const Function* func) const { return domins_.at(func); }
+    auto GetDominators(const BasicBlock* bb) const { return domins_.equal_range(bb); }
 
 private:
     void DFS(const CFG::FlowGraph&, const BasicBlock*, int&);
@@ -40,7 +37,7 @@ private:
     std::unordered_map<const BasicBlock*, int> indexof_{};
     std::vector<int> idom_{};
 
-    std::unordered_map<const Function*, Domins> domins_{};
+    std::unordered_multimap<const BasicBlock*, const BasicBlock*> domins_{};
     CFG* graphs_{};
 };
 
