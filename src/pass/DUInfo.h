@@ -5,6 +5,7 @@
 #include "visitir/IRVisitor.h"
 #include <list>
 #include <unordered_map>
+#include <unordered_set>
 
 class BinaryInstr;
 class ConvertInstr;
@@ -20,22 +21,58 @@ public:
     void ExecuteOnFunction(Function* func) override { VisitFunction(func); }
     void ExitFunction(Function*) override {}
 
+    bool HasDef(const BasicBlock* bb) const { return bbdef_.count(bb); }
+    bool HasPhiDef(const BasicBlock* bb) const { return bbphidef_.count(bb); }
+    bool HasUse(const BasicBlock* bb) const { return bbuse_.count(bb); }
+    bool HasPhiUse(const BasicBlock* bb) const { return bbphiuse_.count(bb); }
+
     const Instr* GetDef(const IROperand* op) const { return def_.at(op); }
+    const auto& GetDef(const BasicBlock* bb) const { return bbdef_.at(bb); }
+    auto GetPhiDef(const BasicBlock* bb) const { return bbphidef_.at(bb); }
+
     const auto& GetUse(const IROperand* op) const { return uses_.at(op); }
+    const auto& GetUse(const BasicBlock* bb) const { return bbuse_.at(bb); }
+    const auto& GetPhiUse(const BasicBlock* bb) const { return bbphiuse_.at(bb); }
     bool IsLastUse(const IROperand* op, const Instr* i) const { return uses_.at(op).back() == i; }
 
     void AddDef(const IROperand* op, const Instr* i) { def_.emplace(op, i); }
+    void AddDef(const BasicBlock* bb, const IROperand* op) { bbdef_[bb].insert(op); }
+    void AddPhiDef(const BasicBlock* bb, const IROperand* op) { bbphidef_[bb] = op; }
+
     void AddUse(const IROperand* op, const Instr* i) { uses_[op].push_back(i); }
+    void AddUse(const BasicBlock* bb, const IROperand* op) { bbuse_[bb].insert(op); }
+    void AddPhiUse(const BasicBlock* bb, const IROperand* op) { bbphiuse_[bb].push_back(op); }
+
     void DelDef(const IROperand* op) { def_.erase(op); }
+    void DelDef(const BasicBlock* bb) { bbdef_.erase(bb); }
+    void DelDef(const BasicBlock* bb, const IROperand* op) { bbdef_.at(bb).erase(op); }
+    void DelPhiDef(const BasicBlock* bb) { bbphidef_.erase(bb); }
+
     void DelUse(const IROperand* op) { uses_.erase(op); }
     void DelUse(const IROperand* op, const Instr* i) { uses_.at(op).remove(i); }
+    void DelUse(const BasicBlock* bb) { bbuse_.erase(bb); }
+    void DelUse(const BasicBlock* bb, const IROperand* op) { bbuse_.at(bb).erase(op); }
+    void DelPhiUse(const BasicBlock* bb, const IROperand* op) { bbphiuse_.at(bb).remove(op); }
 
 private:
     void BinaryDUHelper(BinaryInstr*);
     void ConvertDUHelper(ConvertInstr*);
 
+    const BasicBlock* curbb_{};
+
     std::unordered_map<const IROperand*, const Instr*> def_{};
     std::unordered_map<const IROperand*, std::list<const Instr*>> uses_{};
+
+    // variables defined (without phi) in basic blocks
+    std::unordered_map<const BasicBlock*, std::unordered_set<const IROperand*>> bbdef_{};
+    // variables used (without phi) in basic blocks
+    std::unordered_map<const BasicBlock*, std::unordered_set<const IROperand*>> bbuse_{};
+    // variables defined by a phi instruction;
+    // One phi per block - otherwise the block is ill-formed
+    std::unordered_map<const BasicBlock*, const IROperand*> bbphidef_{};
+    // variables used in phi instructions; use list to save some memory,
+    // since there's no need to keep the elements unique
+    std::unordered_map<const BasicBlock*, std::list<const IROperand*>> bbphiuse_{};
 
 private:
     void VisitFunction(Function*) override;

@@ -7,16 +7,25 @@
 void DUInfo::BinaryDUHelper(BinaryInstr* bin)
 {
     AddDef(bin->Result(), bin);
+    AddDef(curbb_, bin->Result());
     if (bin->Lhs()->Is<Register>())
+    {
         AddUse(bin->Lhs(), bin);
+        AddUse(curbb_, bin->Lhs());
+    }
     if (bin->Rhs()->Is<Register>())
+    {
         AddUse(bin->Rhs(), bin);
+        AddUse(curbb_, bin->Rhs());
+    }
 }
 
 void DUInfo::ConvertDUHelper(ConvertInstr* cvt)
 {
     AddDef(cvt->Dest(), cvt);
+    AddDef(curbb_, cvt->Dest());
     AddUse(cvt->Value(), cvt);
+    AddUse(curbb_, cvt->Value());
 }
 
 
@@ -28,6 +37,7 @@ void DUInfo::VisitFunction(Function* func)
 
 void DUInfo::VisitBasicBlock(BasicBlock* b)
 {
+    curbb_ = b;
     for (auto i : *b)
         i->Accept(this);
 }
@@ -36,28 +46,45 @@ void DUInfo::VisitBasicBlock(BasicBlock* b)
 void DUInfo::VisitRetInstr(RetInstr* ret)
 {
     if (ret->ReturnValue() && ret->ReturnValue()->Is<Register>())
+    {
         AddUse(ret->ReturnValue(), ret);
+        AddUse(curbb_, ret->ReturnValue());
+    }
 }
 
 void DUInfo::VisitBrInstr(BrInstr* br)
 {
     if (br->Cond() && br->Cond()->Is<Register>())
+    {
         AddUse(br->Cond(), br);
+        AddUse(curbb_, br->Cond());
+    }
 }
 
 void DUInfo::VisitSwitchInstr(SwitchInstr* swtch)
 {
     if (swtch->GetIdent()->Is<Register>())
+    {
         AddUse(swtch->GetIdent(), swtch);
+        AddUse(curbb_, swtch->GetIdent());
+    }
 }
 
 void DUInfo::VisitCallInstr(CallInstr* call)
 {
     if (call->Result())
+    {
         AddDef(call->Result(), call);
+        AddDef(curbb_, call->Result());
+    }
     for (auto op : call->ArgvList())
+    {
         if (op->Is<Register>())
+        {
             AddUse(op, call);
+            AddUse(curbb_, op);
+        }
+    }
 }
 
 void DUInfo::VisitAddInstr(AddInstr* i)   { BinaryDUHelper(i); }
@@ -79,27 +106,39 @@ void DUInfo::VisitXorInstr(XorInstr* i)   { BinaryDUHelper(i); }
 void DUInfo::VisitAllocaInstr(AllocaInstr* alloca)
 {
     AddDef(alloca->Result(), alloca);
+    AddDef(curbb_, alloca->Result());
 }
 
 void DUInfo::VisitLoadInstr(LoadInstr* load)
 {
     AddDef(load->Result(), load);
+    AddDef(curbb_, load->Result());
     AddUse(load->Pointer(), load);
+    AddUse(curbb_, load->Pointer());
 }
 
 void DUInfo::VisitStoreInstr(StoreInstr* store)
 {
     if (store->Value()->Is<Register>())
+    {
         AddUse(store->Value(), store);
+        AddUse(curbb_, store->Value());
+    }
     AddUse(store->Dest(), store);
+    AddUse(curbb_, store->Dest());
 }
 
 void DUInfo::VisitGetElePtrInstr(GetElePtrInstr* gep)
 {
     AddDef(gep->Result(), gep);
+    AddDef(curbb_, gep->Result());
     if (!gep->HoldsInt() && gep->OpIndex()->Is<Register>())
+    {
         AddUse(gep->OpIndex(), gep);
-    AddUse(gep->OpIndex(), gep);
+        AddUse(curbb_, gep->OpIndex());
+    }
+    AddUse(gep->Pointer(), gep);
+    AddUse(curbb_, gep->Pointer());
 }
 
 void DUInfo::VisitTruncInstr(TruncInstr* i)       { ConvertDUHelper(i); }
@@ -117,10 +156,17 @@ void DUInfo::VisitBitcastInstr(BitcastInstr* i)   { ConvertDUHelper(i); }
 
 #define CMP_HELPER                  \
 AddDef(cmp->Result(), cmp);         \
+AddDef(curbb_, cmp->Result());      \
 if (cmp->Op1()->Is<Register>())     \
+{                                   \
     AddUse(cmp->Op1(), cmp);        \
+    AddUse(curbb_, cmp->Op1());     \
+}                                   \
 if (cmp->Op2()->Is<Register>())     \
-    AddUse(cmp->Op2(), cmp)
+{                                   \
+    AddUse(cmp->Op2(), cmp);        \
+    AddUse(curbb_, cmp->Op2());     \
+}
 
 void DUInfo::VisitIcmpInstr(IcmpInstr* cmp) { CMP_HELPER; }
 void DUInfo::VisitFcmpInstr(FcmpInstr* cmp) { CMP_HELPER; }
@@ -130,18 +176,34 @@ void DUInfo::VisitFcmpInstr(FcmpInstr* cmp) { CMP_HELPER; }
 void DUInfo::VisitSelectInstr(SelectInstr* sel)
 {
     AddDef(sel->Result(), sel);
+    AddDef(curbb_, sel->Result());
     if (sel->SelType()->Is<Register>())
+    {
         AddUse(sel->SelType(), sel);
+        AddUse(curbb_, sel->SelType());
+    }
     if (sel->Value1()->Is<Register>())
+    {
         AddUse(sel->Value1(), sel);
+        AddUse(curbb_, sel->Value1());
+    }
     if (sel->Value2()->Is<Register>())
+    {
         AddUse(sel->Value2(), sel);
+        AddUse(curbb_, sel->Value2());
+    }
 }
 
 void DUInfo::VisitPhiInstr(PhiInstr* phi)
 {
     AddDef(phi->Result(), phi);
+    AddPhiDef(curbb_, phi->Result());
     for (auto [_, op] : phi->GetBlockValPair())
+    {
         if (op->Is<Register>())
+        {
             AddUse(op, phi);
+            AddPhiUse(curbb_, op);
+        }
+    }
 }
