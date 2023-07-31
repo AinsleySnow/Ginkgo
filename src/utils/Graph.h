@@ -35,12 +35,14 @@ class AdjList;
 template <typename V>
 class AdjList<V> : public __AdjListBase<V, std::unordered_set<int>>
 {
+    using Base = __AdjListBase<V, std::unordered_set<int>>;
+
 public:
     AdjList<V>(std::unordered_map<V, int>& i,
         std::unordered_map<int, V*>& v) : Base(i, v) {}
 
-    bool operator[](const V& to) const { return HasLinkTo(to); }
-    bool operator[](int to) const { return HasLinkTo(to); }
+    bool operator[](const V& to) const { return Base::HasLinkTo(to); }
+    bool operator[](int to) const { return Base::HasLinkTo(to); }
 };
 
 
@@ -82,16 +84,10 @@ public:
         bool operator==(Iterator<I> other) const { return current_ == other.current_; }
         bool operator!=(Iterator<I> other) const { return !(*this == other); }
 
-        auto operator*()
-        {
-            return Wrapper<V&, E&>(
-                *map_.at(current_->first), current_->second);
-        }
-        auto operator*() const
-        {
-            return Wrapper<const V&, const E&>(
-                *map_.at(current_->first), current_->second);
-        }
+        auto operator*() { return (Wrapper<V&, E&>){ *map_.at(current_->first), current_->second }; }
+        auto operator*() const { return (Wrapper<const V&, const E&>){ *map_.at(current_->first), current_->second }; }
+        auto operator->() { return (Wrapper<V&, E&>){ *map_.at(current_->first), current_->second }; }
+        auto operator->() const { return (Wrapper<V&, E&>){ *map_.at(current_->first), current_->second }; }
 
     private:
         I current_{};
@@ -102,7 +98,7 @@ public:
     class Window
     {
     public:
-        template <class I>
+        template <class WI>
         class Iterator
         {
         public:
@@ -112,30 +108,32 @@ public:
             using reference = V&;
             using iterator_category = std::bidirectional_iterator_tag;
 
-            Iterator(I c) : current_(c) {}
+            Iterator(WI c) : current_(c) {}
 
             auto& operator++() { current_++; return *this; }
             auto operator++(int) { auto retval = *this; ++(*this); return retval; }
             auto& operator--() { current_--; return *this; }
             auto operator--(int) { auto retval = *this; --(*this); return retval; }
 
-            auto operator+(size_t off) const { return Iterator(current_ + off, map_); }
-            auto operator-(size_t off) const { return Iterator(current_ - off, map_); }
+            auto operator+(size_t off) const { return Iterator(current_ + off); }
+            auto operator-(size_t off) const { return Iterator(current_ - off); }
 
-            bool operator==(Iterator<I> other) const { return current_ == other.current_; }
-            bool operator!=(Iterator<I> other) const { return !(*this == other); }
+            bool operator==(Iterator<WI> other) const { return current_ == other.current_; }
+            bool operator!=(Iterator<WI> other) const { return !(*this == other); }
 
             auto& operator*() { return current_->second; }
             const auto operator*() const { return current_->second; }
 
         private:
-            I current_{};
+            WI current_{};
         };
 
         Window(I b, I e) : begin_(b), end_(e) {}
 
         auto begin() { return Iterator(begin_); }
+        const auto begin() const { return Iterator(begin_); }
         auto end() { return Iterator(end_); }
+        const auto end() const { return Iterator(end_); }
         auto cbegin() const { return Iterator(cbegin_); }
         auto cend() const { return Iterator(cend_); }
 
@@ -146,18 +144,20 @@ public:
         CI cend_{};
     };
 
-    using MapIter = decltype(std::unordered_multimap<int, E>::equal_range(0));
-    using ConstMapIter = const MapIter;
+    using MapIter = decltype(std::declval<std::unordered_multimap<int, E>>().equal_range(0).first);
+    using ConstMapIter = decltype(std::declval<const std::unordered_multimap<int, E>>().equal_range(0).first);
     using IterType = Iterator<MapIter>;
     using ConstIterType = Iterator<ConstMapIter>;
 
     AdjList<V, E>(std::unordered_map<V, int>& i,
         std::unordered_map<int, V*>& v) : Base(i, v) {}
 
-    auto begin() { return Iterator(Base::vertices_.begin()); }
-    auto end() { return Iterator(Base::vertices_.end()); }
-    auto cbegin() const { return Iterator(Base::vertices_.cbegin()); }
-    auto cend() const { return Iterator(Base::vertices_.cend()); }
+    auto begin() { return IterType(Base::vertices_.begin(), Base::vertexvia_); }
+    const auto begin() const { return IterType(Base::vertices_.begin(), Base::vertexvia_); }
+    auto end() { return IterType(Base::vertices_.end(), Base::vertexvia_); }
+    const auto end() const { return IterType(Base::vertices_.end(), Base::vertexvia_); }
+    auto cbegin() const { return ConstIterType(Base::vertices_.cbegin(), Base::vertexvia_); }
+    auto cend() const { return ConstIterType(Base::vertices_.cend(), Base::vertexvia_); }
 
     auto operator[](const V& to) const
     { return this->operator[](Base::indexof_.at(to)); }
@@ -192,15 +192,6 @@ public:
 };
 
 
-template <typename V>
-struct Vertex
-{
-    V* vertex_{};
-    int finish_{};
-    int discover_{};
-    bool visited_{};
-};
-
 template <typename V, class ADJ>
 class __GraphBase
 {
@@ -209,12 +200,12 @@ public:
     {
     public:
         using difference_type = ptrdiff_t;
-        using value_type = std::pair<Vertex<V>&, ADJ&>;
+        using value_type = std::pair<V&, ADJ&>;
         using pointer = value_type*;
         using reference = value_type&;
         using iterator_category = std::random_access_iterator_tag;
 
-        ItemIterator(Vertex<V>* v, ADJ* a, int i) : vertices_(v), adjlist_(a), index_(i) {}
+        ItemIterator(V* v, ADJ* a, int i) : vertices_(v), adjlist_(a), index_(i) {}
 
         auto& operator++() { index_++; return *this; }
         auto operator++(int) { auto retval = *this; ++(*this); return retval; }
@@ -235,39 +226,35 @@ public:
         }
         bool operator!=(const ItemIterator& other) const { return !(*this == other); }
 
-        std::pair<Vertex<V>&, ADJ&> operator*()
-        {
-            return std::make_pair<
-                Vertex<V>&, ADJ&>(vertices_[index_], adjlist_[index_]);
-        }
-        std::pair<const Vertex<V>&, const ADJ&> operator*() const
-        {
-            return std::make_pair<
-                const Vertex<V>&, const ADJ&>(vertices_[index_], adjlist_[index_]);
-        }
+        std::pair<V*, ADJ&> operator*()
+        { return std::make_pair<V&, ADJ&>(vertices_[index_], adjlist_[index_]); }
+        std::pair<const V*, const ADJ&> operator*() const
+        { return std::make_pair<const V&, const ADJ&>(vertices_[index_], adjlist_[index_]); }
 
     private:
-        Vertex<V>* vertices_{};
+        V* vertices_{};
         ADJ* adjlist_{};
         int index_{};
     };
 
     auto begin() { return ItemIterator(vertexvia_.data(), adj_.data(), 0); }
+    const auto begin() const { return ItemIterator(vertexvia_.data(), adj_.data(), 0); }
     auto end() { return ItemIterator(vertexvia_.data(), adj_.data(), vertexvia_.size()); }
+    const auto end() const { return ItemIterator(vertexvia_.data(), adj_.data(), vertexvia_.size()); }
     const auto cbegin() const { return begin(); }
     const auto cend() const { return end(); }
 
     auto& GetVertices() { return vertexvia_; }
     const auto& GetVertices() const { return vertexvia_; }
-    auto& GetEdges(const V& v) { return adj_[indexof_[v]]; }
-    const auto& GetEdges(const V& v) const { return adj_[indexof_[v]]; }
+    auto& GetEdges(const V& v) { return adj_[indexof_.at(v)]; }
+    const auto& GetEdges(const V& v) const { return adj_[indexof_.at(v)]; }
     auto& operator[](const V& v) { return GetEdges(v); }
     const auto& operator[](const V& v) const { return GetEdges(v); }
 
     void AddVertex(const V& v)
     {
         auto addr = &(indexof_.emplace(v, index_).first->first);
-        vertexvia_[index_] = { addr, 0, 0, false };
+        vertexvia_[index_] = addr;
         adj_.push_back({});
         index_ += 1;
     }
@@ -301,7 +288,7 @@ public:
 protected:
     int index_{};
     std::unordered_map<V, int> indexof_{};
-    std::vector<Vertex<V>> vertexvia_{};
+    std::vector<V*> vertexvia_{};
     std::vector<ADJ> adj_{};
 };
 
