@@ -13,7 +13,7 @@ class __AdjListBase
 {
 public:
     __AdjListBase(std::unordered_map<V, int>& i,
-        std::unordered_map<int, V*>& v) : indexof_(i), vertexvia_(v) {}
+        std::vector<V const*>& v) : indexof_(i), vertexvia_(v) {}
 
     bool HasLinkTo(const V& to) const { return vertices_.count(indexof_.at(to)); }
     bool HasLinkTo(int to) const { return vertices_.count(to); }
@@ -25,7 +25,7 @@ public:
 protected:
     C vertices_{};
     std::unordered_map<V, int>& indexof_;
-    std::unordered_map<int, V*>& vertexvia_;
+    std::vector<V const*>& vertexvia_;
 };
 
 
@@ -39,7 +39,7 @@ class AdjList<V> : public __AdjListBase<V, std::unordered_set<int>>
 
 public:
     AdjList<V>(std::unordered_map<V, int>& i,
-        std::unordered_map<int, V*>& v) : Base(i, v) {}
+        std::vector<V const*>& v) : Base(i, v) {}
 
     bool operator[](const V& to) const { return Base::HasLinkTo(to); }
     bool operator[](int to) const { return Base::HasLinkTo(to); }
@@ -52,15 +52,14 @@ class AdjList<V, E> : public __AdjListBase<V, std::unordered_multimap<int, E>>
     using Base = __AdjListBase<V, std::unordered_multimap<int, E>>;
 
 public:
-    template <class I>
+    template <class I, typename EDGE>
     class Iterator
     {
     public:
-        template <typename VERTEX, typename EDGE>
         struct Wrapper
         {
-            VERTEX to_{};
-            EDGE value_{};
+            const V& to_{};
+            EDGE& value_{};
         };
 
         using difference_type = ptrdiff_t;
@@ -69,29 +68,27 @@ public:
         using reference = V&;
         using iterator_category = std::bidirectional_iterator_tag;
 
-        Iterator(I i, const std::unordered_map<int, V*>& m) : current_(i), map_(m) {}
+        Iterator(I i, const std::vector<V const*>& m) : current_(i), map_(m) {}
 
         auto& operator++() { current_++; return *this; }
         auto operator++(int) { auto retval = *this; ++(*this); return retval; }
         auto& operator--() { current_--; return *this; }
         auto operator--(int) { auto retval = *this; --(*this); return retval; }
 
-        auto& operator+=(size_t off) { *this = *this + off; return *this; }
-        auto& operator-=(size_t off) { *this = *this - off; return *this; }
         auto operator+(size_t off) const { return Iterator(current_ + off, map_); }
         auto operator-(size_t off) const { return Iterator(current_ - off, map_); }
 
-        bool operator==(Iterator<I> other) const { return current_ == other.current_; }
-        bool operator!=(Iterator<I> other) const { return !(*this == other); }
+        bool operator==(Iterator<I, EDGE> other) const { return current_ == other.current_; }
+        bool operator!=(Iterator<I, EDGE> other) const { return !(*this == other); }
 
-        auto operator*() { return (Wrapper<V&, E&>){ *map_.at(current_->first), current_->second }; }
-        auto operator*() const { return (Wrapper<const V&, const E&>){ *map_.at(current_->first), current_->second }; }
-        auto operator->() { return (Wrapper<V&, E&>){ *map_.at(current_->first), current_->second }; }
-        auto operator->() const { return (Wrapper<V&, E&>){ *map_.at(current_->first), current_->second }; }
+        auto operator*() { return (Wrapper){ *map_.at(current_->first), current_->second }; }
+        auto operator*() const { return (const Wrapper){ *map_.at(current_->first), current_->second }; }
+        auto operator->() { return (Wrapper){ *map_.at(current_->first), current_->second }; }
+        auto operator->() const { return (const Wrapper){ *map_.at(current_->first), current_->second }; }
 
     private:
         I current_{};
-        const std::unordered_map<int, V*>& map_;
+        const std::vector<V const*>& map_;
     };
 
     template <class I, class CI>
@@ -144,18 +141,18 @@ public:
         CI cend_{};
     };
 
-    using MapIter = decltype(std::declval<std::unordered_multimap<int, E>>().equal_range(0).first);
-    using ConstMapIter = decltype(std::declval<const std::unordered_multimap<int, E>>().equal_range(0).first);
-    using IterType = Iterator<MapIter>;
-    using ConstIterType = Iterator<ConstMapIter>;
+    using MapIter = typename std::unordered_multimap<int, E>::iterator;
+    using ConstMapIter = typename std::unordered_multimap<int, E>::const_iterator;
+    using IterType = Iterator<MapIter, E>;
+    using ConstIterType = Iterator<ConstMapIter, const E>;
 
     AdjList<V, E>(std::unordered_map<V, int>& i,
-        std::unordered_map<int, V*>& v) : Base(i, v) {}
+        std::vector<V const*>& v) : Base(i, v) {}
 
     auto begin() { return IterType(Base::vertices_.begin(), Base::vertexvia_); }
-    const auto begin() const { return IterType(Base::vertices_.begin(), Base::vertexvia_); }
+    const auto begin() const { return cbegin(); }
     auto end() { return IterType(Base::vertices_.end(), Base::vertexvia_); }
-    const auto end() const { return IterType(Base::vertices_.end(), Base::vertexvia_); }
+    const auto end() const { return cend(); }
     auto cbegin() const { return ConstIterType(Base::vertices_.cbegin(), Base::vertexvia_); }
     auto cend() const { return ConstIterType(Base::vertices_.cend(), Base::vertexvia_); }
 
@@ -255,7 +252,7 @@ public:
     {
         auto addr = &(indexof_.emplace(v, index_).first->first);
         vertexvia_[index_] = addr;
-        adj_.push_back({});
+        adj_.push_back((ADJ){ indexof_, vertexvia_ });
         index_ += 1;
     }
 
@@ -288,7 +285,7 @@ public:
 protected:
     int index_{};
     std::unordered_map<V, int> indexof_{};
-    std::vector<V*> vertexvia_{};
+    std::vector<V const*> vertexvia_{};
     std::vector<ADJ> adj_{};
 };
 

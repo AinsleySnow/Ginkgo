@@ -74,6 +74,7 @@ public:
 
     x64Alloc(Module* m) : FunctionPass(m) {}
 
+    void EnterFunction(Function* func) { curfunc_ = func; }
     void ExitFunction(Function* func) override
     {
         ArchInfo() = x64Stack();

@@ -4,10 +4,10 @@
 
 void Dominators::DFS(const CFG::FlowGraph& fg, const BasicBlock* bb, int& poi)
 {
-    for (auto v : fg[bb])
+    for (auto [to, _] : fg[bb])
         // not present in the set
-        if (!indexof_.count(v.to_))
-            DFS(fg, v.to_, poi);
+        if (!indexof_.count(to))
+            DFS(fg, to, poi);
     indexof_[bb] = poi;
     bbvia_.push_back(bb);
     poi += 1;
