@@ -363,7 +363,7 @@ void CodeGen::GetElePtrRegHelper(
         LeaqEmitHelper(ptr, rlt);
         x64Reg reg{ GetSpareIntReg(0) };
         asmfile_.EmitMov(i, &reg);
-        asmfile_.EmitBinary("mul", scl, &reg);
+        asmfile_.EmitBinary("imul", scl, &reg);
         asmfile_.EmitBinary("add", &reg, rlt);
     }
     else
@@ -519,7 +519,7 @@ void CodeGen::LeaqEmitHelper(const x64* addr, const x64* dest)
     asmfile_.EmitMov(reg, dest);
 }
 
-void CodeGen::MovEmitHelper(const x64* from, const x64* to)
+void CodeGen::MovEmitHelper(const x64* from, const x64* to, int suffix)
 {
     if (auto imm = from->As<x64Imm>(); imm && to->Is<x64Mem>())
     {
@@ -529,7 +529,7 @@ void CodeGen::MovEmitHelper(const x64* from, const x64* to)
     }
     if (from->Is<x64Reg>() || from->Is<x64Imm>() || to->Is<x64Reg>())
     {
-        asmfile_.EmitMov(from, to);
+        asmfile_.EmitMov(from, to, suffix);
         return;
     }
 
@@ -1088,11 +1088,15 @@ void CodeGen::VisitCallInstr(CallInstr* inst)
     //         low address
 
     SaveCallerSaved();
-    SysVConv conv{ inst->Proto() };
+    auto proto = inst->Proto() ?
+        inst->Proto() :
+        // Call through a function pointer?
+        inst->FuncAddr()->Type()->As<PtrType>()->Point2()->As<FuncType>();
+    SysVConv conv{ proto };
     conv.MapArgv();
 
     auto [_, vec] = conv.CountRegs();
-    if (inst->Proto()->Variadic())
+    if (proto->Variadic())
     {
         if (vec == 0)
             asmfile_.EmitInstr("    xorq %rax, %rax\n");
@@ -1142,10 +1146,16 @@ void CodeGen::VisitXorInstr(XorInstr* inst)     { BinaryGenHelper("xor", inst); 
 
 void CodeGen::VisitMulInstr(MulInstr* inst)
 {
-    bool issigned =
-        inst->Lhs()->Type()->As<IntType>()->IsSigned() ||
-        inst->Rhs()->Type()->As<IntType>()->IsSigned();
-    BinaryGenHelper(issigned ? "imul" : "mul", inst);
+    if (inst->Lhs()->Type()->As<IntType>()->IsSigned() ||
+        inst->Rhs()->Type()->As<IntType>()->IsSigned())
+    {
+        BinaryGenHelper("imul", inst);
+        return;
+    }
+    auto lhs = alloc_->GetIROpMap(inst->Lhs());
+    asmfile_.EmitMov(lhs, RegTag::rax);
+    asmfile_.EmitUnary("mul", alloc_->GetIROpMap(inst->Rhs()));
+    asmfile_.EmitMov(RegTag::rax, alloc_->GetIROpMap(inst->Result()));
 }
 
 void CodeGen::VisitDivInstr(DivInstr* inst)
@@ -1182,7 +1192,7 @@ void CodeGen::VisitStoreInstr(StoreInstr* inst)
         mappedval->Is<x64Mem>() && !mappedval->As<x64Mem>()->LoadTwice())
         LeaqEmitHelper(mappedval, mappeddest);
     else
-        MovEmitHelper(mappedval, mappeddest);
+        MovEmitHelper(mappedval, mappeddest, 0);
 }
 
 void CodeGen::VisitLoadInstr(LoadInstr* inst)
@@ -1192,6 +1202,9 @@ void CodeGen::VisitLoadInstr(LoadInstr* inst)
 
     if (result->Type()->Is<FloatType>())
         VecMovEmitHelper(mappedptr, MapPossibleFloat(result));
+    // Is the pointer points to a global position?
+    else if (inst->Pointer()->Name()[0] == '@')
+        LeaqEmitHelper(mappedptr, alloc_->GetIROpMap(result));
     else
         MovEmitHelper(mappedptr, alloc_->GetIROpMap(result));
 }

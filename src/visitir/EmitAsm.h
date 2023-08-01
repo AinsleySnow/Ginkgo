@@ -60,7 +60,7 @@ public:
     void EmitUcom(const x64* op1, const x64* op2);
     void EmitUcom(const x64* op1, RegTag op2);
 
-    void EmitMov(const x64* src, const x64* dest);
+    void EmitMov(const x64* src, const x64* dest, int = 1);
     void EmitMov(RegTag, const x64* dest);
     void EmitMov(const x64* src, RegTag);
     void EmitMov(RegTag, long offset);

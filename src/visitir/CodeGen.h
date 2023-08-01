@@ -167,7 +167,7 @@ private:
     const x64* PrepareDivMod(const BinaryInstr*);
 
     void LeaqEmitHelper(const x64*, const x64*);
-    void MovEmitHelper(const x64*, const x64*);
+    void MovEmitHelper(const x64*, const x64*, int = 1);
     void MovzEmitHelper(const x64*, const x64*);
     void MovzEmitHelper(size_t, size_t, const x64*);
     void MovsEmitHelper(const x64*, const x64*);
