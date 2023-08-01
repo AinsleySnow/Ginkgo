@@ -1,14 +1,22 @@
 add_library(
     ginkgo_pass
     OBJECT
-    DUChains.cc
+    CFG.cc
+    Dominators.cc
+    DUInfo.cc
+    Liveness.cc
+    LoopAnalyze.cc
     SimpleAlloc.cc
     x64Alloc.cc
 )
 
 target_precompile_headers(
     ginkgo_pass
-    PRIVATE DUChains.h
+    PRIVATE CFG.h
+    PRIVATE DUInfo.h
+    PRIVATE Dominators.h
+    PRIVATE Liveness.h
+    PRIVATE LoopAnalyze.h
     PRIVATE Pass.h
     PRIVATE Pipeline.h
     PRIVATE SimpleAlloc.h
