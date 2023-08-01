@@ -92,6 +92,14 @@ std::shared_ptr<CType> TypeBuilder::MatchCType(
         return lhs;
     else if (lhs->Is<CArithmType>() && rhs->Is<CPtrType>())
         return rhs;
+    // Both lhs and rhs are pointers? Then we are handling
+    // ptr = ptr or ptr - ptr. Note that while ptr - ptr is okay,
+    // ptr + ptr is illegal in C and this sort of error
+    // should be recognized in CodeChk. The type of the ptrs,
+    // given minus as the operator, are bound to be same
+    // as guaranteed by CodeChk.
+    else if (lhs->Is<CPtrType>() && rhs->Is<CPtrType>())
+        return lhs;
     // for things like ArrayName = 2, ArrayName[2]
     else if (lhs->Is<CArrayType>() && rhs->Is<CArithmType>())
         return std::make_unique<CPtrType>(lhs->As<CArrayType>()->ArrayOf()->Clone());
@@ -437,6 +445,7 @@ void TypeBuilder::VisitCallExpr(CallExpr* expr)
         }
     }
 
+    expr->Postfix()->Accept(this);
     auto func = expr->Postfix()->Type();
     if (func->Is<CFuncType>())
     {

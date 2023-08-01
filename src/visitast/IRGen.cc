@@ -377,11 +377,20 @@ void IRGen::VisitAssignExpr(AssignExpr* assign)
         result = ibud_.InsertGetElePtrInstr(regname, lhs->As<Register>(), rhs);
     else if (IS_PTR(assign->left_) && IS_ARITHM(assign->right_) && assign->op_ == Tag::sub_assign)
     {
-        auto zero = IntConst::CreateIntConst(
-            ibud_.Container(), 0, assign->right_->Val()->Type()->As<IntType>());
-        auto minus = ibud_.InsertSubInstr(
-            env_.GetRegName(), zero, assign->right_->Val());
-        result = ibud_.InsertGetElePtrInstr(regname, lhs->As<Register>(), minus);
+        auto size = lhsty->As<PtrType>()->Point2()->Size();
+        const IROperand* newrhs = nullptr;
+        if (rhs->Is<IntConst>())
+        {
+            newrhs = IntConst::CreateIntConst(ibud_.Container(),
+                rhs->As<IntConst>()->Val() * size, rhs->Type()->As<IntType>());
+        }
+        else
+        {
+            auto sizeconst = IntConst::CreateIntConst(
+                ibud_.Container(), size, rhs->Type()->As<IntType>());
+            newrhs = ibud_.InsertMulInstr(env_.GetRegName(), rhs, sizeconst);
+        }
+        result = ibud_.InsertSubInstr(regname, lhs->As<Register>(), newrhs);
     }
 
     else if (assign->op_ == Tag::add_assign && lhsty->Is<IntType>())
@@ -467,14 +476,32 @@ void IRGen::VisitBinaryExpr(BinaryExpr* bin)
     std::string regname = env_.GetRegName();
     const Register* result = nullptr;
 
-    if (IS_ARITHM(bin->left_) && IS_PTR(bin->right_))
+    if (IS_ARITHM(bin->left_) && IS_PTR(bin->right_) && bin->op_ == Tag::plus)
         result = ibud_.InsertGetElePtrInstr(regname, AS_REG(bin->right_), bin->left_->Val()); 
-    else if (IS_PTR(bin->left_) && IS_ARITHM(bin->right_))
+    else if (IS_PTR(bin->left_) && IS_ARITHM(bin->right_) && bin->op_ == Tag::plus)
         result = ibud_.InsertGetElePtrInstr(regname, AS_REG(bin->left_), bin->right_->Val());
+    else if (IS_PTR(bin->left_) && IS_ARITHM(bin->right_) && bin->op_ == Tag::minus)
+    {
+        // here, rhs mustn't be types other than integer type.
+        auto size = lhsty->As<PtrType>()->Point2()->Size();
+        const IROperand* newrhs = nullptr;
+        if (rhs->Is<IntConst>())
+        {
+            newrhs = IntConst::CreateIntConst(ibud_.Container(),
+                rhs->As<IntConst>()->Val() * size, rhs->Type()->As<IntType>());
+        }
+        else
+        {
+            auto sizeconst = IntConst::CreateIntConst(
+                ibud_.Container(), size, rhs->Type()->As<IntType>());
+            newrhs = ibud_.InsertMulInstr(env_.GetRegName(), rhs, sizeconst);
+        }
+        result = ibud_.InsertSubInstr(regname, lhs->As<Register>(), newrhs);
+    }
 
-    else if (IS_ARITHM(bin->left_) && IS_ARRAY(bin->right_))
+    else if (IS_ARITHM(bin->left_) && IS_ARRAY(bin->right_) && bin->op_ == Tag::plus)
         result = ibud_.InsertGetElePtrInstr(regname, AS_REG(bin->right_), bin->left_->Val());
-    else if (IS_ARRAY(bin->left_) && IS_ARITHM(bin->right_))
+    else if (IS_ARRAY(bin->left_) && IS_ARITHM(bin->right_) && bin->op_ == Tag::plus)
         result = ibud_.InsertGetElePtrInstr(regname, AS_REG(bin->left_), bin->right_->Val());
 
     else if (bin->op_ == Tag::plus && !hasfloat)
@@ -483,7 +510,15 @@ void IRGen::VisitBinaryExpr(BinaryExpr* bin)
         result = ibud_.InsertFaddInstr(regname, lhs, rhs);
 
     else if (bin->op_ == Tag::minus && !hasfloat)
+    {
         result = ibud_.InsertSubInstr(regname, lhs, rhs);
+        if (IS_PTR(bin->left_) && IS_PTR(bin->right_))
+        {
+            auto sizeptr2 = lhsty->As<PtrType>()->Point2()->Size();
+            auto size = IntConst::CreateIntConst(ibud_.Container(), sizeptr2, lhsty->As<PtrType>());
+            result = ibud_.InsertDivInstr(env_.GetRegName(), result, size);
+        }
+    }
     else if (bin->op_ == Tag::minus)
         result = ibud_.InsertFsubInstr(regname, lhs, rhs);
 
@@ -1081,12 +1116,21 @@ void IRGen::VisitUnaryExpr(UnaryExpr* unary)
     }
     else if (unary->op_ == Tag::asterisk)
     {
-        auto addreg = LoadAddr(unary->content_.get());
+        const IROperand* addreg = LoadAddr(unary->content_.get());
         if (addreg->Type()->As<PtrType>()->Point2()->Is<ArrayType>())
         {
             auto zero = IntConst::CreateIntConst(ibud_.Container(), 0);
-            addreg = ibud_.InsertGetElePtrInstr(env_.GetRegName(), addreg, zero);
+            addreg = ibud_.InsertGetElePtrInstr(
+                env_.GetRegName(), addreg->As<Register>(), zero);
         }
+        // Not a pointer? That means we are dereferencing a pointer
+        // to arithmetic type or heterogeneous type, and we must store
+        // the address of the dereferenced value in unary->Val(), that is,
+        // the pointer itself.
+        else if (!addreg->Type()->As<PtrType>()->Point2()->Is<PtrType>())
+            ;
+        else
+            addreg = LoadVal(unary->content_.get());
         unary->Val() = addreg;
     }
     else if (unary->op_ == Tag::minus)
