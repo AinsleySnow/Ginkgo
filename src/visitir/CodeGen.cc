@@ -1214,8 +1214,17 @@ void CodeGen::VisitLoadInstr(LoadInstr* inst)
 
 void CodeGen::VisitGetElePtrInstr(GetElePtrInstr* inst)
 {
-    // inst->Result() must be a pointer.
-    auto size = inst->Result()->Type()->As<PtrType>()->Point2()->Size();
+    size_t size = 0;
+    if (auto ptr = inst->Pointer()->Type()->As<PtrType>(); ptr)
+    {
+        if (ptr->Point2()->Is<ArrayType>() && inst->IsInner())
+            size = ptr->Point2()->As<ArrayType>()->ArrayOf()->Size();
+        else
+            size = ptr->Point2()->Size();
+    }
+    else // if "pointer" is an array
+        size = inst->Pointer()->Type()->As<ArrayType>()->ArrayOf()->Size();
+
     auto pointer = MapPossibleRegister(inst->Pointer())->As<x64Mem>();
     auto index = alloc_->GetIROpMap(inst->OpIndex());
     auto result = alloc_->GetIROpMap(inst->Result());

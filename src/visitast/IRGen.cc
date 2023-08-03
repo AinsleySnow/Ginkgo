@@ -108,9 +108,13 @@ const IROperand* IRGen::LoadVal(Expr* expr)
         if (ident->Addr()->Type()->As<PtrType>()->Point2()->Is<ArrayType>())
         // tl;dr: if ident is a pointer to some array
         {
+            // Then... it must be a 'real' array
+            auto inner = !ident->Type()->As<CArrayType>()->IsParam();
+            // inner not set? That means the array has more
+            // than one dimension and is passed to a function.
             auto zero = IntConst::CreateIntConst(ibud_.Container(), 0);
             ident->Val() = ibud_.InsertGetElePtrInstr(
-                env_.GetRegName(), ident->Addr(), zero);
+                env_.GetRegName(), inner, ident->Addr(), zero);
         }
         else
             ident->Val() = ibud_.InsertLoadInstr(env_.GetRegName(), ident->Addr());
@@ -133,7 +137,7 @@ const IROperand* IRGen::LoadVal(Expr* expr)
         auto zero = IntConst::CreateIntConst(
             ibud_.Container(), 0, IntType::GetInt32(true));
         expr->Val() = ibud_.InsertGetElePtrInstr(
-            env_.GetRegName(), expr->Val()->As<Register>(), zero);
+            env_.GetRegName(), true, expr->Val()->As<Register>(), zero);
         return expr->Val();
     }
     else return expr->Val();
@@ -298,6 +302,9 @@ void IRGen::VisitParamList(ParamList* list)
     for (auto& param : list->GetParamList())
     {
         param->Accept(this);
+        auto raw = param->RawType();
+        if (auto array = raw->As<CArrayType>(); array)
+            const_cast<CArrayType*>(array)->SetIsParam();
         list->AppendType(param->RawType());
     }
 }
@@ -323,7 +330,7 @@ void IRGen::VisitAccessExpr(AccessExpr* access)
         if (access->Op() == Tag::dot)
             val = ibud_.InsertGetValInstr(env_.GetRegName(), val, index);
         else
-            val = ibud_.InsertGetElePtrInstr(env_.GetRegName(), val, index);
+            val = ibud_.InsertGetElePtrInstr(env_.GetRegName(), false, val, index);
         if (!field.empty()) break;
     }
 }
@@ -340,8 +347,11 @@ void IRGen::VisitArrayExpr(ArrayExpr* array)
     // tl;dr: if array yields a pointer
         addr = ibud_.InsertLoadInstr(env_.GetRegName(), addr);
 
+    auto inner = true;
+    if (auto arr = array->identifier_->Type()->As<CArrayType>(); arr)
+        inner = !arr->IsParam();
     array->Addr() = ibud_.InsertGetElePtrInstr(
-        env_.GetRegName(), addr, LoadVal(array->index_.get()));
+        env_.GetRegName(), inner, addr, LoadVal(array->index_.get()));
 }
 
 
@@ -374,7 +384,7 @@ void IRGen::VisitAssignExpr(AssignExpr* assign)
     const Register* result = nullptr;
 
     if (IS_PTR(assign->left_) && IS_ARITHM(assign->right_) && assign->op_ == Tag::add_assign)
-        result = ibud_.InsertGetElePtrInstr(regname, lhs->As<Register>(), rhs);
+        result = ibud_.InsertGetElePtrInstr(regname, true, lhs->As<Register>(), rhs);
     else if (IS_PTR(assign->left_) && IS_ARITHM(assign->right_) && assign->op_ == Tag::sub_assign)
     {
         auto size = lhsty->As<PtrType>()->Point2()->Size();
@@ -477,9 +487,9 @@ void IRGen::VisitBinaryExpr(BinaryExpr* bin)
     const Register* result = nullptr;
 
     if (IS_ARITHM(bin->left_) && IS_PTR(bin->right_) && bin->op_ == Tag::plus)
-        result = ibud_.InsertGetElePtrInstr(regname, AS_REG(bin->right_), bin->left_->Val()); 
+        result = ibud_.InsertGetElePtrInstr(regname, true, AS_REG(bin->right_), bin->left_->Val()); 
     else if (IS_PTR(bin->left_) && IS_ARITHM(bin->right_) && bin->op_ == Tag::plus)
-        result = ibud_.InsertGetElePtrInstr(regname, AS_REG(bin->left_), bin->right_->Val());
+        result = ibud_.InsertGetElePtrInstr(regname, true, AS_REG(bin->left_), bin->right_->Val());
     else if (IS_PTR(bin->left_) && IS_ARITHM(bin->right_) && bin->op_ == Tag::minus)
     {
         // here, rhs mustn't be types other than integer type.
@@ -500,9 +510,17 @@ void IRGen::VisitBinaryExpr(BinaryExpr* bin)
     }
 
     else if (IS_ARITHM(bin->left_) && IS_ARRAY(bin->right_) && bin->op_ == Tag::plus)
-        result = ibud_.InsertGetElePtrInstr(regname, AS_REG(bin->right_), bin->left_->Val());
+    {
+        auto inner = bin->right_->Type()->As<CArrayType>()->IsParam();
+        result = ibud_.InsertGetElePtrInstr(
+            regname, inner, AS_REG(bin->right_), bin->left_->Val());
+    }
     else if (IS_ARRAY(bin->left_) && IS_ARITHM(bin->right_) && bin->op_ == Tag::plus)
-        result = ibud_.InsertGetElePtrInstr(regname, AS_REG(bin->left_), bin->right_->Val());
+    {
+        auto inner = bin->left_->Type()->As<CArrayType>()->IsParam();
+        result = ibud_.InsertGetElePtrInstr(
+            regname, inner, AS_REG(bin->left_), bin->right_->Val());
+    }
 
     else if (bin->op_ == Tag::plus && !hasfloat)
         result = ibud_.InsertAddInstr(regname, lhs, rhs);
@@ -1119,9 +1137,10 @@ void IRGen::VisitUnaryExpr(UnaryExpr* unary)
         const IROperand* addreg = LoadAddr(unary->content_.get());
         if (addreg->Type()->As<PtrType>()->Point2()->Is<ArrayType>())
         {
+            auto inner = !unary->content_->Type()->As<CArrayType>()->IsParam();
             auto zero = IntConst::CreateIntConst(ibud_.Container(), 0);
             addreg = ibud_.InsertGetElePtrInstr(
-                env_.GetRegName(), addreg->As<Register>(), zero);
+                env_.GetRegName(), inner, addreg->As<Register>(), zero);
         }
         // Not a pointer? That means we are dereferencing a pointer
         // to arithmetic type or heterogeneous type, and we must store
