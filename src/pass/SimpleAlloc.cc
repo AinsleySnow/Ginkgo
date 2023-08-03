@@ -161,6 +161,8 @@ void SimpleAlloc::VisitCallInstr(CallInstr* i)
     for (auto op : i->ArgvList())
         if (!MapConstAndGlobalVar(op))
             stackcache_.Access(op->As<Register>(), i);
+    if (i->FuncAddr()) // Call through a function pointer?
+        stackcache_.Access(i->FuncAddr()->As<Register>(), i);
     if (i->Result())
         Allocate(i->Result()->As<Register>());
 }
