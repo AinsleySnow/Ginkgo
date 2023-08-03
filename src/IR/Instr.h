@@ -568,11 +568,13 @@ public:
     static bool ClassOf(const GetElePtrInstr* const) { return true; }
     static bool ClassOf(const Instr* const i) { return i->id_ == InstrId::geteleptr; }
 
-    GetElePtrInstr(const Register* r, const Register* p, std::variant<const IROperand*, int> i) :
-        Instr(InstrId::geteleptr), result_(r), pointer_(p), index_(i) {}
+    GetElePtrInstr(bool in, const Register* r, const Register* p, std::variant<const IROperand*, int> i) :
+        isinner_(in), Instr(InstrId::geteleptr), result_(r), pointer_(p), index_(i) {}
 
     std::string ToString() const override;
     void Accept(IRVisitor*) override;
+
+    bool IsInner() const { return isinner_; }
 
     auto Result() const { return result_; }
     auto Pointer() const { return pointer_; }
@@ -582,6 +584,25 @@ public:
     auto OpIndex() const { return std::get<0>(index_); }
 
 private:
+    // When we try to get elements in an array of arrays through
+    // a pointer, the following statements can be written:
+    // %y = geteleptr [4 x [4 x i32]]* %x [i64 2];
+    // However, the statement above is ambigious. What's the desired
+    // type of %y? [4 x [4 x i32]]* or [4 x i32]*? If %x points to
+    // the array of arrays itself, the latter one may be more desired;
+    // otherwise if %x points to a poisition within an array of type
+    // [4 x [4 x [4 x i32]]] (three dimensions), we need the former type.
+    // In order to distinguish the two situations, we add the 'isinner_'
+    // field. If the field is set, geteleptr instruction ignore the
+    // outer array, calculate offset using the size of the inner type and
+    // the result's type will be pointer to the type. Otherwise, offset is
+    // calculated by the size of the complete type, and result will have
+    // the type same as the 'pointer_' field.
+    // In LLVM, there's a more compilcated yet more powful way to achieve this.
+    // We can write:
+    // %y = getelementptr inbounds [4 x [4 x i32]], [4 x [4 x i32]]* %1, i64 0, i64 2
+    // But in this toy compiler the above method would be nice~
+    bool isinner_{};
     const Register* result_{};
     const Register* pointer_{};
     std::variant<const IROperand*, int> index_{};

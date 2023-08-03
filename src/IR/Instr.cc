@@ -184,7 +184,10 @@ std::string SetValInstr::ToString() const
 void GetElePtrInstr::Accept(IRVisitor* v) { v->VisitGetElePtrInstr(this); }
 std::string GetElePtrInstr::ToString() const
 {
-    return result_->Name() + " = geteleptr " + pointer_->ToString() +
+    auto base = result_->Name() + " = geteleptr ";
+    if (pointer_->Type()->As<PtrType>()->Point2()->Is<ArrayType>())
+        base += isinner_ ? "inner " : "outer ";
+    return base + pointer_->ToString() +
         " [" +  (std::holds_alternative<int>(index_) ?
             std::to_string(std::get<1>(index_)) : std::get<0>(index_)->ToString()) + ']';
 }

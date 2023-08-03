@@ -302,21 +302,23 @@ void InstrBuilder::InsertSetValInstr(
     Insert(std::move(psetval));
 }
 
-const Register* InstrBuilder::InsertGetElePtrInstr(
-    const std::string& result, const Register* val, std::variant<const IROperand*, int> index)
+const Register* InstrBuilder::InsertGetElePtrInstr(const std::string& result,
+    bool inner, const Register* val, std::variant<const IROperand*, int> index)
 {
     auto point2 = val->Type()->As<PtrType>()->Point2();
     const IRType* rety = nullptr;
 
-    if (point2->Is<ArrayType>())
+    if (point2->Is<ArrayType>() && inner)
         rety = PtrType::GetPtrType(Container(), point2->As<ArrayType>()->ArrayOf());
+    else if (point2->Is<ArrayType>() /* && !inner*/)
+        rety = val->Type();
     else if (point2->Is<HeterType>())
     {
         rety = PtrType::GetPtrType(Container(),
             point2->As<HeterType>()->At(std::get<int>(index)));
     }
     else
-        rety = PtrType::GetPtrType(Container(), point2);
+        rety = val->Type();
 
     const auto* reg = Register::CreateRegister(Container(), result, rety);
     if (index.index() == 0 && std::get<0>(index)->Type()->Size() != 8)
@@ -329,7 +331,7 @@ const Register* InstrBuilder::InsertGetElePtrInstr(
         index = i;
     }
 
-    Insert(std::make_unique<GetElePtrInstr>(reg, val, index));
+    Insert(std::make_unique<GetElePtrInstr>(inner, reg, val, index));
     return reg;
 }
 

@@ -179,7 +179,7 @@ public:
     void InsertSetValInstr(
         const IROperand* newval, const Register* val, std::variant<const IROperand*, int> index);
     const Register* InsertGetElePtrInstr(
-        const std::string& result, const Register* val, std::variant<const IROperand*, int> index);
+        const std::string& result, bool inner, const Register* val, std::variant<const IROperand*, int> index);
 
 
     const Register* InsertTruncInstr(
