@@ -123,7 +123,7 @@ x64Alloc::RegSet x64Alloc::NotUsedIntReg() const
         x64Phys::r12, x64Phys::r13, x64Phys::r14, x64Phys::r15,
     };
 
-    auto used = UsedRegs();
+    auto used = UsedIntReg();
     std::set<x64Phys> notused{};
     std::set_difference(intset.begin(), intset.end(),
         used.begin(), used.end(), std::inserter(notused, notused.begin()));
@@ -139,7 +139,7 @@ x64Alloc::RegSet x64Alloc::NotUsedVecReg() const
         x64Phys::xmm12, x64Phys::xmm13, x64Phys::xmm14, x64Phys::xmm15,
     };
 
-    auto used = UsedRegs();
+    auto used = UsedVecReg();
     std::set<x64Phys> notused{};
     std::set_difference(vecset.begin(), vecset.end(),
         used.begin(), used.end(), std::inserter(notused, notused.begin()));

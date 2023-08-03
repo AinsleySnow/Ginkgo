@@ -84,8 +84,8 @@ public:
     {
         curfunc_ = func;
         VisitFunction(func);
-        regmap_.emplace(func, UsedRegs());
-        infomap_.emplace(func, ArchInfo());
+        regmap_.emplace(func, std::move(UsedRegs()));
+        infomap_.emplace(func, std::move(ArchInfo()));
     }
 
     const x64* GetIROpMap(const IROperand* op) const;
