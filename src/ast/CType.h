@@ -274,7 +274,7 @@ public:
         CType(CTypeId::array, ty->Size() * c, ty->Align()), arrayof_(std::move(ty)), count_(c) {}
 
     std::string ToString() const;
-    const ArrayType* ToIRType(Pool<IRType>*) const override;
+    const IRType* ToIRType(Pool<IRType>*) const override;
 
     bool Compatible(const CType&) const { return false; }
     std::unique_ptr<CType> Clone() const override;
@@ -289,6 +289,9 @@ public:
         align_ = ty->Align();
     }
 
+    bool IsParam() const { return isparam_; }
+    void SetIsParam() { align_ = 8; isparam_ = true; }
+
     bool VariableLen() const { return variable_; }
     bool& VariableLen() { return variable_; }
     bool Static() const { return static_; }
@@ -297,6 +300,11 @@ public:
 private:
     std::unique_ptr<CType> arrayof_{};
     size_t count_{};
+    // Set if the variable that has this type is
+    // declared in some function's parameter list.
+    // Array is passed as the pointer to its first element
+    // in C, and we need to reflect the point in the IR.
+    bool isparam_{};
     bool variable_{};
     bool static_{};
 };

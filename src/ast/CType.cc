@@ -238,9 +238,12 @@ std::unique_ptr<CType> CPtrType::Clone() const
 }
 
 
-const ArrayType* CArrayType::ToIRType(Pool<IRType>* pool) const
+const IRType* CArrayType::ToIRType(Pool<IRType>* pool) const
 {
     auto arrayof = arrayof_->ToIRType(pool);
+    if (isparam_)
+        return PtrType::GetPtrType(pool, arrayof);
+
     auto array = align_ ?
         ArrayType::GetArrayType(pool, count_, align_, arrayof) :
         ArrayType::GetArrayType(pool, count_, arrayof);
@@ -264,6 +267,7 @@ std::unique_ptr<CType> CArrayType::Clone() const
     array->Storage() = Storage();
     array->arrayof_ = std::move(arrayof_->Clone());
     array->count_ = count_;
+    array->isparam_ = isparam_;
     array->variable_ = variable_;
     array->static_ = static_;
     return std::move(array);
