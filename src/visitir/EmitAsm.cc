@@ -147,7 +147,7 @@ void EmitAsm::EmitVcvtt(const x64* src, const x64* dest)
     auto from = GetFltTag(src);
     auto to = GetIntTag(dest);
 
-    EmitInstr(fmt::format(INDENT "vcvtt{}2si{}{}, {}\n",
+    EmitInstr(fmt::format(INDENT "vcvtt{}2si{} {}, {}\n",
         from, to, src->ToString(), dest->ToString()));
 }
 

@@ -527,7 +527,15 @@ void CodeGen::MovEmitHelper(const x64* from, const x64* to, int suffix)
     if (auto imm = from->As<x64Imm>(); imm && to->Is<x64Mem>())
     {
         auto val = imm->GetRepr().first;
-        if (val > UINT32_MAX)
+        if (val > INT32_MAX && val <= UINT32_MAX && to->Size() != 4)
+        {
+            auto oldsz = to->Size();
+            const_cast<x64*>(to)->Size() = 4;
+            asmfile_.EmitMov(from, to);
+            const_cast<x64*>(to)->Size() = oldsz;
+            return;
+        }
+        else if (val > UINT32_MAX)
             goto usereg;
     }
     if (from->Is<x64Reg>() || from->Is<x64Imm>() || to->Is<x64Reg>())
@@ -625,7 +633,7 @@ void CodeGen::VcvtEmitHelper(const x64* op1, const x64* op2)
 void CodeGen::VcvtsiEmitHelper(bool sign, const x64* op1, const x64* op2)
 {
     size_t oldsz = 0;
-    if (op1->Size() != 4 || op1->Size() != 8)
+    if (op1->Size() != 4 && op1->Size() != 8)
     {
         if (op1->Is<x64Reg>() && sign)
             asmfile_.EmitMovs(op1->Size(), 8, op1);
@@ -650,14 +658,19 @@ void CodeGen::VcvtsiEmitHelper(bool sign, const x64* op1, const x64* op2)
 
 void CodeGen::VcvttEmitHelper(const x64* op1, const x64* op2)
 {
+    auto oldsz = op2->Size();
+    if (oldsz < 4)
+        const_cast<x64*>(op2)->Size() = 4;
     if (op2->Is<x64Reg>())
-    {
         asmfile_.EmitVcvtt(op1, op2);
-        return;
+    else
+    {
+        auto tag = GetSpareVecReg(0);
+        asmfile_.EmitVcvtt(op1, tag);
+        asmfile_.EmitVmov(tag, op2);
     }
-    auto tag = GetSpareVecReg(0);
-    asmfile_.EmitVcvtt(op1, tag);
-    asmfile_.EmitVmov(tag, op2);
+    if (oldsz < 4)
+        const_cast<x64*>(op2)->Size() = oldsz;
 }
 
 void CodeGen::UcomEmitHelper(const x64* op1, const x64* op2)
@@ -778,7 +791,7 @@ void CodeGen::CMovEmitHelper(Condition cond, bool issigned, const x64* op1, cons
 void CodeGen::CmpEmitHelper(const x64* op1, const x64* op2)
 {
     x64Reg reg{ RegTag::none };
-    if (auto imm = op1->As<x64Imm>(); imm && imm->GetRepr().first > UINT32_MAX)
+    if (auto imm = op1->As<x64Imm>(); imm && imm->GetRepr().first > INT32_MAX)
     {
         reg = x64Reg(GetSpareIntReg(0), op2->Size());
         op1 = &reg;
@@ -1260,7 +1273,7 @@ void CodeGen::VisitTruncInstr(TruncInstr* inst)
     else
     {
         temp.Size() = 8;
-        auto mask = ~(0x8000000000000000 >> (64 - to->Size() * 8));
+        auto mask = ~((long)(0x8000000000000000) >> (63 - to->Size() * 8));
         asmfile_.EmitBinary("and", mask, &temp);
     }
 
@@ -1282,7 +1295,10 @@ void CodeGen::VisitZextInstr(ZextInstr* inst)
 {
     auto from = alloc_->GetIROpMap(inst->Value());
     auto to = alloc_->GetIROpMap(inst->Dest());
-    MovzEmitHelper(from, to);
+    if (from->Size() < 4)
+        MovzEmitHelper(from, to);
+    else // clean the higher 32 bits as well
+        asmfile_.EmitMov(from, from);
 }
 
 void CodeGen::VisitSextInstr(SextInstr* inst)
@@ -1362,12 +1378,19 @@ void CodeGen::VisitPtrtoIInstr(PtrtoIInstr* inst)
 {
     auto from = alloc_->GetIROpMap(inst->Value());
     auto to = alloc_->GetIROpMap(inst->Dest());
-
+    size_t oldsz = 0;
+    if (to->Size() != 8)
+    {
+        oldsz = to->Size();
+        const_cast<x64*>(to)->Size() = 8;
+    }
     auto mem = from->As<x64Mem>();
     if ((mem && mem->LoadTwice()) || !mem)
         MovEmitHelper(from, to);
     else // if (mem && mem->LoadOnce())
         LeaqEmitHelper(from, to);
+    if (oldsz)
+        const_cast<x64*>(to)->Size() = oldsz;
 }
 
 void CodeGen::VisitItoPtrInstr(ItoPtrInstr* inst)
@@ -1378,7 +1401,16 @@ void CodeGen::VisitItoPtrInstr(ItoPtrInstr* inst)
     // and the destination of itoptr must be a load-twice
     // pointer if it is mapped onto the stack. So its value
     // can be set by a single mov instruction.
-    MovEmitHelper(from, to);
+    if (from->Size() == 8)
+        MovEmitHelper(from, to);
+    else if (from->Size() == 4)
+    {
+        const_cast<x64*>(to)->Size() = 4;
+        MovEmitHelper(from, to);
+        const_cast<x64*>(to)->Size() = 8;
+    }
+    else // if (from->Size() == 1 || from->Size() == 2)
+        MovzEmitHelper(from, to);
 }
 
 

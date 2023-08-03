@@ -653,11 +653,10 @@ end:
 
 void IRGen::VisitCastExpr(CastExpr* cast)
 {
-    cast->typename_->Accept(this);
-    cast->expr_->Accept(this);
     tbud_.VisitCastExpr(cast);
+    cast->expr_->Accept(this);
 
-    auto& ty = cast->typename_->Type();
+    auto& ty = cast->Type();
     auto& expr = cast->expr_->Type();
     auto expreg = LoadVal(cast->expr_.get());
 
