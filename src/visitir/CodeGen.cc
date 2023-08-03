@@ -340,7 +340,10 @@ void CodeGen::GetElePtrImmHelper(
     else if (ptr->LoadTwice())
     {
         x64Reg reg{ GetSpareIntReg(0) };
-        x64Mem mem{ 8, 0, reg, i->GetRepr().first, scl };
+        x64Mem mem{
+            8, static_cast<long>(i->GetRepr().first * scl),
+            reg, RegTag::none, 0
+        };
         asmfile_.EmitMov(ptr, &reg);
         LeaqEmitHelper(&mem, rlt);
     }
@@ -360,10 +363,10 @@ void CodeGen::GetElePtrRegHelper(
 {
     if (!ptr->LoadTwice()) // eq to (ptr->GlobalLoc() || ptr->LoadOnce())
     {
-        LeaqEmitHelper(ptr, rlt);
-        x64Reg reg{ GetSpareIntReg(0) };
+        x64Reg reg{ GetSpareIntReg(1) };
         asmfile_.EmitMov(i, &reg);
         asmfile_.EmitBinary("imul", scl, &reg);
+        LeaqEmitHelper(ptr, rlt);
         asmfile_.EmitBinary("add", &reg, rlt);
     }
     else
