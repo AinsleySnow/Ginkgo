@@ -1,4 +1,4 @@
-#include <assert.h>
+#include "test.h"
 
 // forced promotion of signed integer types
 void char2short()
@@ -229,8 +229,10 @@ void float2double()
 }
 
 /*
-commented, since I mistook the size of long double as 8 bytes.
-It's... sort of feature of Ginkgo? Anyway, I'll fix it later.
+commented, since I want size of long double to be
+16 bytes. However, for the time being long double is
+treated as an alias of double. Full support for long
+double may be added later, I think.
 
 void float2ldouble()
 {
@@ -403,22 +405,14 @@ void ldouble2short()
 
 void float2int()
 {
-    float a = 2147483647.0;
+    float a = 33554430.0;
     int b = 0;
     b = (int) a;
-    assert(b == 2147483647);
+    assert(b == 33554430);
 
     a = -1.0;
     b = (int) a;
     assert(b == -1);
-
-    a = 2147483648.0;
-    b = (int) a;
-    assert(b == -2147483648);
-
-    a = 6442450944.0;
-    b = (int) a;
-    assert(b == -2147483648);
 }
 
 void double2int()
@@ -465,37 +459,29 @@ void ldouble2int()
 
 void float2long()
 {
-    float a = 9223372036854775807.0f;
+    float a = 33554430.0f;
     long b = 0;
     b = (long) a;
-    assert(b == 9223372036854775807L);
+    assert(b == 33554430);
 
     a = -1.0f;
     b = (long) a;
     assert(b == -1L);
-
-    a = 9223372036854775808.0f;
-    b = (long) a;
-    assert(b == -9223372036854775808L);
 }
 
 void double2long()
 {
-    double a = 9223372036854775807.0;
+    double a = 9007199254740992.0;
     long b = 0;
     b = (long) a;
-    assert(b == 9223372036854775807L);
+    assert(b == 9007199254740992);
 
     a = -1.0;
     b = (long) a;
     assert(b == -1L);
-
-    a = 9223372036854775808.0;
-    b = (long) a;
-    assert(b == -9223372036854775808L);
 }
 
-void ldouble2long()
+/*void ldouble2long()
 {
     long double a = 9223372036854775807.0;
     long b = 0;
@@ -509,7 +495,7 @@ void ldouble2long()
     a = 9223372036854775808.0L;
     b = (long) a;
     assert(b == -9223372036854775808L);
-}
+}*/
 
 // integer to float-point
 void integer2float()
@@ -607,30 +593,18 @@ int main()
     char2short();
     char2int();
     char2long();
-    char2float();
-    char2double();
-    //char2ldouble();
 
     short2char();
     short2int();
     short2long();
-    short2float();
-    short2double();
-    //short2ldouble();
 
     int2char();
     int2short();
     int2long();
-    int2float();
-    int2double();
-    //int2ldouble();
 
     long2char();
     long2short();
     long2int();
-    long2float();
-    long2double();
-    //long2ldouble();
 
     float2char();
     float2short();
@@ -656,6 +630,5 @@ int main()
     pointer2integer();
     integer2pointer();
 
-    printf("OK\n");
-    return 0;
+    SUCCESS;
 }

@@ -326,6 +326,5 @@ int main()
     void2char();
     char2void();
 
-    printf("OK\n");
-    return 0;
+    SUCCESS;
 }
