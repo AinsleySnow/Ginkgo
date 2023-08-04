@@ -77,6 +77,11 @@ void DUInfo::VisitCallInstr(CallInstr* call)
         AddDef(call->Result(), call);
         AddDef(curbb_, call->Result());
     }
+    if (call->FuncAddr()) // Call through a func ptr?
+    {
+        AddUse(call->FuncAddr(), call);
+        AddUse(curbb_, call->FuncAddr());
+    }
     for (auto op : call->ArgvList())
     {
         if (op->Is<Register>())

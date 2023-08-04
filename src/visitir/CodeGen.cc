@@ -1216,11 +1216,19 @@ void CodeGen::VisitLoadInstr(LoadInstr* inst)
     auto result = inst->Result();
     auto mappedptr = LoadPointer(inst->Pointer());
 
+    if (inst->Pointer()->Name()[0] == '@') // Global variable?
+    {
+        auto ptr = inst->Pointer()->Type()->As<PtrType>();
+        if (auto ptr2 = ptr->Point2()->As<PtrType>();
+            ptr2 && ptr2->Point2()->Is<FuncType>())
+            LeaqEmitHelper(mappedptr, alloc_->GetIROpMap(result));
+        else
+            MovEmitHelper(mappedptr, alloc_->GetIROpMap(result));
+        return;
+    }
+
     if (result->Type()->Is<FloatType>())
         VecMovEmitHelper(mappedptr, MapPossibleFloat(result));
-    // Is the pointer points to a global position?
-    else if (inst->Pointer()->Name()[0] == '@')
-        LeaqEmitHelper(mappedptr, alloc_->GetIROpMap(result));
     else
         MovEmitHelper(mappedptr, alloc_->GetIROpMap(result));
 }
