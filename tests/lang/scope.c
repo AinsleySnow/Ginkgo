@@ -1,16 +1,25 @@
-int putchar(int);
+#include "test.h"
 
 int c = 4;
 
 int main()
 {
-    putchar(c);
+    assert(c == 4);
     {
         int c = 9;
-        putchar(c);
+        assert(c == 9);
         {
             int c = 20;
-            putchar(c);
+            assert(c == 20);
         }
     }
+
+    int a = 40;
+    {
+        int c = 50;
+        a -= 20;
+        assert(c == 50);
+    }
+
+    SUCCESS;
 }
