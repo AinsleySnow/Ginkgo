@@ -3,10 +3,10 @@
 
 #include "ast/Expr.h"
 #include "visitast/Identifier.h"
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
-#include <unordered_map>
 
 class IntConst;
 class Register;
@@ -44,7 +44,7 @@ public:
 private:
     Identifier* FindingHelper(const std::string&, Identifier::IdentType) const;
 
-    std::unordered_multimap<std::string, std::unique_ptr<Identifier>> identmap_{};
+    std::map<std::string, std::unique_ptr<Identifier>> identmap_{};
     ScopeType scopetype_;
 };
 
@@ -70,7 +70,6 @@ public:
 private:
     Scope* filescope_{};
     Scope* funcscope_{};
-    Scope* blockscope_{};
 
     std::vector<std::unique_ptr<Scope>> stack_{};
 };

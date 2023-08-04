@@ -4,9 +4,10 @@
 Identifier* Scope::FindingHelper(const std::string& name, Identifier::IdentType it) const
 {
     auto result = identmap_.find(name);
-    for (; result != identmap_.end(); ++result)
-        if (result->second->GetIdentType() == it)
-            return result->second.get();
+    if (result == identmap_.end())
+        return nullptr;
+    if (result->second->GetIdentType() == it)
+        return result->second.get();
     return nullptr;
 }
 
@@ -116,20 +117,11 @@ Member* Scope::AddMember(
 
 const Object* ScopeStack::SearchObject(const std::string& name)
 {
-    if (blockscope_)
-    {
-        const Object* target = blockscope_->GetObject(name);
-        if (target) return target;
-    }
-
     for (auto iter = stack_.rbegin(); iter != stack_.rend(); ++iter)
     {
         const Object* target = (*iter)->GetObject(name);
         if (target)
-        {
-            blockscope_ = iter->get();
             return target;
-        }
     }
 
     return nullptr;
@@ -229,18 +221,16 @@ void ScopeStack::PushNewScope(Scope::ScopeType scpty)
     stack_.push_back(std::make_unique<Scope>(scpty));
     if (scpty == Scope::ScopeType::file)
         filescope_ = stack_.back().get();
-    else if (scpty == Scope::ScopeType::block)
-        blockscope_ = stack_.back().get();
+    else if (scpty == Scope::ScopeType::func)
+        funcscope_ = stack_.back().get();
 }
 
 void ScopeStack::PopScope()
 {
     if (stack_.back().get() == filescope_)
         filescope_ = nullptr;
-    if (stack_.back().get() == blockscope_)
-        blockscope_ = nullptr;
-    else if (stack_.back().get() == blockscope_)
-        blockscope_ = nullptr;
+    if (stack_.back().get() == funcscope_)
+        funcscope_ = nullptr;
     stack_.pop_back();
 }
 
