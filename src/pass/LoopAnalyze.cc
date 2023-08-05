@@ -4,14 +4,14 @@
 
 void LoopAnalyze::IdentifyLoops(const Function* func)
 {
-    auto fg = cfg_->GetFlowGraph(func);
+    auto fg = fg_->GetFlowGraph();
     for (auto& v : fg.GetVertices())
         loopinfo_.emplace(*v, (LoopInfo){});
     DFS(fg, func->At(0), 1);
 }
 
 const BasicBlock* LoopAnalyze::DFS(
-    const CFG::FlowGraph& fg, const BasicBlock* b0, int pos)
+    const FlowGraph::GraphType& fg, const BasicBlock* b0, int pos)
 {
     loopinfo_[b0].dfsppos_ = pos;
     loopinfo_[b0].visited_ = true;

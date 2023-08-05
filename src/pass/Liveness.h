@@ -2,7 +2,7 @@
 #define _LIVENESS_H_
 
 #include "pass/Pass.h"
-#include "pass/CFG.h"
+#include "pass/FlowGraph.h"
 #include "pass/DUInfo.h"
 #include "pass/LoopAnalyze.h"
 #include <unordered_set>
@@ -33,7 +33,7 @@ public:
     const auto& LiveOut(const BasicBlock* bb) const { return liveout_.at(bb); }
 
 private:
-    void PartialLiveness(const CFG::FlowGraph&, const BasicBlock*);
+    void PartialLiveness(const FlowGraph::GraphType&, const BasicBlock*);
     void PropagateHeader(const Function*);
     // Find outermost excluding loop. That is,
     // the highest loop header containing 'to' but not 'from'.
@@ -50,7 +50,7 @@ private:
     std::unordered_map<const BasicBlock*,
         std::unordered_set<const IROperand*>> liveout_{};
 
-    CFG* cfg_{};
+    FlowGraph* fg_{};
     DUInfo* duinfo_{};
     LoopAnalyze* loops_{};
 };

@@ -2,7 +2,7 @@
 #define _LOOP_ANALYZE_H_
 
 #include "pass/Pass.h"
-#include "pass/CFG.h"
+#include "pass/FlowGraph.h"
 #include <unordered_map>
 #include <vector>
 
@@ -21,7 +21,7 @@ class LoopAnalyze : public FunctionPass
 {
 public:
     LoopAnalyze(Module* m, Pass* c) :
-        FunctionPass(m), cfg_(static_cast<CFG*>(c)) {}
+        FunctionPass(m), fg_(static_cast<FlowGraph*>(c)) {}
 
     void ExecuteOnFunction(Function* func) override { IdentifyLoops(func); }
     void ExitFunction(Function* func) override {}
@@ -35,7 +35,7 @@ public:
 
 private:
     void IdentifyLoops(const Function*);
-    const BasicBlock* DFS(const CFG::FlowGraph&, const BasicBlock*, int);
+    const BasicBlock* DFS(const FlowGraph::GraphType&, const BasicBlock*, int);
     void MarkLoopHeader(const BasicBlock*, const BasicBlock*);
 
     struct LoopInfo
@@ -49,7 +49,7 @@ private:
     };
 
     std::unordered_map<const BasicBlock*, LoopInfo> loopinfo_{};
-    CFG* cfg_{};
+    FlowGraph* fg_{};
 };
 
 #endif // _LOOP_ANALYZE_H_

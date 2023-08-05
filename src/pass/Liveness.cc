@@ -4,7 +4,7 @@
 #include <unordered_set>
 
 
-void Liveness::PartialLiveness(const CFG::FlowGraph& fg, const BasicBlock* bb)
+void Liveness::PartialLiveness(const FlowGraph::GraphType& fg, const BasicBlock* bb)
 {
     onpath_.insert(bb);
 
@@ -115,6 +115,6 @@ const BasicBlock* Liveness::FindOLE(
 
 void Liveness::ExecuteOnFunction(Function* func)
 {
-    PartialLiveness(cfg_->GetFlowGraph(func), func->At(0));
+    PartialLiveness(fg_->GetFlowGraph(), func->At(0));
     PropagateHeader(func);
 }

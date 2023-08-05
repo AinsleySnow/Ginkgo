@@ -1,9 +1,9 @@
 add_library(
     ginkgo_pass
     OBJECT
-    CFG.cc
     Dominators.cc
     DUInfo.cc
+    FlowGraph.cc
     Liveness.cc
     LoopAnalyze.cc
     SimpleAlloc.cc
@@ -12,9 +12,9 @@ add_library(
 
 target_precompile_headers(
     ginkgo_pass
-    PRIVATE CFG.h
     PRIVATE DUInfo.h
     PRIVATE Dominators.h
+    PRIVATE FlowGraph.h
     PRIVATE Liveness.h
     PRIVATE LoopAnalyze.h
     PRIVATE Pass.h

@@ -2,7 +2,7 @@
 #include "utils/Graph.h"
 
 
-void Dominators::DFS(const CFG::FlowGraph& fg, const BasicBlock* bb, int& poi)
+void Dominators::DFS(const FlowGraph::GraphType& fg, const BasicBlock* bb, int& poi)
 {
     for (auto [to, _] : fg[bb])
         // not present in the set
@@ -15,7 +15,7 @@ void Dominators::DFS(const CFG::FlowGraph& fg, const BasicBlock* bb, int& poi)
 
 void Dominators::MapPostorder(const Function* func)
 {
-    auto& fg = graphs_->GetFlowGraph(func);
+    auto& fg = graphs_->GetFlowGraph();
     int poi = 0; // post-order index
 
     for (auto& v : fg.GetVertices())
@@ -30,7 +30,7 @@ void Dominators::FindIDom(const Function* func)
 {
     int start = indexof_[func->At(0)];
 
-    const auto& flow = graphs_->GetFlowGraph(func);
+    const auto& flow = graphs_->GetFlowGraph();
     auto defined = [this] (int po) -> bool {
         return idom_[po] != -1;
     };
@@ -46,7 +46,7 @@ void Dominators::FindIDom(const Function* func)
             int newidom = -1;
             auto node = bbvia_[i];
             // Pick some processed predecessor of the current block
-            for (auto& pred : graphs_->GetPredsOf(node))
+            for (auto& [_, pred] : graphs_->GetPredsOf(node))
             {
                 if (auto p = indexof_[pred]; defined(p))
                 {
@@ -54,7 +54,7 @@ void Dominators::FindIDom(const Function* func)
                     break;
                 }
             }
-            for (auto& pred : graphs_->GetPredsOf(node))
+            for (auto& [_, pred] : graphs_->GetPredsOf(node))
                 if (auto p = indexof_[pred]; defined(p))
                     newidom = Intersect(p, newidom);
             if (idom_[i] != newidom)
@@ -100,7 +100,7 @@ void Dominators::ExecuteOnFunction(Function* func)
     FindIDom(func);
 }
 
-void Dominators::ExitFunction(Function* func)
+void Dominators::ExitFunction()
 {
     indexof_.clear();
     bbvia_.clear();
