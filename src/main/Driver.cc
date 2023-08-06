@@ -1,5 +1,8 @@
 #include "main/Driver.h"
+#include "pass/FlowGraph.h"
 #include "pass/DUInfo.h"
+#include "pass/Liveness.h"
+#include "pass/LoopAnalyze.h"
 #include "pass/Pipeline.h"
 #include "pass/SimpleAlloc.h"
 #include "parser/yacc.hh"
@@ -122,8 +125,11 @@ void Driver::GenerateIR()
 Pipeline Driver::InitPipeline()
 {
     Pipeline simple{ module_.get() };
-    simple.AddPass<DUInfo>(0);
-    simple.AddPass<SimpleAlloc>(1, 0);
+    simple.AddPass<FlowGraph>(100);
+    simple.AddPass<DUInfo>(200);
+    simple.AddPass<LoopAnalyze>(300, 100);
+    simple.AddPass<Liveness>(400, 100, 200, 300);
+    simple.AddPass<SimpleAlloc>(500, 200, 400);
     return std::move(simple);
 }
 
@@ -132,8 +138,7 @@ void Driver::GenerateAsm(const std::string& output)
     // Note here that the parameter stands for output
     // file name, not input as in the other methods.
     Pipeline pl = InitPipeline();
-    pl.ExecuteAll();
-    CodeGen codegen{ output, pl.GetPass<SimpleAlloc>(1) };
+    CodeGen codegen{ output, &pl, pl.GetPass<SimpleAlloc>(500) };
     codegen.VisitModule(module_.get());
 }
 

@@ -2,6 +2,7 @@
 #include "visitir/SysVConv.h"
 #include "visitir/x64.h"
 #include "IR/Value.h"
+#include "pass/x64Alloc.h"
 #include <climits>
 #include <memory>
 #include <string>
@@ -848,6 +849,8 @@ void CodeGen::TestEmitHelper(const x64* op1, const x64* op2)
 
 void CodeGen::VisitModule(Module* mod)
 {
+    pipeline_->ExecuteOnModule();
+
     asmfile_.EmitPseudoInstr(".file", { "\"" + mod->Name() + "\"" });
     asmfile_.EmitBlankLine();
     for (auto val : *mod)
@@ -921,7 +924,7 @@ void CodeGen::VisitFunction(Function* func)
     if (func->Empty())
         return;
 
-    alloc_->EnterFunction(func);
+    pipeline_->ExecuteOnFunction(func);
     auto name = func->Name().substr(1);
 
     asmfile_.EmitPseudoInstr(".text");
@@ -973,6 +976,8 @@ void CodeGen::VisitFunction(Function* func)
 
     asmfile_.Dump2File();
     asmfile_.EmitBlankLine();
+
+    pipeline_->ExitFunction();
 }
 
 void CodeGen::VisitBasicBlock(BasicBlock* bb)

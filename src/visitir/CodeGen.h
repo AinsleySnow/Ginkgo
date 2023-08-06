@@ -3,7 +3,7 @@
 
 #include "visitir/IRVisitor.h"
 #include "visitir/EmitAsm.h"
-#include "pass/x64Alloc.h"
+#include "pass/Pipeline.h"
 #include <cstdio>
 #include <memory>
 #include <string>
@@ -15,6 +15,7 @@ class IROperand;
 class Register;
 class SysVConv;
 class x64;
+class x64Alloc;
 class x64Imm;
 class x64Mem;
 class x64Reg;
@@ -25,8 +26,8 @@ enum class RegTag;
 class CodeGen : public IRVisitor
 {
 public:
-    CodeGen(x64Alloc* a) : alloc_(a) {}
-    CodeGen(const std::string& f, x64Alloc* a) : asmfile_(f), alloc_(a) {}
+    CodeGen(Pipeline* p, x64Alloc* a) : pipeline_(p), alloc_(a) {}
+    CodeGen(const std::string& f, Pipeline* p, x64Alloc* a) : asmfile_(f), pipeline_(p), alloc_(a) {}
 
     std::string GetAsmName() const { return asmfile_.AsmName(); }
 
@@ -202,6 +203,7 @@ private:
         const IROperand*, std::unique_ptr<const x64>> tempmap_{};
     std::unordered_map<FpRepr, std::string, FpRepr::Hash, FpRepr::Equal> fpconst_{};
 
+    Pipeline* pipeline_{};
     x64Alloc* alloc_{};
     EmitAsm asmfile_{ "" };
 };
