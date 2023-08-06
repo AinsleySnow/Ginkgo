@@ -137,7 +137,9 @@ public:
     auto& Cond() { return cond_; }
     auto Cond() const { return cond_; }
     auto GetTrueBlk() { return true_; }
+    auto GetTrueBlk() const { return true_; }
     auto GetFalseBlk() { return false_; }
+    auto GetFalseBlk() const { return false_; }
     void SetTrueBlk(BasicBlock* blk) { true_ = blk; }
     void SetFalseBlk(BasicBlock* blk) { false_ = blk; }
 

@@ -26,6 +26,7 @@ public:
     auto CurBlock() const { return curblk_; }
     void EnterBlock(const BasicBlock*);
     void SwitchBlock(const BasicBlock*);
+    void SetInsertPoint(int i) { insertpoint_ = i; }
 
     void Write2Mem() { write2file_ = false; }
     void Dump2File();
@@ -102,6 +103,11 @@ public:
 private:
     mutable int labelindex_{};
 
+    // Similar to InsertPoint in IRBuilder, but is simpler than it.
+    // 0: insert to the end of a block (default)
+    // > 0: insert before block[insertpoint_ - 1]
+    // < 0: insert before the -insertpoint_ th to the last instruction in current block
+    int insertpoint_{};
     std::unordered_map<
         const BasicBlock*, std::vector<std::string>> blks_{};
     std::vector<const BasicBlock*> blkindexes_{};

@@ -26,8 +26,20 @@ static std::string GetFltTag(const x64* op)
 
 void EmitAsm::EmitInstr(const std::string& str)
 {
-    if (write2file_) file_ << str;
-    else blks_[curblk_].push_back(str);
+    if (write2file_)
+        file_ << str;
+    else if (insertpoint_ == 0)
+        blks_[curblk_].push_back(str);
+    else if (insertpoint_ < 0)
+    {
+        auto pos = (blks_[curblk_].crbegin() - insertpoint_).base();
+        blks_[curblk_].insert(pos, str);
+    }
+    else // if (insertpoint_ > 0)
+    {
+        auto pos = blks_[curblk_].cbegin() + (insertpoint_ - 1);
+        blks_[curblk_].insert(pos, str);
+    }
 }
 
 
@@ -406,7 +418,7 @@ void EmitAsm::EmitCmp(const x64* op1, RegTag op2)
 void EmitAsm::EmitCmp(unsigned long c, const x64* op1)
 {
     EmitInstr(fmt::format(INDENT "cmp{} ${}, {}\n",
-        GetIntTag(op1), op1->ToString(), std::to_string(c)));
+        GetIntTag(op1), std::to_string(c), op1->ToString()));
 }
 
 void EmitAsm::EmitTest(const x64* op1, const x64* op2)
