@@ -161,7 +161,7 @@ public:
     void Accept(IRVisitor*) override;
 
     Instr* LastInstr() { return *std::prev(end()); }
-    const Instr* LastInstr() const { return LastInstr(); }
+    const Instr* LastInstr() const { return *std::prev(end()); }
 
     void MergePools(BasicBlock*);
 };
