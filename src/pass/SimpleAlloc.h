@@ -3,12 +3,12 @@
 
 #include "pass/Pass.h"
 #include "pass/DUInfo.h"
+#include "pass/Liveness.h"
 #include "pass/x64Alloc.h"
 #include "visitir/IRVisitor.h"
 #include "visitir/x64.h"
 #include <cassert>
-#include <set>
-#include <unordered_map>
+#include <vector>
 
 class BinaryInstr;
 class ConvertInstr;
@@ -33,45 +33,43 @@ class Register;
 class SimpleAlloc : public x64Alloc
 {
 public:
-    SimpleAlloc(Module* m, Pass* du) : x64Alloc(m),
-        info_(static_cast<DUInfo*>(du)), stackcache_(this, info_) {}
+    SimpleAlloc(Module* m, Pass* du, Pass* l) : x64Alloc(m),
+        info_(static_cast<DUInfo*>(du)), live_(static_cast<Liveness*>(l)) {}
 
 private:
-    class StackCache
-    {
-    public:
-        StackCache(SimpleAlloc* sa, DUInfo* d) : alloc_(sa), info_(d) {}
+    using RegList = std::vector<std::pair<RegTag, const Register*>>;
 
-        RegTag SpareReg() const;
-        RegTag SpareFReg() const;
-        void Access(const Register*, const Instr*) const;
-        void Map2Reg(const Register*, RegTag);
-        void Map2Stack(const Register*, long offset);
-        void Map2Stack(const Register*, size_t size, long offset);
+    RegTag SpareHelper(RegList& set, const Register*) const;
+    RegTag SpareReg(const Register*) const;
+    RegTag SpareFReg(const Register*) const;
 
-    private:
-        SimpleAlloc* alloc_;
-        DUInfo* info_{};
-
-        // map virtual registers to where? the value can be
-        // either a register or a stack address.
-        std::unordered_map<const Register*, const x64*> regmap_{};
-
-        // the three registers used are rbx, r12, r13, respectively.
-        mutable std::set<RegTag> intreg_{ RegTag::rbx, RegTag::r12, RegTag::r13 };
-        // for float-points, the three registers used is xmm8, xmm9, xmm10.
-        mutable std::set<RegTag> vecreg_{ RegTag::xmm8, RegTag::xmm9, RegTag::xmm10 };
-    };
+    void Map2Reg(const Register*, RegTag);
+    void Map2Stack(const Register*, long offset);
+    void Map2Stack(const Register*, size_t size, long offset);
 
     void Allocate(const Register*);
     long AllocateOnX64Stack(x64Stack&, size_t, size_t);
+    void Access(const Register*, const BasicBlock*, const Instr*);
 
     void BinaryAllocaHelper(BinaryInstr*);
     void ConvertAllocaHelper(ConvertInstr*);
 
+    void ResetRegList();
+
+    // The first element of register deque is the ready-to-allocate register.
+    // If it is already mapped to some live-in operand, then we move it to the
+    //  end of the deque and check if the new head is allocatable.
+    // Three gp-registers used are rbx, r12, r13, respectively.
+    mutable RegList intreg_
+    { { RegTag::rbx, nullptr}, { RegTag::r12, nullptr }, { RegTag::r13, nullptr} };
+    // for float-points, the registers are xmm8, xmm9 and xmm10.
+    mutable RegList vecreg_
+    { { RegTag::xmm8, nullptr }, { RegTag::xmm9, nullptr }, { RegTag::xmm10, nullptr } };
+
     Function* curfunc_{};
+    BasicBlock* curbb_{};
     DUInfo* info_{};
-    StackCache stackcache_{ this, nullptr };
+    Liveness* live_{};
 
 private:
     void VisitFunction(Function*) override;

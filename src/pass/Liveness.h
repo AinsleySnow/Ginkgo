@@ -31,6 +31,8 @@ public:
 
     const auto& LiveIn(const BasicBlock* bb) const { return livein_.at(bb); }
     const auto& LiveOut(const BasicBlock* bb) const { return liveout_.at(bb); }
+    bool LiveInAt(const IROperand* op, const BasicBlock* bb) const { return livein_.at(bb).count(op); }
+    bool LiveOutAt(const IROperand* op, const BasicBlock* bb) const { return liveout_.at(bb).count(op); }
 
 private:
     void PartialLiveness(const FlowGraph::GraphType&, const BasicBlock*);

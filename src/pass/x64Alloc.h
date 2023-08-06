@@ -74,22 +74,24 @@ public:
 
     x64Alloc(Module* m) : FunctionPass(m) {}
 
-    void EnterFunction(Function* func) { curfunc_ = func; }
-    void ExitFunction(Function* func) override
+    void ExitFunction() override
     {
-        ArchInfo() = x64Stack();
         Clear();
+        ArchInfo() = x64Stack();
+        curfunc_ = nullptr;
+        ir_.clear();
+        reg_.clear();
     }
     void ExecuteOnFunction(Function* func) override
     {
         curfunc_ = func;
         VisitFunction(func);
-        regmap_.emplace(func, std::move(UsedRegs()));
-        infomap_.emplace(func, std::move(ArchInfo()));
+        reg_ = std::move(UsedRegs());
+        info_ = std::move(ArchInfo());
     }
 
     const x64* GetIROpMap(const IROperand* op) const;
-    long RspOffset() const { return infomap_.at(curfunc_).rspoffset_; }
+    long RspOffset() const { return info_.rspoffset_; }
 
     RegSet UsedCallerSaved() const;
     RegSet UsedCalleeSaved() const;
@@ -112,9 +114,9 @@ protected:
 
 private:
     Function* curfunc_{};
-    std::unordered_map<const Function*, x64Stack> infomap_{};
-    std::unordered_map<const Function*, RegX64Map> irmap_{};
-    std::unordered_map<const Function*, RegSet> regmap_{};
+    x64Stack info_{};
+    RegX64Map ir_{};
+    RegSet reg_{};
 };
 
 

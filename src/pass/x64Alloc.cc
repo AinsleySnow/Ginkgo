@@ -30,13 +30,13 @@ bool x64Alloc::MapConstAndGlobalVar(const IROperand* op)
 {
     if (op->Is<Constant>())
     {
-        irmap_[curfunc_][op] = std::make_unique<x64Imm>(op->As<Constant>());
+        ir_[op] = std::make_unique<x64Imm>(op->As<Constant>());
         return true;
     }
     auto reg = op->As<Register>();
     if (reg->Name()[0] == '@')
     {
-        irmap_[curfunc_][op] = std::make_unique<x64Mem>(
+        ir_[op] = std::make_unique<x64Mem>(
             reg->Type()->As<PtrType>()->Point2()->Size(), reg->Name().substr(1));
         return true;
     }
@@ -45,12 +45,12 @@ bool x64Alloc::MapConstAndGlobalVar(const IROperand* op)
 
 void x64Alloc::MapRegister(const IROperand* op, std::unique_ptr<x64> reg)
 {
-    irmap_[curfunc_][op] = std::move(reg);
+    ir_[op] = std::move(reg);
 }
 
 void x64Alloc::MarkLoadTwice(const IROperand* op)
 {
-    auto mapped = irmap_[curfunc_][op].get();
+    auto mapped = ir_[op].get();
     if (auto mem = mapped->As<x64Mem>(); mem)
         mem->LoadTwice() = true;
 }
@@ -58,8 +58,8 @@ void x64Alloc::MarkLoadTwice(const IROperand* op)
 
 const x64* x64Alloc::GetIROpMap(const IROperand* op) const
 {
-    auto it = irmap_.at(curfunc_).find(op);
-    if (it == irmap_.at(curfunc_).end()) return nullptr;
+    auto it = ir_.find(op);
+    if (it == ir_.end()) return nullptr;
     return it->second.get();
 }
 
@@ -71,7 +71,7 @@ static auto anyone = [](auto&& k, auto&&... args) -> bool {     \
     return ((args == k) || ...);                                \
 };                                                              \
 std::set<x64Phys> regs{};                                       \
-for (auto reg : regmap_.at(curfunc_))                           \
+for (auto reg : reg_)                                           \
     if (anyone(reg, __VA_ARGS__))                               \
         regs.emplace(reg);                                      \
 return regs
