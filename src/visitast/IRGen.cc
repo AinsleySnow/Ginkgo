@@ -1205,8 +1205,9 @@ void IRGen::VisitCaseStmt(CaseStmt* stmt)
         env_.SwitchStackTop()->SetDefault(bb);
     }
 
-    stmt->stmt_->Accept(this);
-    
+    if (stmt->stmt_)
+        stmt->stmt_->Accept(this);
+
     // if this is default tag, create a new basic block
     if (!stmt->const_ && !ibud_.Container()->Empty())
     {
@@ -1215,7 +1216,8 @@ void IRGen::VisitCaseStmt(CaseStmt* stmt)
             ibud_.InsertBrInstr(bb);
         ibud_.SetInsertPoint(bb);
     }
-    Merge(stmt->stmt_->NextList(), stmt->nextlist_);
+    if (stmt->stmt_)
+        Merge(stmt->stmt_->NextList(), stmt->nextlist_);
 }
 
 
@@ -1289,12 +1291,14 @@ void IRGen::VisitForStmt(ForStmt* stmt)
 
     if (stmt->init_)
         stmt->init_->Accept(this);
+    else // if (stmt->decl_)
+        stmt->decl_->Accept(this);
 
     BasicBlock* cmpblk = nullptr;
     BasicBlock* loopblk = nullptr;
     BasicBlock* incblk = nullptr;
 
-    if (!stmt->condition_->Empty())
+    if (stmt->condition_)
     {
         cmpblk = bbud_.GetBasicBlock(env_.GetLabelName());
         loopblk = bbud_.GetBasicBlock(env_.GetLabelName());
@@ -1303,7 +1307,7 @@ void IRGen::VisitForStmt(ForStmt* stmt)
         ibud_.SetInsertPoint(cmpblk);
         stmt->condition_->Accept(this);
         ibud_.InsertBrInstr(
-            LoadVal(stmt->condition_->expr_.get()), loopblk, nullptr);
+            LoadVal(stmt->condition_.get()), loopblk, nullptr);
         stmt->PushBrInstr(ibud_.LastInstr());
     }
     else
@@ -1319,9 +1323,10 @@ void IRGen::VisitForStmt(ForStmt* stmt)
         ibud_.SetInsertPoint(incblk);
         stmt->increment_->Accept(this);
 
-        if (!stmt->condition_->Empty())
+        if (stmt->condition_)
             ibud_.InsertBrInstr(cmpblk);
-        else ibud_.InsertBrInstr(loopblk);
+        else
+            ibud_.InsertBrInstr(loopblk);
 
         bbud_.SetInsertPoint(incblk);
     }
@@ -1329,9 +1334,10 @@ void IRGen::VisitForStmt(ForStmt* stmt)
     ibud_.SetInsertPoint(loopblk);
     if (stmt->increment_)
         stmt->continuepoint_ = incblk;
-    else if (!stmt->condition_->Empty())
+    else if (stmt->condition_)
         stmt->continuepoint_ = cmpblk;
-    else stmt->continuepoint_ = loopblk;
+    else
+        stmt->continuepoint_ = loopblk;
 
     stmt->body_->Accept(this);
 
@@ -1340,9 +1346,10 @@ void IRGen::VisitForStmt(ForStmt* stmt)
         ibud_.InsertBrInstr(incblk);
         bbud_.SetInsertPoint(bbud_.InsertPoint() + 1);
     }
-    else if (!stmt->condition_->Empty())
+    else if (stmt->condition_)
         ibud_.InsertBrInstr(cmpblk);
-    else ibud_.InsertBrInstr(loopblk);
+    else
+        ibud_.InsertBrInstr(loopblk);
 
     Merge(stmt->body_->NextList(), stmt->nextlist_);
 
@@ -1420,8 +1427,11 @@ void IRGen::VisitLabelStmt(LabelStmt* stmt)
     }
 
     env_.AddLabelBlkPair(stmt->label_, ibud_.Container());
-    stmt->stmt_->Accept(this);
-    Merge(stmt->stmt_->NextList(), stmt->nextlist_);
+    if (stmt->stmt_)
+    {
+        stmt->stmt_->Accept(this);
+        Merge(stmt->stmt_->NextList(), stmt->nextlist_);
+    }
 }
 
 

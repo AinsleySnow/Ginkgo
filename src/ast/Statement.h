@@ -51,11 +51,9 @@ public:
 class CaseStmt : public Statement
 {
 public:
-    CaseStmt(std::unique_ptr<Expr> c, std::unique_ptr<Statement> s) :
-        const_(std::move(c)), stmt_(std::move(s)) {}
-    CaseStmt(std::unique_ptr<Statement> s) : stmt_(std::move(s)) {}
-
+    CaseStmt(std::unique_ptr<Expr> c) : const_(std::move(c)) {}
     void Accept(ASTVisitor* v) override;
+    void AddStatement(std::unique_ptr<Statement> s) { stmt_ = std::move(s); }
 
 private:
     friend class IRGen;
@@ -127,20 +125,23 @@ private:
 class ForStmt : public IterStmt
 {
 public:
-    ForStmt(std::unique_ptr<Statement> init,
-        std::unique_ptr<ExprStmt> cond, std::unique_ptr<Statement> s) : 
-            init_(std::move(init)), condition_(std::move(cond)), body_(std::move(s)) {}
-    ForStmt(std::unique_ptr<Statement> init, std::unique_ptr<ExprStmt> cond,
-        std::unique_ptr<Expr> inc, std::unique_ptr<Statement> s) : 
+    ForStmt(std::unique_ptr<Expr> init, std::unique_ptr<Expr> cond,
+        std::unique_ptr<Expr> inc, std::unique_ptr<Statement> s) :
             init_(std::move(init)), condition_(std::move(cond)),
+            increment_(std::move(inc)), body_(std::move(s)) {}
+
+    ForStmt(std::unique_ptr<Statement> decl, std::unique_ptr<Expr> cond,
+        std::unique_ptr<Expr> inc, std::unique_ptr<Statement> s) : 
+            decl_(std::move(decl)), condition_(std::move(cond)),
             increment_(std::move(inc)), body_(std::move(s)) {}
 
     void Accept(ASTVisitor* v) override;
 
 private:
     friend class IRGen;
-    std::unique_ptr<Statement> init_{};
-    std::unique_ptr<ExprStmt> condition_{};
+    std::unique_ptr<Expr> init_{};
+    std::unique_ptr<Statement> decl_{};
+    std::unique_ptr<Expr> condition_{};
     std::unique_ptr<Expr> increment_{};
     std::unique_ptr<Statement> body_{};
 };
@@ -180,9 +181,9 @@ private:
 class LabelStmt : public Statement
 {
 public:
-    LabelStmt(const std::string& l, std::unique_ptr<Statement> s) :
-        label_(l), stmt_(std::move(s)) {}
+    LabelStmt(const std::string& l) : label_(l) {}
     void Accept(ASTVisitor* v) override;
+    void AddStatement(std::unique_ptr<Statement> s) { stmt_ = std::move(s); }
 
 private:
     friend class IRGen;

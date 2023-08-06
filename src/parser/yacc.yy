@@ -125,6 +125,7 @@ direct_abstract_declarator abstract_declarator
 %type <std::unique_ptr<CompoundStmt>> compound_statement block_item_list
 %type <std::unique_ptr<Statement>> block_item statement
 selection_statement iteration_statement jump_statement labeled_statement
+unlabeled_statement primary_block secondary_block label
 
 
 // much more precedences are added, in order to avoid
@@ -1133,27 +1134,54 @@ preprocess_instruction
 
 statement
 	: labeled_statement     { $$ = std::move($1); }
-	| compound_statement    { $$ = std::move($1); }
-	| expression_statement  { $$ = std::move($1); }
-	| selection_statement   { $$ = std::move($1); }
-	| iteration_statement   { $$ = std::move($1); }
+    | unlabeled_statement   { $$ = std::move($1); }
+    ;
+
+unlabeled_statement
+	: expression_statement  { $$ = std::move($1); }
+	| primary_block         { $$ = std::move($1); }
 	| jump_statement        { $$ = std::move($1); }
 	;
 
+primary_block
+    : compound_statement    { $$ = std::move($1); }
+    | selection_statement   { $$ = std::move($1); }
+    | iteration_statement   { $$ = std::move($1); }
+    ;
+
+secondary_block
+    : statement             { $$ = std::move($1); }
+    ;
+
 // Workaround to get desired behavior.
 // Otherwise, complex mechanism will be added to CheckType class.
-labeled_statement
-	: IDENTIFIER ':' statement
-    { $$ = std::make_unique<LabelStmt>($1, std::move($3)); }
-    | TYPEDEF_NAME ':' statement
-    { $$ = std::make_unique<LabelStmt>($1, std::move($3)); }
-    | ENUMERATION_CONSTANT ':' statement
-    { $$ = std::make_unique<LabelStmt>($1, std::move($3)); }
-	| CASE constant_expression ':' statement
-    { $$ = std::make_unique<CaseStmt>(std::move($2), std::move($4)); }
-	| DEFAULT ':' statement
-    { $$ = std::make_unique<CaseStmt>(nullptr, std::move($3)); }
+label
+	: IDENTIFIER ':'
+    { $$ = std::make_unique<LabelStmt>($1); }
+    | TYPEDEF_NAME ':'
+    { $$ = std::make_unique<LabelStmt>($1); }
+    | ENUMERATION_CONSTANT ':'
+    { $$ = std::make_unique<LabelStmt>($1); }
+	| CASE constant_expression ':'
+    { $$ = std::make_unique<CaseStmt>(std::move($2)); }
+	| DEFAULT ':'
+    { $$ = std::make_unique<CaseStmt>(nullptr); }
 	;
+
+labeled_statement
+    : label statement
+    {
+        auto raw = $1.get();
+        if (auto l = dynamic_cast<LabelStmt*>(raw); l)
+            l->AddStatement(std::move($2));
+        else
+        {
+            auto c = dynamic_cast<CaseStmt*>(raw);
+            c->AddStatement(std::move($2));
+        }
+        $$ = std::move($1);
+    }
+    ;
 
 compound_statement
 	: '{' '}'
@@ -1177,7 +1205,8 @@ block_item_list
 
 block_item
 	: declaration { $$ = std::move($1); }
-	| statement { $$ = std::move($1); }
+	| unlabeled_statement { $$ = std::move($1); }
+    | label { $$ = std::move($1); }
     | preprocess_instruction { $$ = std::make_unique<ExprStmt>(nullptr); }
 	;
 
@@ -1187,27 +1216,45 @@ expression_statement
 	;
 
 selection_statement
-	: IF '(' expression ')' statement ELSE statement %prec ELSE
+	: IF '(' expression ')' secondary_block ELSE secondary_block %prec ELSE
     { $$ = std::make_unique<IfStmt>(std::move($3), std::move($5), std::move($7)); }
-	| IF '(' expression ')' statement                %prec LOWER_THAN_ELSE
+	| IF '(' expression ')' secondary_block                %prec LOWER_THAN_ELSE
     { $$ = std::make_unique<IfStmt>(std::move($3), std::move($5)); }
-	| SWITCH '(' expression ')' statement
+	| SWITCH '(' expression ')' secondary_block
     { $$ = std::make_unique<SwitchStmt>(std::move($3), std::move($5)); }
 	;
 
 iteration_statement
-	: WHILE '(' expression ')' statement
+	: WHILE '(' expression ')' secondary_block
     { $$ = std::make_unique<WhileStmt>(std::move($3), std::move($5)); }
-	| DO statement WHILE '(' expression ')' ';'
+	| DO secondary_block WHILE '(' expression ')' ';'
     { $$ = std::make_unique<DoWhileStmt>(std::move($5), std::move($2)); }
-	| FOR '(' expression_statement expression_statement ')' statement
-	{ $$ = std::make_unique<ForStmt>(std::move($3), std::move($4), std::move($6)); }
-    | FOR '(' expression_statement expression_statement expression ')' statement
-	{ $$ = std::make_unique<ForStmt>(std::move($3), std::move($4), std::move($5), std::move($7)); }
-    | FOR '(' declaration expression_statement ')' statement
-	{ $$ = std::make_unique<ForStmt>(std::move($3), std::move($4), std::move($6)); }
-    | FOR '(' declaration expression_statement expression ')' statement
-	{ $$ = std::make_unique<ForStmt>(std::move($3), std::move($4), std::move($5), std::move($7)); }
+
+    | FOR '(' ';' ';' ')' secondary_block
+    { $$ = std::make_unique<ForStmt>(std::unique_ptr<Expr>(nullptr), nullptr, nullptr, std::move($6)); }
+    | FOR '(' expression ';' ';' ')' secondary_block
+    { $$ = std::make_unique<ForStmt>(std::move($3), nullptr, nullptr, std::move($7)); }
+    | FOR '(' ';' expression ';' ')' secondary_block
+    { $$ = std::make_unique<ForStmt>(std::unique_ptr<Expr>(nullptr), std::move($4), nullptr, std::move($7)); }
+    | FOR '(' expression ';' expression ';' ')' secondary_block
+    { $$ = std::make_unique<ForStmt>(std::move($3), std::move($5), nullptr, std::move($8)); }
+    | FOR '(' ';' ';' expression ')' secondary_block
+    { $$ = std::make_unique<ForStmt>(std::unique_ptr<Expr>(nullptr), nullptr, std::move($5), std::move($7)); }
+	| FOR '(' expression ';' ';' expression ')' secondary_block
+    { $$ = std::make_unique<ForStmt>(std::move($3), nullptr, std::move($6), std::move($8)); }
+	| FOR '(' ';' expression ';' expression ')' secondary_block
+    { $$ = std::make_unique<ForStmt>(std::unique_ptr<Expr>(nullptr), std::move($4), std::move($6), std::move($8)); }
+	| FOR '(' expression ';' expression ';' expression ')' secondary_block
+	{ $$ = std::make_unique<ForStmt>(std::move($3), std::move($5), std::move($7), std::move($9)); }
+
+    | FOR '(' declaration ';' ')' secondary_block
+	{ $$ = std::make_unique<ForStmt>(std::move($3), nullptr, nullptr, std::move($6)); }
+    | FOR '(' declaration expression ';' ')' secondary_block
+	{ $$ = std::make_unique<ForStmt>(std::move($3), std::move($4), nullptr, std::move($7)); }
+    | FOR '(' declaration ';' expression ')' secondary_block
+	{ $$ = std::make_unique<ForStmt>(std::move($3), nullptr, std::move($5), std::move($7)); }
+    | FOR '(' declaration expression ';' expression ')' secondary_block
+	{ $$ = std::make_unique<ForStmt>(std::move($3), std::move($4), std::move($6), std::move($8)); }
     ;
 
 // Workaround, as above
