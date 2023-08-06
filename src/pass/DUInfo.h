@@ -19,7 +19,11 @@ public:
     DUInfo(Module* m) : FunctionPass(m) {}
 
     void ExecuteOnFunction(Function* func) override { VisitFunction(func); }
-    void ExitFunction(Function*) override {}
+    void ExitFunction() override
+    {
+        def_.clear(); uses_.clear(); bbdef_.clear();
+        bbuse_.clear(); bbphidef_.clear(); bbphiuse_.clear();
+    }
 
     bool HasDef(const BasicBlock* bb) const { return bbdef_.count(bb); }
     bool HasPhiDef(const BasicBlock* bb) const { return bbphidef_.count(bb); }

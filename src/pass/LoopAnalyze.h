@@ -24,7 +24,7 @@ public:
         FunctionPass(m), fg_(static_cast<FlowGraph*>(c)) {}
 
     void ExecuteOnFunction(Function* func) override { IdentifyLoops(func); }
-    void ExitFunction(Function* func) override {}
+    void ExitFunction() override { loopinfo_.clear(); }
 
     const BasicBlock* GetHeader(const BasicBlock* bb) const { return loopinfo_.at(bb).loopheader_; }
     bool InLoop(const BasicBlock* bb) const { return loopinfo_.at(bb).loopheader_; }

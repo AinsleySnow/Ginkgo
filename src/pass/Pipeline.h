@@ -29,15 +29,29 @@ public:
     PASS* GetPass(int i)
     {
         assert(passes_.at(i));
-        auto p = dynamic_cast<PASS*>(passes_.at(i).get());
-        assert(p);
+        auto p = static_cast<PASS*>(passes_.at(i).get());
         return p;
     }
 
-    void ExecuteAll()
+    void ExecuteOnModule()
     {
-        for (auto& pass : passes_)
-            pass.second->Execute();
+        for (auto& pair : passes_)
+            if (auto p = pair.second->As<ModulePass>(); p)
+                p->ExecuteOnModule();
+    }
+
+    void ExecuteOnFunction(Function* func)
+    {
+        for (auto& pair : passes_)
+            if (auto p = pair.second->As<FunctionPass>(); p)
+                p->ExecuteOnFunction(func);
+    }
+
+    void ExitFunction()
+    {
+        for (auto& pair : passes_)
+            if (auto p = pair.second->As<FunctionPass>(); p)
+                p->ExitFunction();
     }
 
 private:

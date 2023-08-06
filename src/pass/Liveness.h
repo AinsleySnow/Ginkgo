@@ -22,12 +22,12 @@ class Liveness : public FunctionPass
 {
 public:
     Liveness(Module* m, Pass* g, Pass* du, Pass* l) :
-        FunctionPass(m), cfg_(static_cast<CFG*>(g)),
+        FunctionPass(m), fg_(static_cast<FlowGraph*>(g)),
         duinfo_(static_cast<DUInfo*>(du)),
         loops_(static_cast<LoopAnalyze*>(l)) {}
 
     void ExecuteOnFunction(Function*) override;
-    void ExitFunction(Function*) override { visited_.clear(); }
+    void ExitFunction() override { visited_.clear(); livein_.clear(); liveout_.clear(); }
 
     const auto& LiveIn(const BasicBlock* bb) const { return livein_.at(bb); }
     const auto& LiveOut(const BasicBlock* bb) const { return liveout_.at(bb); }
