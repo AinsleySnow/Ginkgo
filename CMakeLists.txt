@@ -26,6 +26,14 @@ set(GINKGO_THIRD_PARTY_INCLUDE_DIR
     ${PROJECT_SOURCE_DIR}/third_party
     ${PROJECT_SOURCE_DIR}/third_party/fmt/include
     ${PROJECT_SOURCE_DIR}/third_party/utfcpp/source)
+
+set(GINKGO_SRC_DIR ${PROJECT_SOURCE_DIR}/src)
+
+execute_process(
+    COMMAND lex -o ${GINKGO_SRC_DIR}/parser/lexer.cc ${GINKGO_SRC_DIR}/parser/lexer.ll
+    COMMAND bison ${GINKGO_SRC_DIR}/parser/yacc.yy -dy -Wno-yacc -o ${GINKGO_SRC_DIR}/parser/yacc.cc
+)
+
 include_directories(${GINKGO_SRC_INCLUDE_DIR} ${GINKGO_THIRD_PARTY_INCLUDE_DIR})
 
 include(ExternalProject)
@@ -39,16 +47,23 @@ ExternalProject_Add(
     INSTALL_COMMAND ""
 )
 
+add_custom_command(
+    OUTPUT ${GINKGO_SRC_DIR}/parser/lexer.cc
+    COMMAND lex -o ${GINKGO_SRC_DIR}/parser/lexer.cc ${GINKGO_SRC_DIR}/parser/lexer.ll
+    DEPENDS ${GINKGO_SRC_DIR}/parser/lexer.ll
+    COMMENT "Build target lexer"
+)
+
+add_custom_command(
+    OUTPUT ${GINKGO_SRC_DIR}/parser/yacc.cc
+    COMMAND bison ${GINKGO_SRC_DIR}/parser/yacc.yy -dy -Wno-yacc -o ${GINKGO_SRC_DIR}/parser/yacc.cc
+    DEPENDS ${GINKGO_SRC_DIR}/parser/yacc.yy
+    COMMENT "Build target parser"
+)
+
 add_subdirectory(gklib)
 add_subdirectory(src)
 add_subdirectory(third_party)
 
-set(GINKGO_SRC_DIR ${PROJECT_SOURCE_DIR}/src)
-
-add_custom_target(parser
-    COMMAND bison ${GINKGO_SRC_DIR}/parser/yacc.yy -dy -o ${GINKGO_SRC_DIR}/parser/yacc.cc
-)
-
-add_custom_target(lexer
-    COMMAND lex -o ${GINKGO_SRC_DIR}/parser/lexer.cc ${GINKGO_SRC_DIR}/parser/lexer.ll
-)
+add_custom_target(parser DEPENDS ${GINKGO_SRC_DIR}/parser/yacc.cc)
+add_custom_target(lexer DEPENDS ${GINKGO_SRC_DIR}/parser/lexer.cc)
