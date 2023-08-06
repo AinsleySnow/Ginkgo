@@ -1065,14 +1065,31 @@ ret:
 
 void CodeGen::VisitBrInstr(BrInstr* inst)
 {
-    if (inst->Cond())
+    if (!inst->Cond())
+    {
+        asmfile_.EmitJmp("", GetLabel(inst->GetTrueBlk()));
+        return;
+    }
+    if (auto ic = inst->Cond()->As<IntConst>(); ic)
+    {
+        if (ic->Val())
+            asmfile_.EmitJmp("", GetLabel(inst->GetTrueBlk()));
+        else
+            asmfile_.EmitJmp("", GetLabel(inst->GetFalseBlk()));
+        return;
+    }
+
+    if (inst->Cond()->Type()->Is<FloatType>())
     {
         auto cond = MapPossibleFloat(inst->Cond());
-        asmfile_.EmitCmp((unsigned long)0, cond);
-        asmfile_.EmitJmp("ne", GetLabel(inst->GetTrueBlk()));
-        asmfile_.EmitJmp("", GetLabel(inst->GetFalseBlk()));
+        auto zero = GetFpLabel({ 0, 0 }, cond->Size());
+        x64Mem mem{ cond->Size(), std::move(zero) };
+        asmfile_.EmitUcom(&mem, cond);
     }
-    else asmfile_.EmitJmp("", GetLabel(inst->GetTrueBlk()));
+    else
+        asmfile_.EmitCmp((unsigned long)0, alloc_->GetIROpMap(inst->Cond()));
+    asmfile_.EmitJmp("ne", GetLabel(inst->GetTrueBlk()));
+    asmfile_.EmitJmp("", GetLabel(inst->GetFalseBlk()));
 }
 
 
