@@ -241,6 +241,12 @@ public:
     const auto cbegin() const { return begin(); }
     const auto cend() const { return end(); }
 
+    void Clear()
+    {
+        index_ = 0; indexof_.clear();
+        vertexvia_.clear(); adj_.clear();
+    }
+
     auto& GetVertices() { return vertexvia_; }
     const auto& GetVertices() const { return vertexvia_; }
     auto& GetEdges(const V& v) { return adj_[indexof_.at(v)]; }
@@ -251,7 +257,7 @@ public:
     void AddVertex(const V& v)
     {
         auto addr = &(indexof_.emplace(v, index_).first->first);
-        vertexvia_[index_] = addr;
+        vertexvia_.push_back(addr);
         adj_.push_back((ADJ){ indexof_, vertexvia_ });
         index_ += 1;
     }
