@@ -5,6 +5,7 @@
 #include "visitir/EmitAsm.h"
 #include "pass/Pipeline.h"
 #include <cstdio>
+#include <iostream>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -28,6 +29,10 @@ class CodeGen : public IRVisitor
 public:
     CodeGen(Pipeline* p, x64Alloc* a) : pipeline_(p), alloc_(a) {}
     CodeGen(const std::string& f, Pipeline* p, x64Alloc* a) : asmfile_(f), pipeline_(p), alloc_(a) {}
+
+    void SetSummaryStream(std::ostream* s) { summary_ = s; }
+    void AddFuncPass2Print(FunctionPass* p) { funcpass_.push_back(p); }
+    void AddModulePass2Print(ModulePass* p) { modulepass_.push_back(p); }
 
     std::string GetAsmName() const { return asmfile_.AsmName(); }
 
@@ -91,6 +96,11 @@ public:
     void VisitFcmpInstr(FcmpInstr*) override;
     void VisitSelectInstr(SelectInstr*) override;
     void VisitPhiInstr(PhiInstr*) override;
+
+private:
+    std::ostream* summary_{};
+    std::vector<const FunctionPass*> funcpass_{};
+    std::vector<const ModulePass*> modulepass_{};
 
 private:
     struct FpRepr

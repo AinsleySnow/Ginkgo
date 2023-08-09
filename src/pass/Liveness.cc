@@ -1,5 +1,6 @@
 #include "pass/Liveness.h"
 #include "utils/Graph.h"
+#include <fmt/format.h>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -11,14 +12,13 @@ void Liveness::PartialLiveness(const FlowGraph::GraphType& fg, const BasicBlock*
     for (auto v : fg[bb])
     {
         auto to = v.to_;
+        // Re-entry edge?
+        if (loops_->IsReenrty(bb, to))
+            to = FindOLE(bb, to);
         // Is the edge a back edge or a visited vertex?
         if (OnPath(to) || Visited(to))
             continue;
-        // Re-entry edge?
-        if (loops_->IsReenrty(bb, to))
-            PartialLiveness(fg, FindOLE(bb, to));
-        else
-            PartialLiveness(fg, to);
+        PartialLiveness(fg, to);
     }
 
     std::unordered_set<const IROperand*> live{};
@@ -36,7 +36,8 @@ void Liveness::PartialLiveness(const FlowGraph::GraphType& fg, const BasicBlock*
             to = FindOLE(bb, to);
         live.merge(livein_[to]);
         if (duinfo_->HasPhiDef(to))
-            live.erase(duinfo_->GetPhiDef(to));
+            for (auto op : duinfo_->GetPhiDef(to))
+                live.erase(op);
     }
     // copy to liveout
     liveout_[bb] = live;
@@ -53,7 +54,8 @@ void Liveness::PartialLiveness(const FlowGraph::GraphType& fg, const BasicBlock*
             live.insert(op);
     // add variable defined by phi instruction
     if (duinfo_->HasPhiDef(bb))
-        live.insert(duinfo_->GetPhiDef(bb));
+        for (auto op : duinfo_->GetPhiDef(bb))
+            live.insert(op);
     livein_[bb] = std::move(live);
 
     onpath_.erase(bb);
@@ -79,7 +81,8 @@ void Liveness::PropagateHeader(const Function* func)
             {
                 auto temp = livein_[header];
                 if (duinfo_->HasPhiDef(header))
-                    temp.erase(duinfo_->GetPhiDef(header));
+                    for (auto op : duinfo_->GetPhiDef(header))
+                        temp.erase(op);
                 livein_[bb].merge(temp);
                 liveout_[bb].merge(temp);
                 liveloop[header] = std::move(temp);
@@ -113,8 +116,37 @@ const BasicBlock* Liveness::FindOLE(
 }
 
 
+#define SUMMARY_HELPER(which)                                   \
+for (auto& pair : which)                                        \
+{                                                               \
+    auto& set = pair.second;                                    \
+    if (set.size() == 0)                                        \
+        continue;                                               \
+    summary += fmt::format("[{}]: ", pair.first->Name());       \
+    auto last = std::for_each_n(set.begin(), set.size() - 1,    \
+    [&] (const IROperand* op) {                                 \
+        summary += op->As<Register>()->Name() + ", ";           \
+    });                                                         \
+    summary += (*last)->As<Register>()->Name() + "\n";          \
+}
+
+std::string Liveness::PrintSummary() const
+{
+    std::string summary{ fmt::format("Pass Liveness in function {}:\n", CurFunc()->Name()) };
+    summary += "basic block : live-in virtual registers\n";
+    SUMMARY_HELPER(livein_);
+    summary += "basic block : live-out virtual registers\n";
+    SUMMARY_HELPER(liveout_);
+    summary += '\n';
+    return std::move(summary);
+}
+
+#undef SUMMARY_HELPER
+
+
 void Liveness::ExecuteOnFunction(Function* func)
 {
+    CurFunc() = func;
     PartialLiveness(fg_->GetFlowGraph(), func->At(0));
     PropagateHeader(func);
 }

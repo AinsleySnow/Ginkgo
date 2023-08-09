@@ -1,6 +1,7 @@
 #include "pass/FlowGraph.h"
 #include "IR/Instr.h"
 #include "IR/Value.h"
+#include <fmt/format.h>
 
 
 void FlowGraph::VisitBasicBlock(BasicBlock* bb)
@@ -60,8 +61,34 @@ void FlowGraph::VisitRetInstr(BasicBlock* bb, RetInstr* r)
 }
 
 
+std::string FlowGraph::PrintSummary() const
+{
+    std::string summary{ fmt::format("Pass FlowGraph in function {}:\n", CurFunc()->Name()) };
+    for (auto [v, adj] : flow_)
+    {
+        for (auto [to, cond] : *adj)
+        {
+            if (to == nullptr)
+                summary += fmt::format("{} -> exit\n", (**v)->Name());
+            else
+            {
+                summary += fmt::format("{} -> {}", (**v)->Name(), to->Name());
+                if (!cond.first)
+                    summary += '\n';
+                else if (cond.second)
+                    summary += fmt::format(", {}\n", cond.first->ToString());
+                else
+                    summary += ", otherwise\n";
+            }
+        }
+    }
+    return std::move(summary);
+}
+
+
 void FlowGraph::ExecuteOnFunction(Function* func)
 {
+    CurFunc() = func;
     for (auto bb : *func)
         flow_.AddVertex(bb);
     // Stands for exit

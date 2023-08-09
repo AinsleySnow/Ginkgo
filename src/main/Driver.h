@@ -1,12 +1,11 @@
 #ifndef _DRIVER_H_
 #define _DRIVER_H_
 
-#include <fstream>
+#include "ast/Statement.h"
+#include "IR/Value.h"
 #include <memory>
 #include <string>
 #include <vector>
-#include "ast/Statement.h"
-#include "IR/Value.h"
 
 class Pipeline;
 
@@ -27,6 +26,11 @@ public:
     void SetLink2Ginkgo(bool l) { link2gk_ = l; }
     void SetInputName(const std::string& n) { inputname_ = n; }
     void SetOutputName(const std::string& n) { outputname_ = n; }
+
+    void SetSummaryFlag() { summaryflag_ = true; }
+    void SetSummaryStream(const std::string& o) { passtream_ = o; }
+    void AddModulePass2Print(int p) { modpassprint_.push_back(p); }
+    void AddFuncPass2Print(int p) { funcpassprint_.push_back(p); }
 
     void Run();
 
@@ -57,6 +61,11 @@ private:
     bool link2gk_{};
     std::string inputname_{};
     std::string outputname_{};
+
+    bool summaryflag_{};
+    std::string passtream_{};
+    std::vector<int> modpassprint_{};
+    std::vector<int> funcpassprint_{};
 
     TransUnit transunit_{};
     std::unique_ptr<Module> module_{};

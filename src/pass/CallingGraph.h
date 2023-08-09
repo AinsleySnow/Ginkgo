@@ -3,8 +3,10 @@
 
 #include "pass/Pass.h"
 #include "utils/Graph.h"
+#include <string>
 #include <unordered_map>
 
+class BasicBlock;
 class Function;
 class Module;
 class CallInstr;
@@ -29,6 +31,7 @@ public:
     };
 
     CallingGraph(Module* m) : ModulePass(m) {}
+    std::string PrintSummary() const override;
     void ExecuteOnModule() override;
 
     const auto& GetCallingGraph() const { return calling_; }

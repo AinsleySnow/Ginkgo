@@ -3,6 +3,7 @@
 
 #include "pass/Pass.h"
 #include "pass/FlowGraph.h"
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -20,6 +21,8 @@ class Dominators : public FunctionPass
 public:
     Dominators(Module* m, Pass* fg) :
         FunctionPass(m), graphs_(static_cast<FlowGraph*>(fg)) {}
+
+    std::string PrintSummary() const override;
 
     void ExecuteOnFunction(Function*) override;
     void ExitFunction() override;

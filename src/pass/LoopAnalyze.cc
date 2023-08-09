@@ -1,5 +1,6 @@
 #include "pass/LoopAnalyze.h"
 #include "utils/Graph.h"
+#include <fmt/format.h>
 
 
 void LoopAnalyze::IdentifyLoops(const Function* func)
@@ -101,4 +102,29 @@ bool LoopAnalyze::IsReenrty(
     if (loopinfo_.at(from).loopheader_ == loopinfo_.at(to).loopheader_)
         return false;
     return true;
+}
+
+
+std::string LoopAnalyze::PrintSummary() const
+{
+    std::string summary{ fmt::format("Pass LoopAnalyze in function {}:\n", CurFunc()->Name()) };
+    summary += "All loop headers:\n";
+    for (auto& [bb, info] : loopinfo_)
+    {
+        if (!info.isheader_)
+            continue;
+        summary += fmt::format("{}: {}\n",
+            bb->Name(), info.isirreducible_ ? "irreducible" : "reducible");
+    }
+    summary += "Other blocks in loops:\n";
+    for (auto& [bb, info] : loopinfo_)
+    {
+        if (info.isheader_)
+            continue;
+        if (bb && info.loopheader_)
+        // except exit block and blocks not in loop
+            summary += fmt::format("{}'s header: {}\n",
+                bb->Name(), info.loopheader_->Name());
+    }
+    return std::move(summary);
 }

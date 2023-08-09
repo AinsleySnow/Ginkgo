@@ -2,6 +2,7 @@
 #include "IR/Instr.h"
 #include "IR/IROperand.h"
 #include "IR/Value.h"
+#include <fmt/format.h>
 
 
 void DUInfo::BinaryDUHelper(BinaryInstr* bin)
@@ -212,3 +213,42 @@ void DUInfo::VisitPhiInstr(PhiInstr* phi)
         }
     }
 }
+
+
+#define SUMMARY_HELPER                                      \
+if (ops.size() == 0)                                        \
+    continue;                                               \
+auto last = std::for_each_n(ops.begin(), ops.size() - 1,    \
+    [&] (const IROperand* op) {                             \
+        summary += op->As<Register>()->Name();              \
+    });                                                     \
+summary += (*last)->As<Register>()->Name()
+
+std::string DUInfo::PrintSummary() const
+{
+    std::string summary{ fmt::format(
+        "Pass DUInfo in function {}:\n", CurFunc()->Name()) };
+    for (auto& [bb, ops] : bbdef_)
+    {
+        summary += fmt::format("IR operands defined in {}:\n", bb->Name());
+        SUMMARY_HELPER;
+    }
+    for (auto& [bb, ops] : bbuse_)
+    {
+        summary += fmt::format("IR operands used in {}:\n", bb->Name());
+        SUMMARY_HELPER;
+    }
+    for (auto& [bb, ops] : bbphidef_)
+    {
+        summary += fmt::format("IR operands defined by phi instruction in {}:\n", bb->Name());
+        SUMMARY_HELPER;
+    }
+    for (auto& [bb, ops] : bbphidef_)
+    {
+        summary += fmt::format("IR operands used in phi instruction in {}:\n", bb->Name());
+        SUMMARY_HELPER;
+    }
+    return std::move(summary);
+}
+
+#undef SUMMARY_HELPER

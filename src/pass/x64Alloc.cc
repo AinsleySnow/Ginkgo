@@ -4,12 +4,13 @@
 #include "visitir/SysVConv.h"
 #include "visitir/x64.h"
 #include <algorithm>
+#include <fmt/format.h>
 
 
 void x64Alloc::LoadParam()
 {
-    auto& params = curfunc_->Params();
-    SysVConv conv{ curfunc_->Type() };
+    auto& params = CurFunc()->Params();
+    SysVConv conv{ CurFunc()->Type() };
     conv.MapArgv();
 
     for (int i = params.size() - 1; i >= 0; --i)
@@ -53,6 +54,18 @@ void x64Alloc::MarkLoadTwice(const IROperand* op)
     auto mapped = ir_[op].get();
     if (auto mem = mapped->As<x64Mem>(); mem)
         mem->LoadTwice() = true;
+}
+
+
+std::string x64Alloc::PrintSummary() const
+{
+    std::string summary{ fmt::format("Pass x64Alloc in function {}:\n", CurFunc()->Name()) };
+    summary += "IR virtual reg -> x64 position\n";
+    for (auto& [reg, to] : ir_)
+        if (auto r = reg->As<Register>(); r)
+            summary += fmt::format("{} -> {}\n", r->Name(), to->ToString());
+    summary += '\n';
+    return std::move(summary);
 }
 
 

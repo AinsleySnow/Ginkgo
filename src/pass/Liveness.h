@@ -5,6 +5,7 @@
 #include "pass/FlowGraph.h"
 #include "pass/DUInfo.h"
 #include "pass/LoopAnalyze.h"
+#include <string>
 #include <unordered_set>
 
 class Module;
@@ -26,13 +27,15 @@ public:
         duinfo_(static_cast<DUInfo*>(du)),
         loops_(static_cast<LoopAnalyze*>(l)) {}
 
+    std::string PrintSummary() const override;
+
     void ExecuteOnFunction(Function*) override;
     void ExitFunction() override { visited_.clear(); livein_.clear(); liveout_.clear(); }
 
-    const auto& LiveIn(const BasicBlock* bb) const { return livein_.at(bb); }
-    const auto& LiveOut(const BasicBlock* bb) const { return liveout_.at(bb); }
-    bool LiveInAt(const IROperand* op, const BasicBlock* bb) const { return livein_.at(bb).count(op); }
-    bool LiveOutAt(const IROperand* op, const BasicBlock* bb) const { return liveout_.at(bb).count(op); }
+    const auto& LiveIn(const BasicBlock* bb) { return livein_[bb]; }
+    const auto& LiveOut(const BasicBlock* bb) { return liveout_[bb]; }
+    bool LiveInAt(const IROperand* op, const BasicBlock* bb) { return livein_[bb].count(op); }
+    bool LiveOutAt(const IROperand* op, const BasicBlock* bb) { return liveout_[bb].count(op); }
 
 private:
     void PartialLiveness(const FlowGraph::GraphType&, const BasicBlock*);
@@ -47,9 +50,9 @@ private:
     std::unordered_set<const BasicBlock*> onpath_{};
     std::unordered_set<const BasicBlock*> visited_{};
 
-    std::unordered_map<const BasicBlock*,
+    mutable std::unordered_map<const BasicBlock*,
         std::unordered_set<const IROperand*>> livein_{};
-    std::unordered_map<const BasicBlock*,
+    mutable std::unordered_map<const BasicBlock*,
         std::unordered_set<const IROperand*>> liveout_{};
 
     FlowGraph* fg_{};

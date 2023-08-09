@@ -3,6 +3,7 @@
 
 #include "pass/Pass.h"
 #include "pass/FlowGraph.h"
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -23,7 +24,9 @@ public:
     LoopAnalyze(Module* m, Pass* c) :
         FunctionPass(m), fg_(static_cast<FlowGraph*>(c)) {}
 
-    void ExecuteOnFunction(Function* func) override { IdentifyLoops(func); }
+    std::string PrintSummary() const override;
+
+    void ExecuteOnFunction(Function* func) override { CurFunc() = func; IdentifyLoops(func); }
     void ExitFunction() override { loopinfo_.clear(); }
 
     const BasicBlock* GetHeader(const BasicBlock* bb) const { return loopinfo_.at(bb).loopheader_; }

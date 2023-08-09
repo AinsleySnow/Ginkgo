@@ -54,7 +54,8 @@ std::string CodeGen::GetFpLabel(unsigned long repr, size_t size)
     return GetFpLabel(std::make_pair(repr, 0), size);
 }
 
-std::string CodeGen::GetFpLabel(std::pair<unsigned long, unsigned long> pair, size_t size)
+std::string CodeGen::GetFpLabel(
+    std::pair<unsigned long, unsigned long> pair, size_t size)
 {
     FpRepr repr{ pair.first, pair.second, size };
     if (auto res = fpconst_.find(repr); res != fpconst_.end())
@@ -850,6 +851,14 @@ void CodeGen::TestEmitHelper(const x64* op1, const x64* op2)
 void CodeGen::VisitModule(Module* mod)
 {
     pipeline_->ExecuteOnModule();
+    if (summary_)
+    {
+        for (auto pass : modulepass_)
+        {
+            *summary_ << pass->PrintSummary();
+            *summary_ << '\n';
+        }
+    }
 
     asmfile_.EmitPseudoInstr(".file", { "\"" + mod->Name() + "\"" });
     asmfile_.EmitBlankLine();
@@ -925,6 +934,15 @@ void CodeGen::VisitFunction(Function* func)
         return;
 
     pipeline_->ExecuteOnFunction(func);
+    if (summary_)
+    {
+        for (auto pass : funcpass_)
+        {
+            *summary_ << pass->PrintSummary();
+            *summary_ << '\n';
+        }
+    }
+
     auto name = func->Name().substr(1);
 
     asmfile_.EmitPseudoInstr(".text");

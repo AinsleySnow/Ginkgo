@@ -74,17 +74,19 @@ public:
 
     x64Alloc(Module* m) : FunctionPass(m) {}
 
+    std::string PrintSummary() const override;
+
     void ExitFunction() override
     {
         Clear();
         ArchInfo() = x64Stack();
-        curfunc_ = nullptr;
+        CurFunc() = nullptr;
         ir_.clear();
         reg_.clear();
     }
     void ExecuteOnFunction(Function* func) override
     {
-        curfunc_ = func;
+        CurFunc() = func;
         VisitFunction(func);
         reg_ = std::move(UsedRegs());
         info_ = std::move(ArchInfo());
@@ -113,7 +115,6 @@ protected:
     void MarkLoadTwice(const IROperand*);
 
 private:
-    Function* curfunc_{};
     x64Stack info_{};
     RegX64Map ir_{};
     RegSet reg_{};

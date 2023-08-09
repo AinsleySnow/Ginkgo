@@ -1,5 +1,6 @@
 #include "pass/Dominators.h"
 #include "utils/Graph.h"
+#include <fmt/format.h>
 
 
 void Dominators::DFS(const FlowGraph::GraphType& fg, const BasicBlock* bb, int& poi)
@@ -94,8 +95,21 @@ void Dominators::ConstructDoms(const Function* func)
 }
 
 
+std::string Dominators::PrintSummary() const
+{
+    std::string summary{ fmt::format(
+        "Pass Dominators in function {}:\n", CurFunc()->Name()) };
+    summary += "basic block : dominated by the basic block\n";
+    for (auto [k, v] : domins_)
+        if (k && v)
+            summary += fmt::format("{} : {}\n", k->Name(), v->Name());
+    return std::move(summary);
+}
+
+
 void Dominators::ExecuteOnFunction(Function* func)
 {
+    CurFunc() = func;
     MapPostorder(func);
     FindIDom(func);
 }
@@ -105,4 +119,5 @@ void Dominators::ExitFunction()
     indexof_.clear();
     bbvia_.clear();
     idom_.clear();
+    domins_.clear();
 }

@@ -4,6 +4,7 @@
 #include "pass/Pass.h"
 #include "visitir/IRVisitor.h"
 #include <list>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -18,7 +19,13 @@ class DUInfo : public FunctionPass, private IRVisitor
 public:
     DUInfo(Module* m) : FunctionPass(m) {}
 
-    void ExecuteOnFunction(Function* func) override { VisitFunction(func); }
+    std::string PrintSummary() const override;
+
+    void ExecuteOnFunction(Function* func) override
+    {
+        CurFunc() = func;
+        VisitFunction(func);
+    }
     void ExitFunction() override
     {
         def_.clear(); uses_.clear(); bbdef_.clear();
@@ -41,7 +48,7 @@ public:
 
     void AddDef(const IROperand* op, const Instr* i) { def_.emplace(op, i); }
     void AddDef(const BasicBlock* bb, const IROperand* op) { bbdef_[bb].insert(op); }
-    void AddPhiDef(const BasicBlock* bb, const IROperand* op) { bbphidef_[bb] = op; }
+    void AddPhiDef(const BasicBlock* bb, const IROperand* op) { bbphidef_[bb].insert(op); }
 
     void AddUse(const IROperand* op, const Instr* i) { uses_[op].push_back(i); }
     void AddUse(const BasicBlock* bb, const IROperand* op) { bbuse_[bb].insert(op); }
@@ -72,8 +79,7 @@ private:
     // variables used (without phi) in basic blocks
     std::unordered_map<const BasicBlock*, std::unordered_set<const IROperand*>> bbuse_{};
     // variables defined by a phi instruction;
-    // One phi per block - otherwise the block is ill-formed
-    std::unordered_map<const BasicBlock*, const IROperand*> bbphidef_{};
+    std::unordered_map<const BasicBlock*, std::unordered_set<const IROperand*>> bbphidef_{};
     // variables used in phi instructions; use list to save some memory,
     // since there's no need to keep the elements unique
     std::unordered_map<const BasicBlock*, std::list<const IROperand*>> bbphiuse_{};

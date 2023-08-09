@@ -3,6 +3,7 @@
 
 #include "IR/Value.h"
 #include "utils/DynCast.h"
+#include <string>
 
 
 class Pass
@@ -15,6 +16,8 @@ public:
 
     Pass(PassId p, Module* m) : id_(p), module_(m) {}
     virtual ~Pass() {}
+
+    virtual std::string PrintSummary() const = 0;
 
     ENABLE_IS;
     ENABLE_AS;
@@ -47,6 +50,12 @@ public:
     FunctionPass(Module* m) : Pass(PassId::function, m) {}
     virtual void ExecuteOnFunction(Function*) = 0;
     virtual void ExitFunction() = 0;
+
+    auto& CurFunc() { return curfunc_; }
+    auto CurFunc() const { return curfunc_; }
+
+private:
+    Function* curfunc_{};
 };
 
 #endif // _PASS_H_

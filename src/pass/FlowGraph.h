@@ -3,6 +3,7 @@
 
 #include "pass/Pass.h"
 #include "utils/Graph.h"
+#include <string>
 #include <unordered_map>
 
 class Module;
@@ -34,6 +35,9 @@ public:
     };
 
     FlowGraph(Module* m) : FunctionPass(m) {}
+
+    std::string PrintSummary() const override;
+
     void ExecuteOnFunction(Function*) override;
     void ExitFunction() override { flow_.Clear(); preds_.clear(); }
 

@@ -15,6 +15,7 @@
 #include <fmt/format.h>
 #include <fstream>
 #include <random>
+#include <iostream>
 
 extern FILE* yyin;
 
@@ -139,7 +140,25 @@ void Driver::GenerateAsm(const std::string& output)
     // file name, not input as in the other methods.
     Pipeline pl = InitPipeline();
     CodeGen codegen{ output, &pl, pl.GetPass<SimpleAlloc>(500) };
+
+    std::ostream* pstream = nullptr;
+    if (summaryflag_)
+    {
+        if (passtream_.empty())
+            pstream = &std::cout;
+        else
+            pstream = new std::ofstream(passtream_);
+        codegen.SetSummaryStream(pstream);
+
+        for (auto i : modpassprint_)
+            codegen.AddModulePass2Print(pl.GetPass<ModulePass>(i));
+        for (auto i : funcpassprint_)
+            codegen.AddFuncPass2Print(pl.GetPass<FunctionPass>(i));
+    }
+
     codegen.VisitModule(module_.get());
+    if (!passtream_.empty())
+        delete pstream;
 }
 
 std::string Driver::Assemble(const std::string& input)
