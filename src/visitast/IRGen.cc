@@ -1291,8 +1291,11 @@ void IRGen::VisitForStmt(ForStmt* stmt)
 
     if (stmt->init_)
         stmt->init_->Accept(this);
-    else // if (stmt->decl_)
+    else if (stmt->decl_)
+    {
+        scopestack_.PushNewScope(Scope::ScopeType::block);
         stmt->decl_->Accept(this);
+    }
 
     BasicBlock* cmpblk = nullptr;
     BasicBlock* loopblk = nullptr;
@@ -1357,6 +1360,8 @@ void IRGen::VisitForStmt(ForStmt* stmt)
     ibud_.SetInsertPoint(endblk);
     Backpatch(stmt->NextList(), endblk);
 
+    if (stmt->decl_)
+        scopestack_.PopScope();
     env_.PopStmt();
 }
 
