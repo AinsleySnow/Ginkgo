@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -193,16 +194,20 @@ template <typename V, class ADJ>
 class __GraphBase
 {
 public:
+    template <typename VEXTYPE, typename ADJTYPE>
     class ItemIterator
     {
     public:
+        using deref_vex = std::remove_pointer_t<VEXTYPE>;
+        using deref_adj = std::remove_pointer_t<ADJTYPE>;
         using difference_type = ptrdiff_t;
-        using value_type = std::pair<V&, ADJ&>;
+        using value_type = std::pair<deref_vex*, deref_adj*>;
         using pointer = value_type*;
         using reference = value_type&;
         using iterator_category = std::random_access_iterator_tag;
 
-        ItemIterator(V* v, ADJ* a, int i) : vertices_(v), adjlist_(a), index_(i) {}
+
+        ItemIterator(VEXTYPE v, ADJTYPE a, int i) : vertices_(v), adjlist_(a), index_(i) {}
 
         auto& operator++() { index_++; return *this; }
         auto operator++(int) { auto retval = *this; ++(*this); return retval; }
@@ -223,14 +228,20 @@ public:
         }
         bool operator!=(const ItemIterator& other) const { return !(*this == other); }
 
-        std::pair<V*, ADJ&> operator*()
-        { return std::make_pair<V&, ADJ&>(vertices_[index_], adjlist_[index_]); }
-        std::pair<const V*, const ADJ&> operator*() const
-        { return std::make_pair<const V&, const ADJ&>(vertices_[index_], adjlist_[index_]); }
+        std::pair<deref_vex*, deref_adj*> operator*()
+        {
+            return std::make_pair<deref_vex*,
+                deref_adj*>(vertices_ + index_, adjlist_ + index_);
+        }
+        std::pair<const deref_vex*, const deref_adj*> operator*() const
+        {
+            return std::make_pair<const deref_vex*,
+                const deref_adj*>(vertices_ + index_, adjlist_ + index_);
+        }
 
     private:
-        V* vertices_{};
-        ADJ* adjlist_{};
+        VEXTYPE vertices_{};
+        ADJTYPE adjlist_{};
         int index_{};
     };
 
