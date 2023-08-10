@@ -72,12 +72,12 @@ long SimpleAlloc::AllocateOnX64Stack(x64Stack& info, size_t size, size_t align)
 void SimpleAlloc::Access(
     const Register* reg, const BasicBlock* bb, const Instr* i)
 {
-    RegList& v = intreg_;
+    RegList* v = &intreg_;
     if (reg->Type()->Is<FloatType>())
-        v = vecreg_;
+        v = &vecreg_;
 
-    auto iter = v.begin();
-    for (; iter != v.end(); iter++)
+    auto iter = v->begin();
+    for (; iter != v->end(); iter++)
         if (iter->second == reg)
             goto find;
     return;

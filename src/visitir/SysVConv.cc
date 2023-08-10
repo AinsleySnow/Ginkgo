@@ -37,7 +37,7 @@ void SysVConv::Emplace(int i, const IRType* p, RegTag t)
     {
         AlignStackBy(0, p->Align());
         memoffset_[i] = stacksize_;
-        stacksize_ += p->Size();
+        stacksize_ += 8;
         return;
     }
     argvs_[i] = std::make_unique<x64Reg>(t, p->Size());

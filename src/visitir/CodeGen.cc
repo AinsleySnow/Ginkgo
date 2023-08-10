@@ -226,7 +226,7 @@ void CodeGen::MapOtherParam2Reg(const x64* param, const x64Reg* loc)
 }
 
 // PassParam must correctly adjust the value of rsp, as the VisitCallInstr method
-// will add the size of the parameters and padding by rsp directly.
+// will add rsp by the size of the parameters and padding directly.
 void CodeGen::PassParam(
     const SysVConv& conv, const std::vector<const IROperand*>& param)
 {
@@ -690,8 +690,13 @@ void CodeGen::UcomEmitHelper(const x64* op1, const x64* op2)
 
 void CodeGen::PushEmitHelper(const x64* reg)
 {
-    auto original = 0;
+    if (reg->Is<x64Imm>())
+    {
+        asmfile_.EmitInstr("    pushq " + reg->ToString() + '\n');
+        return;
+    }
 
+    auto original = 0;
     if (reg->Size() != 8)
     {
         MovzEmitHelper(reg->Size(), 8, reg);

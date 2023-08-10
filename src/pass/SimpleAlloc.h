@@ -7,8 +7,8 @@
 #include "pass/x64Alloc.h"
 #include "visitir/IRVisitor.h"
 #include "visitir/x64.h"
+#include <array>
 #include <cassert>
-#include <vector>
 
 class BinaryInstr;
 class ConvertInstr;
@@ -37,7 +37,7 @@ public:
         info_(static_cast<DUInfo*>(du)), live_(static_cast<Liveness*>(l)) {}
 
 private:
-    using RegList = std::vector<std::pair<RegTag, const Register*>>;
+    using RegList = std::array<std::pair<RegTag, const Register*>, 3>;
 
     RegTag SpareHelper(RegList& set, const Register*) const;
     RegTag SpareReg(const Register*) const;
@@ -56,15 +56,18 @@ private:
 
     void ResetRegList();
 
-    // The first element of register deque is the ready-to-allocate register.
-    // If it is already mapped to some live-in operand, then we move it to the
-    //  end of the deque and check if the new head is allocatable.
     // Three gp-registers used are rbx, r12, r13, respectively.
-    mutable RegList intreg_
-    { { RegTag::rbx, nullptr}, { RegTag::r12, nullptr }, { RegTag::r13, nullptr} };
+    mutable RegList intreg_ {
+        std::make_pair(RegTag::rbx, nullptr),
+        std::make_pair(RegTag::r12, nullptr),
+        std::make_pair(RegTag::r13, nullptr)
+    };
     // for float-points, the registers are xmm8, xmm9 and xmm10.
-    mutable RegList vecreg_
-    { { RegTag::xmm8, nullptr }, { RegTag::xmm9, nullptr }, { RegTag::xmm10, nullptr } };
+    mutable RegList vecreg_{
+        std::make_pair(RegTag::xmm8, nullptr),
+        std::make_pair(RegTag::xmm9, nullptr),
+        std::make_pair(RegTag::xmm10, nullptr)
+    };
 
     Function* curfunc_{};
     BasicBlock* curbb_{};
