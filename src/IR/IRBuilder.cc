@@ -290,7 +290,7 @@ const Register* InstrBuilder::InsertGetValInstr(
     const std::string& result, const Register* val, std::variant<const IROperand*, int> index)
 {
     auto reg = Register::CreateRegister(Container(), result,
-        val->Type()->As<HeterType>()->At(std::get<int>(index)));
+        val->Type()->As<HeterType>()->At(std::get<int>(index)).first);
     Insert(std::move(std::make_unique<GetValInstr>(reg, val, index)));
     return reg;
 }
@@ -315,7 +315,7 @@ const Register* InstrBuilder::InsertGetElePtrInstr(const std::string& result,
     else if (point2->Is<HeterType>())
     {
         rety = PtrType::GetPtrType(Container(),
-            point2->As<HeterType>()->At(std::get<int>(index)));
+            point2->As<HeterType>()->At(std::get<int>(index)).first);
     }
     else
         rety = val->Type();
