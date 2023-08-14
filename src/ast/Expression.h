@@ -23,6 +23,10 @@ public:
 
     void Accept(ASTVisitor* v) override;
 
+    bool IsAccess() const override { return true; }
+    AccessExpr* ToAccess() override { return this; }
+    const AccessExpr* ToAccess() const override { return this; }
+
     const auto& Postfix() const { return expr_; }
     Tag Op() const { return tag_; }
     const auto& Field() const { return field_; }
