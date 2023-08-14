@@ -139,17 +139,19 @@ ArrayType::ArrayType(size_t count, size_t align, const IRType* t) :
     count_ = count;
 }
 
-StructType* StructType::GetStructType(Pool<IRType>* pool, const std::string& name)
+StructType* StructType::GetStructType(
+    Pool<IRType>* pool, const std::string& name, size_t s, size_t a)
 {
-    auto ty = std::make_unique<StructType>(name);
+    auto ty = std::make_unique<StructType>(name, s, a);
     auto addr = ty.get();
     pool->Add(std::move(ty));
     return addr;
 }
 
-UnionType* UnionType::GetUnionType(Pool<IRType>* pool, const std::string& name)
+UnionType* UnionType::GetUnionType(
+    Pool<IRType>* pool, const std::string& name, size_t s, size_t a)
 {
-    auto ty = std::make_unique<UnionType>(name);
+    auto ty = std::make_unique<UnionType>(name, s, a);
     auto addr = ty.get();
     pool->Add(std::move(ty));
     return addr;
@@ -230,10 +232,11 @@ std::string FuncType::ToString() const
 std::string StructType::ToString() const
 {
     std::string fields{ "struct { " };
-    for (const auto& pfield : fields_)
-        fields += pfield->ToString() + ", ";
-    fields.back() = '}';
-    *(fields.end() - 1) = ' ';
+    std::for_each_n(fields_.cbegin(), fields_.size() - 1,
+    [&] (auto& pair) {
+        fields += pair.first->ToString() + ", ";
+    });
+    fields += fields_.back().first->ToString() + " }";
     return fields;
 }
 
@@ -241,10 +244,11 @@ std::string StructType::ToString() const
 std::string UnionType::ToString() const
 {
     std::string fields{ "union { " };
-    for (const auto& pfield : fields_)
-        fields += pfield->ToString() + ", ";
-    fields.back() = '}';
-    *(fields.end() - 1) = ' ';
+    std::for_each_n(fields_.cbegin(), fields_.size() - 1,
+    [&] (auto& pair) {
+        fields += pair.first->ToString() + ", ";
+    });
+    fields += fields_.back().first->ToString() + " }";
     return fields;
 }
 
