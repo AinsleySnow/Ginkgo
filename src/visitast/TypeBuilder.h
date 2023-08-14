@@ -22,6 +22,7 @@ public:
     void VisitArrayDef(ArrayDef*) override;
     void VisitHeterList(HeterList*) override;
 
+    void VisitAccessExpr(AccessExpr*) override;
     void VisitArrayExpr(ArrayExpr*) override;
     void VisitAssignExpr(AssignExpr*) override;
     void VisitBinaryExpr(BinaryExpr*) override;

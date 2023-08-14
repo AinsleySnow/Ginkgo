@@ -222,13 +222,13 @@ std::unique_ptr<T> TypeBuilder::HeterHelper(const HeterSpec* spec, size_t align)
     {
         auto ty = scopestack_.SearchCustomed(spec->Name())->GetCType()->As<T>();
         auto cty = std::make_unique<T>(*ty);
-        cty->Align() = align;
+        if (align)
+            cty->Align() = align;
         return std::move(cty);
     }
 
     int fieldindex = 0;
     auto ty = std::make_unique<T>();
-    ty->Align() = align;
     scopestack_.LoadNewScope(const_cast<HeterSpec*>(spec)->GetScope());
     for (auto& decl : fields)
     {
@@ -242,7 +242,14 @@ std::unique_ptr<T> TypeBuilder::HeterHelper(const HeterSpec* spec, size_t align)
         if (decl->IsHeterList())
         {
             for (auto& var : *decl->ToHeterList())
-                ty->AddMember(var->ToObjDef()->Name(), var->RawType(), fieldindex++);
+            {
+                if constexpr (std::is_same_v<T, CStructType>)
+                    ty->AddStructMember(
+                        var->ToObjDef()->Name(), var->RawType(), false, fieldindex++);
+                else
+                    ty->AddUnionMember(
+                        var->ToObjDef()->Name(), var->RawType(), false, fieldindex++);
+            }
         }
         else if (decl->Type()->Is<CHeterType>())
         {
@@ -258,8 +265,15 @@ std::unique_ptr<T> TypeBuilder::HeterHelper(const HeterSpec* spec, size_t align)
             scopestack_.Top().Extend(*hs->GetScope());
             // and then add members to ty
             for (auto& [n, i] : *hs->GetScope())
+            {
                 if (i->GetIdentType() == Identifier::IdentType::member)
-                    ty->AddMember(n, i->GetCType(), fieldindex);
+                {
+                    if constexpr (std::is_same_v<T, CStructType>)
+                        ty->AddStructMember(n, decl->RawType(), true, fieldindex);
+                    else
+                        ty->AddUnionMember(n, decl->RawType(), true, fieldindex);
+                }
+            }
             fieldindex += 1;
         }
     }
@@ -267,6 +281,8 @@ std::unique_ptr<T> TypeBuilder::HeterHelper(const HeterSpec* spec, size_t align)
 
     if (!spec->Name().empty())
         scopestack_.Top().AddCustomed(spec->Name(), ty.get());
+    if (align)
+        ty->Align() = align;
     return std::move(ty);
 }
 
@@ -384,6 +400,35 @@ void TypeBuilder::VisitHeterList(HeterList* list)
         d->Accept(this);
         list->InScope()->AddMember(
             d->ToObjDef()->Name(), d->RawType());
+    }
+}
+
+
+void TypeBuilder::VisitAccessExpr(AccessExpr* expr)
+{
+    if (expr->Type())
+        return;
+    expr->Postfix()->Accept(this);
+    const auto& field = expr->Field();
+    int index = 0;
+
+    const CHeterType* heterty = nullptr;
+    if (expr->Op() == Tag::arrow)
+        heterty = expr->Postfix()->Type()->
+            As<CPtrType>()->Point2()->As<CHeterType>();
+    else // if (expr->Op() == Tag::dot)
+        heterty = expr->Postfix()->Type()->As<CHeterType>();
+
+    while (true)
+    {
+        index = (*heterty)[field];
+        auto [next, ty, _] = (*heterty)[index];
+        if (!next)
+        {
+            expr->Type() = ty->Clone();
+            break;
+        }
+        heterty = ty->As<CHeterType>();
     }
 }
 

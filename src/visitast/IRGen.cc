@@ -140,7 +140,15 @@ const IROperand* IRGen::LoadVal(Expr* expr)
             env_.GetRegName(), true, expr->Val()->As<Register>(), zero);
         return expr->Val();
     }
-    else return expr->Val();
+    else if (expr->IsAccess())
+    {
+        // Val of AccessExpr is always an address
+        expr->Val() = ibud_.InsertLoadInstr(
+            env_.GetRegName(), expr->Val()->As<Register>());
+        return expr->Val();
+    }
+    else
+        return expr->Val();
 }
 
 const Register* IRGen::LoadAddr(Expr* expr)
@@ -150,7 +158,8 @@ const Register* IRGen::LoadAddr(Expr* expr)
     else if (expr->IsSubscript())
         return expr->ToSubscript()->Addr();
     // else if (expr->IsUnary() && expr->ToUnary()->Op() == Tag::_and)
-    // no Addr method in UnaryExpr; if address-of is used,
+    // else if (expr->IsAccess())
+    // no Addr method in UnaryExpr and AccessExpr; if address-of is used,
     // the Val() of expr is just the desired address
     return expr->Val()->As<Register>();
 }
@@ -320,19 +329,35 @@ void IRGen::VisitAccessExpr(AccessExpr* access)
 {
     access->Postfix()->Accept(this);
     tbud_.VisitAccessExpr(access);
-    auto& heterty = *access->Type()->As<CHeterType>();
-    auto val = access->Postfix()->Val()->As<Register>();
+
+    int index = 0;
+    const Register* addr = nullptr;
+    const CHeterType* heterty = nullptr;
+
+    if (access->Op() == Tag::arrow)
+    {
+        addr = LoadVal(access->Postfix().get())->As<Register>();
+        heterty = access->Postfix()->Type()->
+            As<CPtrType>()->Point2()->As<CHeterType>();
+    }
+    else
+    {
+        addr = LoadAddr(access->Postfix().get());
+        heterty = access->Postfix()->Type()->As<CHeterType>();
+    }
 
     while (true)
     {
-        auto index = heterty[access->Field()];
-        auto [field, ty] = heterty[index];
-        if (access->Op() == Tag::dot)
-            val = ibud_.InsertGetValInstr(env_.GetRegName(), val, index);
-        else
-            val = ibud_.InsertGetElePtrInstr(env_.GetRegName(), false, val, index);
-        if (!field.empty()) break;
+        index = (*heterty)[access->Field()];
+        auto [next, ty, _] = (*heterty)[index];
+        addr = ibud_.InsertGetElePtrInstr(env_.GetRegName(), false, addr, index);
+        if (!next)
+            break;
+        // if field is true: yet another heterogeneous field
+        heterty = ty->As<CHeterType>();
     }
+
+    access->Val() = addr;
 }
 
 
