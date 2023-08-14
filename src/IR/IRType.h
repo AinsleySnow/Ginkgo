@@ -170,19 +170,16 @@ public:
     static bool ClassOf(const IRType* const i)
     { return i->id_ == TypeId::_struct || i->id_ == TypeId::_union; }
 
-    HeterType(TypeId i, const std::string& n) : IRType(i), name_(n) {}
+    HeterType(TypeId i, const std::string& n, size_t s, size_t a) :
+        IRType(i), name_(n) { size_ = s; align_ = a; }
 
     auto Name() const { return name_; }
-    void AddField(const IRType* t) { fields_.push_back(t); }
+    void AddField(const IRType* t, size_t o) { fields_.push_back(std::make_pair(t, o)); }
     auto At(int i) const { return fields_.at(i); }
 
-    size_t CalcAlign();
-
 protected:
-    void AlignSizeBy(size_t);
-
     std::string name_{};
-    std::vector<const IRType*> fields_{};
+    std::vector<std::pair<const IRType*, size_t>> fields_{};
 };
 
 
@@ -192,10 +189,10 @@ public:
     static bool ClassOf(const StructType* const) { return true; }
     static bool ClassOf(const IRType* const i) { return i->id_ == TypeId::_struct; }
 
-    static StructType* GetStructType(Pool<IRType>*, const std::string&);
-    StructType(const std::string& n) : HeterType(TypeId::_struct, n) {}
+    static StructType* GetStructType(Pool<IRType>*, const std::string&, size_t, size_t);
+    StructType(const std::string& n, size_t s, size_t a) :
+        HeterType(TypeId::_struct, n, s, a) {}
 
-    size_t CalcSize();
     std::string ToString() const override;
 };
 
@@ -206,10 +203,10 @@ public:
     static bool ClassOf(const UnionType* const) { return true; }
     static bool ClassOf(const IRType* const i) { return i->id_ == TypeId::_union; }
 
-    static UnionType* GetUnionType(Pool<IRType>*, const std::string&);
-    UnionType(const std::string& n) : HeterType(TypeId::_union, n) {}
+    static UnionType* GetUnionType(Pool<IRType>*, const std::string&, size_t, size_t);
+    UnionType(const std::string& n, size_t s, size_t a) :
+        HeterType(TypeId::_union, n, s, a) {}
 
-    size_t CalcSize();
     std::string ToString() const override;
 };
 
