@@ -108,6 +108,14 @@ TypeTag DeclSpec::GetTypeTag()
     case int(Tag::_enum):
         return TypeTag::_enum;
 
+    // struct
+    case int(Tag::_struct):
+        return TypeTag::_struct;
+
+    // union
+    case int(Tag::_union):
+        return TypeTag::_union;
+
     // others
     default: return TypeTag::customed;
     }

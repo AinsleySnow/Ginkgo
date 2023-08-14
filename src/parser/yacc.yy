@@ -682,7 +682,7 @@ struct_declaration_list
 
 struct_declaration
 	: specifier_qualifier_list ';'	/* for anonymous struct/union */
-    { $$ = std::make_unique<DeclSpec>(); }
+    { $$ = std::move($1); }
 	| specifier_qualifier_list struct_declarator_list ';'
     {
         std::shared_ptr<DeclSpec> ds = std::move($1);
