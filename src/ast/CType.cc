@@ -295,26 +295,88 @@ std::unique_ptr<CType> CEnumType::Clone() const
 }
 
 
-
-void CHeterType::AddMember(const std::string& n, const CType* t, int i)
+static size_t FindLCM(size_t a, size_t b)
 {
-    members_.push_back(std::make_pair(n, t));
-    fieldindex_[n] = i;
+    size_t max = (a > b) ? a : b;
+    size_t min = (a < b) ? a : b;
+    for (size_t i = 1; i <= min; i++)
+    {
+        size_t multiple = max * i;
+        if (multiple % min == 0)
+            return multiple;
+    }
+    return min; // make the compiler happy
 }
 
 
-#define TOIRTYPE(name)                              \
-auto ty = name::Get##name(pool, irname_);           \
-for (auto& [_, t] : members_)                       \
-    ty->AddField(t->ToIRType(pool));                \
-ty->CalcAlign();                                    \
-ty->CalcSize();                                     \
-return ty
+#define TOIR_HELPER(name)                                       \
+{                                                               \
+    auto ty = name::Get##name(pool, irname_, size_, align_);    \
+    for (auto& [_, t, o] : members_)                            \
+        ty->AddField(t->ToIRType(pool), o);                     \
+    return ty;                                                  \
+}
 
-const StructType* CStructType::ToIRType(Pool<IRType>* pool) const { TOIRTYPE(StructType); }
-const UnionType* CUnionType::ToIRType(Pool<IRType>* pool) const { TOIRTYPE(UnionType); }
+IRType* CHeterType::ToIRType(Pool<IRType>* pool) const
+{
+    if (id_ == CTypeId::_struct)
+        TOIR_HELPER(StructType)
+    else
+        TOIR_HELPER(UnionType)
+}
 
-#undef TOIRTYPE
+#undef TOIR_HELPER
+
+bool CHeterType::AddMember(const std::string& n, const CType* t, bool m, int i)
+{
+    // can we update size_ and align_?
+    // (to avoid suming up a same field's size again and again)
+    bool cancalc = members_.size() <= i;
+    // to avoid repeating add a same field
+    if (members_.size() <= i)
+        members_.push_back(std::make_tuple(m, t, offset_));
+    fieldindex_[n] = i;
+    return cancalc;
+}
+
+void CHeterType::AlignOffsetBy(size_t align)
+{
+    if (offset_ % align == 0)
+        return;
+    offset_ += align - offset_ % align;
+}
+
+void CHeterType::UpdateSize()
+{
+    tailpadding_ = offset_ % align_ ?
+        align_ - offset_ % align_ : 0;
+    size_ = offset_ + tailpadding_;
+}
+
+
+void CStructType::AddStructMember(
+    const std::string& n, const CType* t, bool m, int i)
+{
+    if (!AddMember(n, t, m, i))
+        return;
+    // Align is always a power of 2
+    if (align_ < t->Align())
+        align_ = t->Align();
+    AlignOffsetBy(t->Align());
+    offset_ += t->Size();
+    UpdateSize();    
+}
+
+
+void CUnionType::AddUnionMember(const std::string& n, const CType* t, bool m, int i)
+{
+    if (!AddMember(n, t, m, i))
+        return;
+    if (align_ < t->Align())
+        align_ = t->Align();
+    if (size_ < t->Size())
+        size_ = t->Size();
+}
 
 
 const VoidType* CVoidType::ToIRType(Pool<IRType>*) const

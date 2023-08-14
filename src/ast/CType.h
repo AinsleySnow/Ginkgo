@@ -356,20 +356,28 @@ public:
     CHeterType(CTypeId i, const std::string& n) : CType(i), name_(n) {}
     CHeterType(CTypeId i, const std::string& n, size_t a) : CType(i, 0, a), name_(n) {}
 
+    IRType* ToIRType(Pool<IRType>*) const override;
+
     auto Name() const { return name_; }
     auto IRName() const { return irname_; }
     auto& IRName() { return irname_; }
 
-    void AddMember(const std::string& n, const CType* t, int i);
-    bool HasMember(const std::string& n) const
-    { return fieldindex_.find(n) != fieldindex_.end(); }
+    bool HasMember(const std::string& n) const { return fieldindex_.count(n); }
     auto operator[](int i) const { return members_[i]; }
-    auto operator[](const std::string& n) { return fieldindex_.at(n); }
+    auto operator[](const std::string& n) const { return fieldindex_.at(n); }
 
 protected:
+    bool AddMember(const std::string& n, const CType* t, bool m, int i);
+    void AlignOffsetBy(size_t align);
+    void UpdateSize();
+
+    size_t offset_{};
+    size_t tailpadding_{};
+
+private:
     std::string name_{};
     std::string irname_{};
-    std::vector<std::pair<std::string, const CType*>> members_{};
+    std::vector<std::tuple<bool, const CType*, size_t>> members_{};
     std::map<std::string, int> fieldindex_{};
 };
 
@@ -385,10 +393,11 @@ public:
     CStructType(const std::string& n, size_t a) : CHeterType(CTypeId::_struct, n, a) {}
 
     std::string ToString() const override { return ""; }
-    const StructType* ToIRType(Pool<IRType>*) const override;
 
     bool Compatible(const CType&) const override { return false; }
-    std::unique_ptr<CType> Clone() const override { return nullptr; }
+    std::unique_ptr<CType> Clone() const override { return std::make_unique<CStructType>(*this); }
+
+    void AddStructMember(const std::string& n, const CType* t, bool m, int i);
 };
 
 
@@ -403,10 +412,11 @@ public:
     CUnionType(const std::string& n, size_t a) : CHeterType(CTypeId::_union, n, a) {}
 
     std::string ToString() const override { return ""; }
-    const UnionType* ToIRType(Pool<IRType>*) const override;
 
     bool Compatible(const CType&) const override { return false; }
-    std::unique_ptr<CType> Clone() const override { return nullptr; }
+    std::unique_ptr<CType> Clone() const override { return std::make_unique<CUnionType>(*this); }
+
+    void AddUnionMember(const std::string& n, const CType* t, bool m, int i);
 };
 
 
