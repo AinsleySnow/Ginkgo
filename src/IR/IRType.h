@@ -173,7 +173,15 @@ public:
     HeterType(TypeId i, const std::string& n, size_t s, size_t a) :
         IRType(i), name_(n) { size_ = s; align_ = a; }
 
+    auto begin() { return fields_.begin(); }
+    auto end() { return fields_.end(); }
+    auto begin() const { return fields_.cbegin(); }
+    auto end() const { return fields_.cend(); }
+    auto cbegin() const { return fields_.cbegin(); }
+    auto cend() const { return fields_.cend(); }
+
     auto Name() const { return name_; }
+    auto FieldNum() const { return fields_.size(); }
     void AddField(const IRType* t, size_t o) { fields_.push_back(std::make_pair(t, o)); }
     auto At(int i) const { return fields_.at(i); }
 

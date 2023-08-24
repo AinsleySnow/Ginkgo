@@ -1280,6 +1280,38 @@ void CodeGen::VisitLoadInstr(LoadInstr* inst)
 
 void CodeGen::VisitGetElePtrInstr(GetElePtrInstr* inst)
 {
+    if (inst->HoldsInt()) // Want to get pointer to a field in a structure?
+    {
+        auto heter = inst->Pointer()->
+            Type()->As<PtrType>()->Point2()->As<HeterType>();
+        auto offset = heter->At(inst->IntIndex()).second;
+        auto ptr = alloc_->GetIROpMap(inst->Pointer());
+        auto result = alloc_->GetIROpMap(inst->Result());
+
+        if (auto p = ptr->As<x64Reg>(); p)
+        {
+            x64Mem mem{ 8, static_cast<long>(offset),
+                p->Tag(), RegTag::none, 0 };
+            LeaqEmitHelper(&mem, result);
+            return;
+        }
+        // else if (ptr->Is<x64Mem>())
+        auto m = ptr->As<x64Mem>();
+        if (m->LoadTwice())
+        {
+            x64Reg reg{ GetSpareIntReg(0), 8 };
+            asmfile_.EmitMov(m, &reg);
+            asmfile_.EmitBinary("add", offset, &reg);
+            asmfile_.EmitMov(&reg, result);
+        }
+        else
+        {
+            LeaqEmitHelper(m, result);
+            asmfile_.EmitBinary("add", offset, result);
+        }
+        return;
+    }
+
     size_t size = 0;
     if (auto ptr = inst->Pointer()->Type()->As<PtrType>(); ptr)
     {

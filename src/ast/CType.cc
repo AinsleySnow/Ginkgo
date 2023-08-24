@@ -357,14 +357,14 @@ void CHeterType::UpdateSize()
 void CStructType::AddStructMember(
     const std::string& n, const CType* t, bool m, int i)
 {
+    AlignOffsetBy(t->Align());
     if (!AddMember(n, t, m, i))
         return;
     // Align is always a power of 2
     if (align_ < t->Align())
         align_ = t->Align();
-    AlignOffsetBy(t->Align());
     offset_ += t->Size();
-    UpdateSize();    
+    UpdateSize();
 }
 
 
