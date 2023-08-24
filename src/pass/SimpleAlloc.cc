@@ -42,7 +42,10 @@ void SimpleAlloc::Map2Stack(const Register* reg, size_t size, long offset)
 
 void SimpleAlloc::Allocate(const Register* reg)
 {
-    auto tag = reg->Type()->Is<FloatType>() ?
+    auto tag = RegTag::none;
+    if (reg->Type()->Is<HeterType>())
+        goto alloconstack;
+    tag = reg->Type()->Is<FloatType>() ?
         SpareFReg(reg) : SpareReg(reg);
 
     if (tag != RegTag::none)
@@ -52,6 +55,7 @@ void SimpleAlloc::Allocate(const Register* reg)
     }
     else
     {
+alloconstack:
         auto offset = AllocateOnX64Stack(
             ArchInfo(), reg->Type()->Size(), reg->Type()->Size());
         Map2Stack(reg, offset);
@@ -253,7 +257,7 @@ void SimpleAlloc::VisitStoreInstr(StoreInstr* i)
 
 void SimpleAlloc::VisitGetElePtrInstr(GetElePtrInstr* i)
 {
-    if (!MapConstAndGlobalVar(i->OpIndex()))
+    if (!i->HoldsInt() && !MapConstAndGlobalVar(i->OpIndex()))
         Access(i->OpIndex()->As<Register>(), curbb_, i);
     if (!MapConstAndGlobalVar(i->Pointer()))
         Access(i->Pointer()->As<Register>(), curbb_, i);
