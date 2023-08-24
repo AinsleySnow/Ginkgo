@@ -1576,6 +1576,35 @@ void CodeGen::VisitStoreInstr(StoreInstr* inst)
         VecMovEmitHelper(MapPossibleFloat(value), mappeddest);
         return;
     }
+    else if (value->Type()->Is<HeterType>())
+    {
+        auto mapped = alloc_->GetIROpMap(value);
+        if (mapped->Is<x64Heter>())
+        {
+            LoadHeterParam(mapped->As<x64Heter>(),
+                mappeddest->As<x64Mem>());
+        }
+        else // if (mapped->Is<x64Mem>())
+        {
+            // save all involved registers here - if the virtual register
+            // is actually a function parameter, not saving these registers
+            // could be a disaster.
+            asmfile_.EmitPush(RegTag::rcx, 8);
+            asmfile_.EmitPush(RegTag::rsi, 8);
+            asmfile_.EmitPush(RegTag::rdi, 8);
+
+            asmfile_.EmitLeaq(mappeddest, RegTag::rdi);
+            asmfile_.EmitLeaq(mapped, RegTag::rsi);
+            asmfile_.EmitInstr(fmt::format(
+                "    movq ${}, %rcx\n", value->Type()->Size()));
+            asmfile_.EmitInstr("    rep movsb\n");
+
+            asmfile_.EmitPop(RegTag::rdi, 8);
+            asmfile_.EmitPop(RegTag::rsi, 8);
+            asmfile_.EmitPop(RegTag::rcx, 8);
+        }
+        return;
+    }
 
     auto mappedval = alloc_->GetIROpMap(value);
     if (value->Type()->Is<PtrType>() &&
@@ -1598,6 +1627,32 @@ void CodeGen::VisitLoadInstr(LoadInstr* inst)
             LeaqEmitHelper(mappedptr, alloc_->GetIROpMap(result));
         else
             MovEmitHelper(mappedptr, alloc_->GetIROpMap(result));
+        return;
+    }
+
+    if (result->Type()->Is<HeterType>())
+    {
+        auto used = alloc_->UsedIntReg();
+        if (used.count(RegTag2X64Phys(RegTag::rcx)))
+            asmfile_.EmitPush(RegTag::rcx, 8);
+        if (used.count(RegTag2X64Phys(RegTag::rsi)))
+            asmfile_.EmitPush(RegTag::rsi, 8);
+        if (used.count(RegTag2X64Phys(RegTag::rdi)))
+            asmfile_.EmitPush(RegTag::rdi, 8);
+
+        auto mappedres = alloc_->GetIROpMap(result);
+        asmfile_.EmitLeaq(mappedres, RegTag::rdi);
+        asmfile_.EmitLeaq(mappedptr, RegTag::rsi);
+        asmfile_.EmitInstr(fmt::format(
+            "    movq ${}, %rcx\n", result->Type()->Size()));
+        asmfile_.EmitInstr("    rep movsb\n");
+
+        if (used.count(RegTag2X64Phys(RegTag::rcx)))
+            asmfile_.EmitPop(RegTag::rdi, 8);
+        if (used.count(RegTag2X64Phys(RegTag::rsi)))
+            asmfile_.EmitPop(RegTag::rsi, 8);
+        if (used.count(RegTag2X64Phys(RegTag::rdi)))
+            asmfile_.EmitPop(RegTag::rcx, 8);
         return;
     }
 
