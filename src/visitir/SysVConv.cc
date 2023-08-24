@@ -27,8 +27,24 @@ void SysVConv::CheckParamClass(const IRType* t)
 
     // We're done if t is not aggregate type
     // array is treated as a pointer
-    if (t->Is<ArrayType>())
+    else if (t->Is<ArrayType>())
         wordclass_.push_back(ParamClass::integer);
+
+    // if a struct or union is greater than 64 bytes,
+    // then it is passed on the stack
+    else if (t->Is<HeterType>() && t->Size() > 64)
+        wordclass_.push_back(ParamClass::memory);
+
+    else if (t->Is<HeterType>())
+    {
+        for (size_t i = 0; i < t->Size(); i += 8)
+        {
+            if (HasFloat(t, i, i + 8, 0))
+                wordclass_.push_back(ParamClass::sse);
+            else
+                wordclass_.push_back(ParamClass::integer);
+        }
+    }
 }
 
 void SysVConv::Emplace(int i, const IRType* p, RegTag t)
@@ -41,6 +57,18 @@ void SysVConv::Emplace(int i, const IRType* p, RegTag t)
         return;
     }
     argvs_[i] = std::make_unique<x64Reg>(t, p->Size());
+}
+
+void SysVConv::Emplace(x64Heter* h, RegTag tag)
+{
+    if (tag != RegTag::none)
+        h->Map2Reg(tag);
+    else
+    {
+        AlignStackBy(0, 8);
+        h->Map2Mem(stacksize_);
+        stacksize_ += 8;
+    }
 }
 
 RegTag SysVConv::GetIntReg()
@@ -58,8 +86,48 @@ RegTag SysVConv::GetVecReg()
 }
 
 
+// from chibicc, codegen.c:
+// Structs or unions equal or smaller than 16 bytes are passed
+// using up to two registers.
+//
+// If the first 8 bytes contains only floating-point type members,
+// they are passed in an XMM register. Otherwise, they are passed
+// in a general-purpose register.
+//
+// If a struct/union is larger than 8 bytes, the same rule is
+// applied to the the next 8 byte chunk.
+// The HasFloat method here is adapted from has_flonum in chibicc.
+bool SysVConv::HasFloat(const IRType* ty, size_t lo, size_t hi, size_t offset)
+{
+    if (ty->Is<HeterType>())
+    {
+        auto h = ty->As<HeterType>();
+        for (auto m : *h)
+            if (!HasFloat(m.first, lo, hi, m.second))
+                return false;
+        return true;
+    }
+    if (ty->Is<ArrayType>())
+    {
+        auto array = ty->As<ArrayType>();
+        for (int i = 0; i < array->Count(); ++i)
+            if (!HasFloat(array->ArrayOf(), lo, hi,
+                offset + array->ArrayOf()->Size() * i))
+                return false;
+        return true;
+    }
+    return offset < lo || hi <= offset || ty->Is<FloatType>();
+}
+
+
 SysVConv::SysVConv(const FuncType* f) : functype_(f)
 {
+    // If the function returns a big structure/union,
+    // then rdi is used for storing the address of the return value.
+    // On return %rax will contain the address that has been
+    // passed in by the caller in %rdi.
+    if (f->ReturnType()->Is<HeterType>() && f->ReturnType()->Size() > 16)
+        intcnt_ = 1;
     for (int i = 0; i < f->ParamType().size(); ++i)
         CheckParamClass(f->ParamType()[i]);
 }
@@ -72,6 +140,23 @@ void SysVConv::MapArgv()
     int windex = 0;
     for (int i = 0; i < size; ++i)
     {
+        if (functype_->ParamType()[i]->Is<HeterType>() &&
+            functype_->ParamType()[i]->Size() <= 64)
+        {
+            auto sz = functype_->ParamType()[i]->Size();
+            auto heter = std::make_unique<x64Heter>(sz);
+            for (int index = 0; index < sz; index += 8)
+            {
+                if (wordclass_[windex] == ParamClass::integer)
+                    Emplace(heter.get(), GetIntReg());
+                else // if the eight bytes is classified into sse class
+                    Emplace(heter.get(), GetVecReg());
+                windex += 1;
+            }
+            argvs_[i] = std::move(heter);
+            continue;
+        }
+
         switch (wordclass_[windex])
         {
         case ParamClass::integer:
@@ -89,9 +174,25 @@ void SysVConv::MapArgv()
 
         // If the class is X87, X87UP or COMPLEX_X87,
         // it is passed in memory.
+        // If the class is MEMORY, pass the argument on the stack
+        // at an address respecting the arguments alignment (which
+        // might be more than its natural alignement).
+        // As when passing parameters, the stack is always aligned by 8,
+        // which is fit for all arithmetic types, only when the
+        // type is a struct or union may the 8-byte alignment become unfit.
+        // Hence we only change the align size when the type is a
+        // heterogeneous type with alignment greater than 8.
+        // A worth to note annoying case is that, if the type is over
+        // aligned, e.g., being 512-byte aligned, the simple approach
+        // here cannot guarantee the desired alignment. I would like to
+        // ignore the case for now.
         case ParamClass::x87:
         case ParamClass::memory:
-            AlignStackBy(0, 8);
+            if (auto ty = functype_->ParamType()[i];
+                ty->Is<HeterType>() && ty->Align() > 8)
+                AlignStackBy(0, ty->Align());
+            else
+                AlignStackBy(0, 8);
             memoffset_[i] = static_cast<long>(stacksize_);
             stacksize_ += functype_->ParamType()[i]->Size();
 
@@ -120,6 +221,11 @@ long SysVConv::OffsetOfArgv(int index) const
     if (memoffset_.find(index) != memoffset_.end())
         return memoffset_.at(index);
     return -1;
+}
+
+std::unique_ptr<x64>&& SysVConv::ExtractArgv(int i)
+{
+    return std::move(argvs_.at(i));
 }
 
 

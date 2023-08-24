@@ -22,10 +22,13 @@ public:
         /*complex_x87,*/ no_class, memory 
     };
 
+    static bool HasFloat(const IRType*, size_t, size_t, size_t);
+
     SysVConv(const FuncType*);
     void MapArgv();
     const x64* PlaceOfArgv(int) const;
     long OffsetOfArgv(int) const;
+    std::unique_ptr<x64>&& ExtractArgv(int);
 
     static RegTag Index2IntTag(int);
     static RegTag Index2VecTag(int);
@@ -38,6 +41,7 @@ private:
     void AlignStackBy(size_t, size_t);
     void CheckParamClass(const IRType*);
     void Emplace(int, const IRType*, RegTag);
+    void Emplace(x64Heter*, RegTag);
     RegTag GetIntReg();
     RegTag GetVecReg();
 
