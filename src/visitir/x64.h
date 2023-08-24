@@ -4,6 +4,8 @@
 #include "utils/DynCast.h"
 #include <cstring>
 #include <string>
+#include <variant>
+#include <vector>
 
 class Constant;
 
@@ -37,7 +39,7 @@ enum class RegTag
 class x64
 {
 public:
-    enum class x64Id { reg, mem, imm };
+    enum class x64Id { reg, mem, imm, heter };
     static bool ClassOf(const x64* const) { return true; }
     x64Id id_{};
 
@@ -103,9 +105,11 @@ public:
     bool& LoadTwice() { return loadtwice_; }
     bool LoadTwice() const { return loadtwice_; }
 
+    auto& Offset() { return offset_; }
     auto Offset() const { return offset_; }
     auto& Base() const { return base_; }
     auto& Index() const { return index_; }
+    auto& Scale() { return scale_; }
     auto Scale() const { return scale_; }
 
 private:
@@ -143,6 +147,53 @@ public:
 
 private:
     const Constant* val_{};
+};
+
+
+class x64Heter : public x64
+{
+public:
+    class Place
+    {
+    public:
+        Place(RegTag t) : place_(t) {}
+        Place(size_t s) : place_(s) {}
+
+        bool InReg() const { return std::holds_alternative<RegTag>(place_); }
+        bool InStack() const { return std::holds_alternative<size_t>(place_); }
+        RegTag ToReg() const { return std::get<0>(place_); }
+        size_t ToOffset() const { return std::get<1>(place_); }
+
+    private:
+        std::variant<RegTag, size_t> place_{};
+    };
+
+    static bool ClassOf(const x64Heter* const) { return true; }
+    static bool ClassOf(const x64* const h) { return h->id_ == x64Id::heter; }
+
+    x64Heter(size_t s) : x64(x64Id::heter, s) {}
+
+    std::string ToString() const override { return ""; }
+
+    auto begin() { return chunks_.begin(); }
+    auto end() { return chunks_.end(); }
+    auto begin() const { return chunks_.cbegin(); }
+    auto end() const { return chunks_.cend(); }
+    auto rbegin() { return chunks_.rbegin(); }
+    auto rend() { return chunks_.rend(); }
+    auto rbegin() const { return chunks_.crbegin(); }
+    auto rend() const { return chunks_.crend(); }
+
+    auto& Front() const { return chunks_.front(); }
+    auto& Back() const { return chunks_.back(); }
+
+    auto Count() const { return chunks_.size(); }
+
+    void Map2Reg(RegTag r) { chunks_.push_back(r); }
+    void Map2Mem(size_t s) { chunks_.push_back(s); }
+
+private:
+    std::vector<Place> chunks_{};
 };
 
 
