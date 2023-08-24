@@ -4,6 +4,7 @@
 #include "IR/Value.h"
 #include "pass/x64Alloc.h"
 #include <climits>
+#include <fmt/format.h>
 #include <memory>
 #include <string>
 
@@ -46,6 +47,16 @@ static RegTag X64Phys2RegTag(x64Phys phys)
 static x64Phys RegTag2X64Phys(RegTag tag)
 {
     return static_cast<x64Phys>(static_cast<int>(tag) - 2);
+}
+
+static bool IsVecReg(x64Phys phys)
+{
+    return static_cast<int>(phys) > 15;
+}
+
+static bool IsVecReg(RegTag tag)
+{
+    return static_cast<int>(tag) > 17;
 }
 
 
@@ -165,6 +176,58 @@ void CodeGen::DeallocFrame()
 }
 
 
+void CodeGen::MapHeterParam(const x64Mem* mem, const x64Heter* heter)
+{
+    auto oldoff = mem->Offset();
+    auto chunks = mem->Size() / 8;
+    if (chunks)
+        const_cast<x64Mem*>(mem)->Offset() += (chunks - 1) * 8;
+
+    auto& phigh = heter->Back();
+    auto remain = mem->Size() - chunks * 8;
+    if (remain == 0)
+        remain = 8;
+
+    if (phigh.InReg())
+    {
+        if (IsVecReg(phigh.ToReg()))
+        {
+            Copy8Bytes(mem, RegTag::rax, RegTag::r11, remain);
+            x64Reg to{ phigh.ToReg() };
+            asmfile_.EmitInstr(fmt::format(
+                "    vmovq %r11, {}\n", to.ToString()));
+        }
+        else
+            Copy8Bytes(mem, RegTag::rax, phigh.ToReg(), remain);
+    }
+    else
+    {
+        AdjustRsp(-8);
+        x64Mem rsp{ 0, 0, RegTag::rsp, RegTag::none, 0 };
+        Copy8Bytes(mem, RegTag::rax, &rsp, remain);
+    }
+
+    for (auto i = heter->rbegin() + 1; i != heter->rend(); ++i)
+    {
+        const_cast<x64Mem*>(mem)->Offset() -= 8;
+        if (i->InReg())
+        {
+            x64Reg r{ i->ToReg() };
+            if (IsVecReg(i->ToReg()))
+                asmfile_.EmitInstr(fmt::format(
+                    "    vmovq {}, {}\n", mem->ToString(), r.ToString()));
+            else
+                asmfile_.EmitMov(mem, &r);
+        }
+        else
+        {
+            asmfile_.EmitInstr(
+                fmt::format("    pushq {}\n", mem->ToString()));
+            stacksize_ += 8;
+        }
+    }
+}
+
 void CodeGen::MapPtrParam2Mem(const x64* ptr)
 {
     auto mem = ptr->As<x64Mem>();
@@ -230,9 +293,64 @@ void CodeGen::MapOtherParam2Reg(const x64* param, const x64Reg* loc)
 void CodeGen::PassParam(
     const SysVConv& conv, const std::vector<const IROperand*>& param)
 {
+    long prevoffset = 0;    
     for (int i = param.size() - 1; i >= 0; --i)
     {
         auto load2reg = conv.PlaceOfArgv(i);
+        if (prevoffset && !load2reg)
+        {
+            // +--------------------------+ <- rsp in caller before
+            // |    80-byte big heter,    |    passing params
+            // |       align = 16         |
+            // +--------------------------+ <- prevoffset
+            // |         Padding          | <- size of padding is calc based
+            // +--------------------------+    on val of rbp in the callee,
+            // |       8-byte chunk       |    but not rsp in the caller
+            // +--------------------------+ <- OffsetOfArgv(i)
+            // |       Return addr        |
+            // +--------------------------+
+            // |         Saved rbp        |    rbp in callee;
+            // +--------------------------+ <- base of the offsets
+            //
+            // Sometimes heterogeneous parameters can have alignment
+            // more than 8. Things become tricky when alignment exceeds
+            // 16 and the case is now ignored for simplicity.
+            // If the alignment is just 16, we may need to add padding
+            // between the current and the next parameter. However, the
+            // padding is calculated from the perspective of rbp in callee,
+            // and we have to get it from the mapped offset.
+            auto chunk = param[i]->Type()->Size() <= 8 ?
+                8 : param[i]->Type()->Size();
+            auto padding = prevoffset - (conv.OffsetOfArgv(i) + chunk);
+            if (padding)
+                AdjustRsp(-padding);
+            prevoffset = 0;
+        }
+
+        if (param[i]->Type()->Is<HeterType>())
+        {
+            if (auto size = param[i]->Type()->Size(); size > 64)
+            {
+                AdjustRsp(-size);
+                asmfile_.EmitPush(RegTag::rcx, 8);
+                asmfile_.EmitPush(RegTag::rsi, 8);
+                asmfile_.EmitPush(RegTag::rdi, 8);
+
+                asmfile_.EmitInstr("    leaq 24(%rsp), %rdi\n");
+                asmfile_.EmitLeaq(alloc_->GetIROpMap(param[i]), RegTag::rsi);
+                asmfile_.EmitInstr(fmt::format("    movq ${}, %rcx\n", size));
+                asmfile_.EmitInstr("    rep movsb\n");
+
+                asmfile_.EmitPop(RegTag::rdi, 8);
+                asmfile_.EmitPop(RegTag::rsi, 8);
+                asmfile_.EmitPop(RegTag::rcx, 8);
+            }
+            else
+                MapHeterParam(alloc_->GetIROpMap(param[i])->As<x64Mem>(),
+                    load2reg->As<x64Heter>());
+            continue;
+        }
+
         auto mapped = MapPossibleFloat(param[i]);
         if (!load2reg && param[i]->Type()->Is<PtrType>())
             MapPtrParam2Mem(mapped);
@@ -246,14 +364,12 @@ void CodeGen::PassParam(
             MapFltParam2Reg(mapped, load2reg->As<x64Reg>());
         else if (load2reg)
             MapOtherParam2Reg(mapped, load2reg->As<x64Reg>());
+
+        if (!load2reg)
+            prevoffset = conv.OffsetOfArgv(i);
     }
 }
 
-
-static bool IsVecReg(x64Phys phys)
-{
-    return static_cast<int>(phys) > 15;
-}
 
 void CodeGen::SaveCalleeSaved()
 {
@@ -301,6 +417,165 @@ void CodeGen::RestoreCallerSaved()
         else
             PopEmitHelper(X64Phys2RegTag(*i), 8);
     }
+}
+
+
+void CodeGen::Copy8Bytes(
+    const x64* mem, RegTag r1, RegTag r2, size_t size)
+{
+    if (size == 1 || size == 2 || size == 4 || size == 8)
+    {
+        x64Reg reg{ r2, size };
+        asmfile_.EmitMov(mem, &reg);
+        return;
+    }
+
+    // else if size == 3, 5, 6, 7
+    auto m = mem->As<x64Mem>();
+    auto oldoff = m->Offset();
+    x64Reg via1{ r1, 1 };
+    x64Reg via8{ r1 };
+    x64Reg to{ r2 };
+
+    asmfile_.EmitBinary("xor", &via8, &via8);
+    for (auto off = 0; off < size; ++off)
+    {
+        asmfile_.EmitMov(m, &via1);
+        asmfile_.EmitBinary("shl", off * 8, &via8);
+        asmfile_.EmitBinary("or", &via8, &to);
+        asmfile_.EmitBinary("xor", &via8, &via8);
+        const_cast<x64Mem*>(m)->Offset()++;
+    }
+    const_cast<x64Mem*>(m)->Offset() = oldoff;
+}
+
+void CodeGen::Copy8Bytes(RegTag from, const x64Mem* to, size_t remain)
+{
+    if (remain == 1 || remain == 2 || remain == 4 || remain == 8)
+    {
+        x64Reg reg{ from, remain };
+        asmfile_.EmitMov(&reg, to, 0);
+        return;
+    }
+
+    // else if remain == 3, 5, 6, 7
+    x64Reg reg{ from, 1 };
+    x64Reg reg8{ from };
+    auto oldoffset = to->Offset();
+    for (int i = 0; i < remain; ++i)
+    {
+        asmfile_.EmitMov(&reg, to, 0);
+        asmfile_.EmitBinary("shr", 8, &reg8);
+        const_cast<x64Mem*>(to)->Offset() += 1;
+    }
+    const_cast<x64Mem*>(to)->Offset() = oldoffset;
+}
+
+void CodeGen::Copy8Bytes(
+    const x64Mem* from, RegTag v, const x64Mem* to, size_t remain)
+{
+    if (remain == 1 || remain == 2 || remain == 4 || remain == 8)
+    {
+        x64Reg via{ v, remain };
+        asmfile_.EmitMov(from, &via);
+        asmfile_.EmitMov(&via, to, 0);
+        return;
+    }
+
+    x64Reg via{ v, 1 };
+    auto oldfrom = from->Offset();
+    auto oldto = to->Offset();
+    for (int i = 0; i < remain; ++i)
+    {
+        asmfile_.EmitMov(from, &via);
+        asmfile_.EmitMov(&via, to, 0);
+        const_cast<x64Mem*>(from)->Offset() += 1;
+        const_cast<x64Mem*>(to)->Offset() += 1;
+    }
+    const_cast<x64Mem*>(from)->Offset() = oldfrom;
+    const_cast<x64Mem*>(to)->Offset() = oldto;
+}
+
+
+void CodeGen::CopySmallHeterIn(const x64* mem, const HeterType* ty)
+{
+    Copy8Bytes(mem, RegTag::rdi,
+        RegTag::rax, ty->Size() > 8 ? 8 : ty->Size());
+    if (ty->Size() > 8)
+    {
+        auto m = mem->As<x64Mem>();
+        const_cast<x64Mem*>(m)->Offset() += 8;
+        Copy8Bytes(m, RegTag::rdi, RegTag::rdx, ty->Size() - 8);
+    }
+
+    if (SysVConv::HasFloat(ty, 0, 8, 0))
+        asmfile_.EmitInstr("    vmovq %rax, %xmm0\n");
+    if (SysVConv::HasFloat(ty, 8, 16, 0))
+        asmfile_.EmitInstr("    vmovq %rdx, %xmm1\n");
+}
+
+void CodeGen::CopySmallHeterOut(const x64* mem, const HeterType* h)
+{
+    if (SysVConv::HasFloat(h, 0, 8, 0))
+        asmfile_.EmitInstr("    vmovq %xmm0, %rax\n");
+    if (SysVConv::HasFloat(h, 8, 16, 0))
+        asmfile_.EmitInstr("    vmovq %xmm1, %rdx\n");
+
+    auto size = h->Size();
+    Copy8Bytes(RegTag::rax, mem->As<x64Mem>(), size > 8 ? 8 : size);
+    if (size > 8)
+    {
+        auto m = mem->As<x64Mem>();
+        const_cast<x64Mem*>(m)->Offset() += 8;
+        Copy8Bytes(RegTag::rdx, m, size - 8);
+        const_cast<x64Mem*>(m)->Offset() -= 8;
+    }
+}
+
+void CodeGen::CopyBigHeter(const x64* m)
+{
+    // The destination is already in rdi.
+    asmfile_.EmitLeaq(m, RegTag::rsi);
+    asmfile_.EmitInstr(fmt::format("    movq ${}, %rcx\n", m->Size()));
+    asmfile_.EmitInstr("    rep movsb\n");
+}
+
+void CodeGen::LoadHeterParam(const x64Heter* heter, const x64Mem* mem)
+{
+    auto oldoff = mem->Offset();
+    for (auto i = heter->begin(); i != heter->end() - 1; ++i)
+    {
+        if (i->InReg())
+        {
+            x64Reg reg{ i->ToReg() };
+            if (IsVecReg(i->ToReg()))
+                asmfile_.EmitInstr(fmt::format(
+                    "    vmovq {}, {}\n", reg.ToString(), mem->ToString()));
+            else
+                asmfile_.EmitMov(&reg, mem, 0);
+        }
+        else // if i in stack
+        {
+            auto offset = i->ToOffset();
+            asmfile_.EmitInstr(fmt::format(
+                "    movq {}(%rbp), %rax\n", static_cast<long>(offset) + 16));
+            asmfile_.EmitInstr(fmt::format(
+                "    movq %rax, {}\n", mem->ToString()));
+        }
+        const_cast<x64Mem*>(mem)->Offset() += 8;
+    }
+
+    auto remain = heter->Size() - (heter->Count() - 1) * 8;
+    if (heter->Back().InReg())
+        Copy8Bytes(heter->Back().ToReg(), mem, remain);
+    else // heter->Back().InStack()
+    {
+        x64Mem rbp{ 8, 
+            static_cast<long>(heter->Back().ToOffset()) + 16,
+            RegTag::rbp, RegTag::none, 0 };
+        Copy8Bytes(&rbp, RegTag::rax, mem, remain);
+    }
+    const_cast<x64Mem*>(mem)->Offset() = oldoff;
 }
 
 
@@ -1073,6 +1348,44 @@ void CodeGen::VisitRetInstr(RetInstr* inst)
             goto ret;
         VecMovEmitHelper(MapPossibleFloat(inst->ReturnValue()), RegTag::xmm0);
     }
+    else if (inst->ReturnValue()->Type()->Is<HeterType>())
+    {
+        auto mapped = alloc_->GetIROpMap(inst->ReturnValue());
+        if (inst->ReturnValue()->Type()->Size() > 16)
+        {
+            CopyBigHeter(mapped);
+            asmfile_.EmitInstr("    movq %rdi, %rax\n");
+        }
+        else if (mapped->Is<x64Mem>())
+            CopySmallHeterIn(mapped, inst->ReturnValue()->Type()->As<HeterType>());
+        else // if (mapped->Is<x64Heter>())
+        {
+            auto fromreg = [this] (RegTag from, RegTag to) {
+                x64Reg f{ from, 8 };
+                asmfile_.EmitMov(&f, RegTag::rax);
+            };
+            auto fromstack = [this] (size_t offset, const std::string& r) {
+                auto o = static_cast<long>(offset) + 16;
+                asmfile_.EmitInstr(
+                    fmt::format("    movq {}(%rbp), {}\n", o, r));
+            };
+            auto h = mapped->As<x64Heter>();
+            auto& first = h->Front();
+            if (first.InReg())
+                fromreg(first.ToReg(), RegTag::rax);
+            else // if (first.InStack())
+                fromstack(first.ToOffset(), "%rax");
+
+            if (h->Size() <= 8)
+                goto ret;
+
+            auto& second = h->Back();
+            if (second.InReg())
+                fromreg(second.ToReg(), RegTag::rdx);
+            else // if (second.InStack())
+                fromstack(second.ToOffset(), "%rdx");
+        }
+    }
 
 ret:
     // what if there's multiple ret instruction in a function?
@@ -1167,7 +1480,11 @@ void CodeGen::VisitCallInstr(CallInstr* inst)
 
     auto extra = GetAlign(stacksize_, 16);
     AdjustRsp(-(conv.Padding() + extra));
+
+    if (proto->ReturnType()->Is<HeterType>() && proto->ReturnType()->Size() > 16)
+        asmfile_.EmitLeaq(alloc_->GetIROpMap(inst->Result()), RegTag::rdi);
     PassParam(conv, inst->ArgvList());
+
     if (inst->FuncAddr())
         asmfile_.EmitCall(alloc_->GetIROpMap(inst->FuncAddr()));
     else
@@ -1177,18 +1494,30 @@ void CodeGen::VisitCallInstr(CallInstr* inst)
     AdjustRsp(conv.StackSize() + extra);
     RestoreCallerSaved();
 
-    if (inst->Result() && inst->Result()->Type()->Is<IntType>())
+    if (!inst->Result())
+        return;
+
+    if (inst->Result()->Type()->Is<IntType>())
     {
         auto x64reg = alloc_->GetIROpMap(inst->Result());
         if (!x64reg->Is<x64Reg>() || x64reg->As<x64Reg>()->Tag() != RegTag::rax)
             asmfile_.EmitMov(RegTag::rax, x64reg);
     }
-    else if (inst->Result() && inst->Result()->Type()->Is<FloatType>())
+    else if (inst->Result()->Type()->Is<FloatType>())
     {
         auto vecreg = alloc_->GetIROpMap(inst->Result());
         if (!vecreg->Is<x64Reg>() || vecreg->As<x64Reg>()->Tag() != RegTag::xmm0)
             VecMovEmitHelper(RegTag::xmm0, vecreg);
     }
+    else if (inst->Result()->Type()->Is<HeterType>() &&
+        inst->Result()->Type()->Size() <= 16)
+    {
+        CopySmallHeterOut(
+            alloc_->GetIROpMap(inst->Result()),
+            inst->Result()->Type()->As<HeterType>());
+    }
+    // else if the result with hetertype is geater than 16 bytes
+    // the return value will be loaded directly to the desired address
 }
 
 

@@ -20,6 +20,7 @@ class x64Alloc;
 class x64Imm;
 class x64Mem;
 class x64Reg;
+class x64Heter;
 enum class Condition;
 enum class RegTag;
 
@@ -152,6 +153,7 @@ private:
     void AdjustRsp(long);
     void DeallocFrame();
 
+    void MapHeterParam(const x64Mem*, const x64Heter*);
     void MapPtrParam2Mem(const x64*);
     void MapPtrParam2Reg(const x64*, const x64Reg*);
     void MapFltParam2Mem(const x64*);
@@ -164,6 +166,15 @@ private:
     void RestoreCalleeSaved();
     void SaveCallerSaved();
     void RestoreCallerSaved();
+
+    void Copy8Bytes(const x64*, RegTag, RegTag, size_t);
+    void Copy8Bytes(RegTag, const x64Mem*, size_t);
+    void Copy8Bytes(const x64Mem*, RegTag, const x64Mem*, size_t);
+
+    void CopySmallHeterIn(const x64*, const HeterType*);
+    void CopySmallHeterOut(const x64*, const HeterType*);
+    void CopyBigHeter(const x64*);
+    void LoadHeterParam(const x64Heter*, const x64Mem*);
 
     RegTag GetSpareIntReg(int) const;
     RegTag GetSpareVecReg(int) const;
