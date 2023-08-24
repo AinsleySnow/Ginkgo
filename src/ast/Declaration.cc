@@ -43,6 +43,16 @@ const HeterSpec* DeclSpec::GetHeterSpec() const
 }
 
 
+void DeclSpec::Extend(std::unique_ptr<DeclSpec>& ds)
+{
+    speclist_.splice(speclist_.end(), ds->speclist_);
+    storagelist_.splice(storagelist_.end(), ds->storagelist_);
+    quallist_.splice(quallist_.end(), ds->quallist_);
+    funcspeclist_.splice(funcspeclist_.end(), ds->funcspeclist_);
+    aligns_.splice(aligns_.end(), ds->aligns_);
+}
+
+
 TypeTag DeclSpec::GetTypeTag()
 {
     for (auto& tyspec : speclist_)

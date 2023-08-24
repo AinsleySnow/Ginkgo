@@ -147,6 +147,8 @@ public:
     void AddAlignSpec(AlignSpec a) { aligns_.push_back(std::move(a)); }
     const auto& AlignSpecs() const { return aligns_; }
 
+    void Extend(std::unique_ptr<DeclSpec>&);
+
     TypeTag GetTypeTag();
     QualType Qual();
     StorageType Storage();

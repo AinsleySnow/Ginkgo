@@ -102,8 +102,8 @@ conditional_expression assignment_expression expression constant_expression
 constant initializer initializer_list
 
 %type <std::unique_ptr<DeclList>> init_declarator_list
-%type <std::unique_ptr<HeterList>> struct_declarator_list
-%type <HeterFields> struct_declaration_list
+%type <std::unique_ptr<HeterList>> member_declarator_list
+%type <HeterFields> member_declaration_list
 %type <std::unique_ptr<InitDecl>> init_declarator
 %type <std::unique_ptr<ParamList>> parameter_type_list parameter_list
 
@@ -113,10 +113,10 @@ constant initializer initializer_list
 %type <QualType> type_qualifier_list
 %type <std::unique_ptr<TypeSpec>> type_specifier enum_specifier
 %type <std::unique_ptr<HeterSpec>> struct_or_union_specifier
-%type <std::unique_ptr<DeclSpec>> declaration_specifiers specifier_qualifier_list
+%type <std::unique_ptr<DeclSpec>> declaration_specifiers specifier_qualifier_list type_specifier_qualifier
 %type <std::unique_ptr<PtrDef>> pointer
 %type <std::unique_ptr<Declaration>> declarator direct_declarator function_definition
-parameter_declaration type_name enum_type_specifier struct_declarator struct_declaration
+parameter_declaration type_name enum_type_specifier member_declarator member_declaration
 direct_abstract_declarator abstract_declarator
 %type <std::unique_ptr<TransUnit>> translation_unit
 
@@ -648,12 +648,12 @@ type_specifier
 	;
 
 struct_or_union_specifier
-	: struct_or_union '{' struct_declaration_list '}'
+	: struct_or_union '{' member_declaration_list '}'
     {
         $$ = std::make_unique<HeterSpec>($1);
         $$->LoadHeterFields(std::move($3));
     }
-	| struct_or_union IDENTIFIER '{' struct_declaration_list '}'
+	| struct_or_union IDENTIFIER '{' member_declaration_list '}'
     {
         $$ = std::make_unique<HeterSpec>($1, $2);
         $$->LoadHeterFields(std::move($4));
@@ -667,69 +667,74 @@ struct_or_union
 	| UNION     // fall through
 	;
 
-struct_declaration_list
-	: struct_declaration
+member_declaration_list
+    : member_declaration
     {
         $$ = HeterFields();
         $$.push_back(std::move($1));
     }
-	| struct_declaration_list struct_declaration
+    | member_declaration_list member_declaration
     {
         $1.push_back(std::move($2));
         $$ = std::move($1);
     }
-	;
+    ;
 
-struct_declaration
-	: specifier_qualifier_list ';'	/* for anonymous struct/union */
+member_declaration
+    : specifier_qualifier_list ';' /* for anonymous struct/union */
     { $$ = std::move($1); }
-	| specifier_qualifier_list struct_declarator_list ';'
+    | specifier_qualifier_list member_declarator_list ';'
     {
         std::shared_ptr<DeclSpec> ds = std::move($1);
         for (auto& decl : *$2)
             decl->InnerMost()->SetChild(ds);
         $$ = std::move($2);
     }
-	| static_assert_declaration { $$ = nullptr; } // TODO
-	;
+    | static_assert_declaration { $$ = nullptr; } // TODO
+    ;
 
 specifier_qualifier_list
-	: type_specifier specifier_qualifier_list   %prec LOWER_THAN_SPEC
+    : type_specifier_qualifier                          %prec LOWER_THAN_SPEC
+    { $$ = std::move($1); }
+    | type_specifier_qualifier specifier_qualifier_list %prec LOWER_THAN_SPEC
     {
-        $2->AddTypeSpec(std::move($1));
+        $2->Extend($1);
         $$ = std::move($2);
     }
-	| type_specifier                            %prec LOWER_THAN_SPEC
+    ;
+
+type_specifier_qualifier
+    : type_specifier
     {
         $$ = std::make_unique<DeclSpec>();
         $$->AddTypeSpec(std::move($1));
     }
-	| type_qualifier specifier_qualifier_list   %prec LOWER_THAN_SPEC
-    {
-        $2->SetQual($1);
-        $$ = std::move($2);
-    }
-	| type_qualifier                            %prec LOWER_THAN_SPEC
+    | type_qualifier
     {
         $$ = std::make_unique<DeclSpec>();
         $$->SetQual($1);
     }
-	;
+    | alignment_specifier
+    {
+        $$ = std::make_unique<DeclSpec>();
+        $$->AddAlignSpec(std::move($1));
+    }
+    ;
 
-struct_declarator_list
-	: struct_declarator
+member_declarator_list
+	: member_declarator
     {
         $$ = std::make_unique<HeterList>();
         $$->Append(std::move($1));
     }
-	| struct_declarator_list ',' struct_declarator
+	| member_declarator_list ',' member_declarator
     {
         $1->Append(std::move($3));
         $$ = std::move($1);
     }
 	;
 
-struct_declarator
+member_declarator
 	: ':' constant_expression
     { $$ = std::make_unique<BitFieldDef>(std::move($2)); }
 	| declarator ':' constant_expression
