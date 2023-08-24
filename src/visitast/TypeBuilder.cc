@@ -196,7 +196,7 @@ std::unique_ptr<CEnumType> TypeBuilder::EnumHelper(const EnumSpec* spec, size_t 
         underlying = std::move(spec->EnumeratorList()->Type()->Clone());
 
     std::unique_ptr<CEnumType> ty = nullptr;
-    if (align)
+    if (align > underlying->Align())
         ty = std::make_unique<CEnumType>(spec->Name(), std::move(underlying), align);
     else
         ty = std::make_unique<CEnumType>(spec->Name(), std::move(underlying));
@@ -281,7 +281,7 @@ std::unique_ptr<T> TypeBuilder::HeterHelper(const HeterSpec* spec, size_t align)
 
     if (!spec->Name().empty())
         scopestack_.Top().AddCustomed(spec->Name(), ty.get());
-    if (align)
+    if (align > ty->Align())
         ty->Align() = align;
     return std::move(ty);
 }
