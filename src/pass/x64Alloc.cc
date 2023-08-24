@@ -17,7 +17,7 @@ void x64Alloc::LoadParam()
     {
         auto loc = conv.PlaceOfArgv(i);
         if (loc)
-            MapRegister(params[i], std::make_unique<x64Reg>(*loc->As<x64Reg>()));
+            MapRegister(params[i], conv.ExtractArgv(i));
         else
         {
             auto offset = conv.OffsetOfArgv(i);
@@ -66,6 +66,27 @@ std::string x64Alloc::PrintSummary() const
             summary += fmt::format("{} -> {}\n", r->Name(), to->ToString());
     summary += '\n';
     return std::move(summary);
+}
+
+
+void x64Alloc::ExitFunction()
+{
+    Clear();
+    ArchInfo() = x64Stack();
+    CurFunc() = nullptr;
+    ir_.clear();
+    reg_.clear();
+}
+
+void x64Alloc::ExecuteOnFunction(Function* func)
+{
+    CurFunc() = func;
+    VisitFunction(func);
+    reg_ = std::move(UsedRegs());
+    info_ = std::move(ArchInfo());
+
+    if (func->ReturnType()->Is<HeterType>() && func->ReturnType()->Size() > 16)
+        reg_.insert(x64Phys::rdi);
 }
 
 

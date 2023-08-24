@@ -76,21 +76,8 @@ public:
 
     std::string PrintSummary() const override;
 
-    void ExitFunction() override
-    {
-        Clear();
-        ArchInfo() = x64Stack();
-        CurFunc() = nullptr;
-        ir_.clear();
-        reg_.clear();
-    }
-    void ExecuteOnFunction(Function* func) override
-    {
-        CurFunc() = func;
-        VisitFunction(func);
-        reg_ = std::move(UsedRegs());
-        info_ = std::move(ArchInfo());
-    }
+    void ExitFunction() override;
+    void ExecuteOnFunction(Function*) override;
 
     const x64* GetIROpMap(const IROperand* op) const;
     long RspOffset() const { return info_.rspoffset_; }
