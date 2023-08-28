@@ -121,7 +121,12 @@ private:
 
 class TypedefSpec : public TypeSpec
 {
-    // TODO
+public:
+    TypedefSpec(std::string&& s) : TypeSpec(Tag::_typedef), name_(s) {}
+    const auto& Name() const { return name_; }
+
+private:
+    std::string name_{};
 };
 
 
@@ -143,6 +148,7 @@ public:
     void AddTypeSpec(std::unique_ptr<::TypeSpec> ts);
     const EnumSpec* GetEnumSpec() const;
     const HeterSpec* GetHeterSpec() const;
+    const TypedefSpec* GetTypedefSpec() const;
 
     void AddAlignSpec(AlignSpec a) { aligns_.push_back(std::move(a)); }
     const auto& AlignSpecs() const { return aligns_; }

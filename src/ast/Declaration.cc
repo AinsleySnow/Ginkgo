@@ -42,6 +42,12 @@ const HeterSpec* DeclSpec::GetHeterSpec() const
         speclist_.front().get());
 }
 
+const TypedefSpec* DeclSpec::GetTypedefSpec() const
+{
+    return static_cast<const TypedefSpec*>(
+        speclist_.front().get());
+}
+
 
 void DeclSpec::Extend(std::unique_ptr<DeclSpec>& ds)
 {
@@ -125,6 +131,9 @@ TypeTag DeclSpec::GetTypeTag()
     // union
     case int(Tag::_union):
         return TypeTag::_union;
+
+    case int(Tag::_typedef):
+        return TypeTag::_typedef;
 
     // others
     default: return TypeTag::customed;
