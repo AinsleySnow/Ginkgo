@@ -204,11 +204,17 @@ void IRGen::VisitDeclList(DeclList* list)
     {
         initdecl->declarator_->Accept(this);
 
+        auto raw = initdecl->declarator_->RawType();
+        auto name = initdecl->declarator_->ToObjDef()->Name();
+        if (raw->Storage().IsTypedef())
+        {
+            scopestack_.Top().AddTypedef(name, raw);
+            continue;
+        }
+
         if (!initdecl->declarator_->Child()->IsFuncDef())
         {
-            initdecl->base_ = AllocaObject(
-                initdecl->declarator_->RawType(),
-                initdecl->declarator_->ToObjDef()->Name());
+            initdecl->base_ = AllocaObject(raw, name);
 
             if (initdecl->initalizer_)
             {

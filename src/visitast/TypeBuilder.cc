@@ -160,6 +160,7 @@ void TypeBuilder::VisitArrayDef(ArrayDef* def)
 
     array->VariableLen() = def->Variable();
     array->Qual() = def->Qual();
+    array->Storage() = array->ArrayOf()->Storage();
     array->Static() = def->Static();
 
     def->Type() = std::move(array);
@@ -286,6 +287,16 @@ std::unique_ptr<T> TypeBuilder::HeterHelper(const HeterSpec* spec, size_t align)
     return std::move(ty);
 }
 
+std::unique_ptr<CType> TypeBuilder::TypedefHelper(const TypedefSpec* spec, size_t align)
+{
+    auto t = scopestack_.UnderlyingTydef(spec->Name());
+    auto ty = t->Clone();
+    ty->Storage().UnsetToken(StorageTag::_typedef);
+    if (align > ty->Align())
+        ty->Align() = align;
+    return std::move(ty);
+}
+
 
 void TypeBuilder::VisitDeclSpec(DeclSpec* spec)
 {
@@ -350,6 +361,13 @@ void TypeBuilder::VisitDeclSpec(DeclSpec* spec)
         scopestack_.Top().AddCustomed(ty->Name(), ty.get());
         spec->Type() = std::move(ty);
     }
+    else if (tag == TypeTag::_typedef)
+    {
+        auto ty = TypedefHelper(spec->GetTypedefSpec(), align);
+        ty->Qual() = spec->Qual();
+        ty->Storage() = spec->Storage();
+        spec->Type() = std::move(ty);
+    }
 }
 
 
@@ -364,10 +382,10 @@ void TypeBuilder::VisitFuncDef(FuncDef* def)
 
     DeclSpec* declspec = def->Child()->InnerMost()->ToDeclSpec();
 
-    bool _inline = declspec->Func().IsInline();
-    bool _noreturn = declspec->Func().IsNoreturn();
-    funccty->Inline() = _inline;
-    funccty->Noreturn() = _noreturn;
+    funccty->Storage() = declspec->Storage();
+    funccty->Qual() = declspec->Qual();
+    funccty->Inline() = declspec->Func().IsInline();
+    funccty->Noreturn() = declspec->Func().IsNoreturn();
     funccty->Variadic() = def->paramlist_->Variadic();
 
     for (auto param : def->GetParamType())
@@ -387,9 +405,10 @@ void TypeBuilder::VisitObjDef(ObjDef* def)
 void TypeBuilder::VisitPtrDef(PtrDef* def)
 {
     def->Child()->Accept(&visitor_);
-    def->Type() = std::make_unique<CPtrType>(
-        std::move(def->Child()->Type()));
-    def->Type()->Qual() = def->qual_;
+    auto ty = std::make_unique<CPtrType>(std::move(def->Child()->Type()));
+    ty->Qual() = def->qual_;
+    ty->Storage() = ty->Point2()->Storage();
+    def->Type() = std::move(ty);
 }
 
 
