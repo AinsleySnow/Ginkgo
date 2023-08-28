@@ -52,7 +52,7 @@ static void comment(void);
 "/*"                    { comment(); }
 "//".*                  { /* consume //-comment */ }
 
-"auto"					{ return YYTOKEN::AUTO; }
+"auto"					{ yylval->emplace<Tag>() = Tag::_auto; return YYTOKEN::AUTO; }
 "break"					{ yylval->emplace<Tag>() = Tag::_break; return YYTOKEN::BREAK; }
 "case"					{ yylval->emplace<Tag>() = Tag::_case; return YYTOKEN::CASE; }
 "char"					{ yylval->emplace<Tag>() = Tag::_char; return YYTOKEN::CHAR; }
@@ -62,7 +62,7 @@ static void comment(void);
 "do"					{ yylval->emplace<Tag>() = Tag::_do; return YYTOKEN::DO; }
 "double"				{ yylval->emplace<Tag>() = Tag::_double; return YYTOKEN::DOUBLE; }
 "else"					{ yylval->emplace<Tag>() = Tag::_else; return YYTOKEN::ELSE; }
-"extern"				{ return YYTOKEN::EXTERN; }
+"extern"				{ yylval->emplace<Tag>() = Tag::_extern; return YYTOKEN::EXTERN; }
 "float"					{ yylval->emplace<Tag>() = Tag::_float; return YYTOKEN::FLOAT; }
 "for"					{ yylval->emplace<Tag>() = Tag::_for; return YYTOKEN::FOR; }
 "goto"					{ yylval->emplace<Tag>() = Tag::_goto; return YYTOKEN::GOTO; }
@@ -70,15 +70,16 @@ static void comment(void);
 "inline"				{ yylval->emplace<Tag>() = Tag::_inline; return YYTOKEN::INLINE; }
 "int"					{ yylval->emplace<Tag>() = Tag::_int; return YYTOKEN::INT; }
 "long"					{ yylval->emplace<Tag>() = Tag::_long; return YYTOKEN::LONG; }
-"register"				{ return YYTOKEN::REGISTER; }
+"register"				{ yylval->emplace<Tag>() = Tag::_register; return YYTOKEN::REGISTER; }
 "restrict"				{ yylval->emplace<Tag>() = Tag::_restrict; return YYTOKEN::RESTRICT; }
 "return"				{ yylval->emplace<Tag>() = Tag::_return; return YYTOKEN::RETURN; }
 "short"					{ yylval->emplace<Tag>() = Tag::_short; return YYTOKEN::SHORT; }
 "signed"				{ yylval->emplace<Tag>() = Tag::_signed; return YYTOKEN::SIGNED; }
 "sizeof"				{ yylval->emplace<Tag>() = Tag::_sizeof; return YYTOKEN::SIZEOF; }
-"static"				{ return YYTOKEN::STATIC; }
+"static"				{ yylval->emplace<Tag>() = Tag::_static; return YYTOKEN::STATIC; }
+"struct"				{ yylval->emplace<Tag>() = Tag::_struct; return YYTOKEN::STRUCT; }
 "switch"				{ return YYTOKEN::SWITCH; }
-"typedef"				{ return YYTOKEN::TYPEDEF; }
+"typedef"				{ yylval->emplace<Tag>() = Tag::_typedef; return YYTOKEN::TYPEDEF; }
 "unsigned"				{ yylval->emplace<Tag>() = Tag::_unsigned; return YYTOKEN::UNSIGNED; }
 "void"					{ yylval->emplace<Tag>() = Tag::_void; return YYTOKEN::VOID; }
 "volatile"				{ yylval->emplace<Tag>() = Tag::_volatile; return YYTOKEN::VOLATILE; }
@@ -96,38 +97,14 @@ static void comment(void);
 "_Noreturn"             { yylval->emplace<Tag>() = Tag::_noreturn; return YYTOKEN::NORETURN; }
 "_Static_assert"        { return YYTOKEN::STATIC_ASSERT; }
 "static_assert"         { return YYTOKEN::STATIC_ASSERT; }
-"_Thread_local"         { return YYTOKEN::THREAD_LOCAL; }
-"thread_local"          { return YYTOKEN::THREAD_LOCAL; }
+"_Thread_local"         { yylval->emplace<Tag>() = Tag::_thread_local; return YYTOKEN::THREAD_LOCAL; }
+"thread_local"          { yylval->emplace<Tag>() = Tag::_thread_local; return YYTOKEN::THREAD_LOCAL; }
 "__func__"              { return YYTOKEN::FUNC_NAME; }
-
-"enum"					{
-    checktype.InEnum() = true;
-    checktype.WithinScope() = true;
-    yylval->emplace<Tag>() = Tag::_enum;
-    return YYTOKEN::ENUM;
-}
-
-"struct"				{
-    checktype.WithinScope() = true;
-    yylval->emplace<Tag>() = Tag::_struct;
-    return YYTOKEN::STRUCT;
-}
-
-"union"					{
-    checktype.WithinScope() = true;
-    yylval->emplace<Tag>() = Tag::_union;
-    return YYTOKEN::UNION;
-}
 
 
 ({L}|{U8})({A}|{U8})*		{
     yylval->emplace<std::string>() = yytext;
-
-    int ty = checktype(yytext);
-    if (ty == -1)
-        ty = YYTOKEN::IDENTIFIER;
-
-    return ty;
+    return checktype(yytext);
 }
 
 {BP}{BS}{IS}?                       { yylval->emplace<std::string>() = yytext; return YYTOKEN::I_CONSTANT; }
@@ -194,48 +171,24 @@ static void comment(void);
 "^"					    { return '^'; }
 "|"					    { return '|'; }
 "?"					    { return '?'; }
+":"                     { return ':'; }
+";"                     { return ';'; }
+"="					    { return '='; }
 
 "#"                     {
     BEGIN(inpreprocess);
     return '#';
 }
 
-":"					    {
-    if (checktype.InEnum())
-        checktype.WithinScope() = false;
-    return ':';
-}
-
-";"					    {
-    checktype.InEnum() = false;
-    checktype.WithinScope() = false;
-    checktype.ClearParen();
-    return ';';
-}
-
 ("{"|"<%")				{
-    checktype.DumpParen();
-    if (checktype.InEnum())
-        checktype.WithinScope() = true;
     checktype.EnterScope();
     return '{';
 }
 
 ("}"|"%>")				{
-    // thanks to the fact that enums cannot nest
-    checktype.InEnum() = false;
-    checktype.WithinScope() = false;
     checktype.LeaveScope();
     return '}';
 }
-
-"="					    {
-    // we're ready to evaluate an expression,
-    // or something else.
-    checktype.WithinScope() = false;
-    return '=';
-}
-
 
 <inpreprocess>"\n"      {
     BEGIN(INITIAL);

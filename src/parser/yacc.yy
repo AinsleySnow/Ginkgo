@@ -9,9 +9,10 @@ int yylex(yy::parser::value_type* yylval, CheckType& checktype);
 #include <algorithm>
 #include <cstdio>
 #include <cctype>
+#include <map>
 #include <memory>
 #include <string>
-#include <unordered_map>
+#include <set>
 #include <vector>
 
 #include "ast/CType.h"
@@ -26,19 +27,9 @@ class CheckType
 {
 public:
     CheckType() { EnterScope(); }
-    ~CheckType() { LeaveScope(); }
 
     bool& WithinScope() { return within_; }
     bool WithinScope() const { return within_; }
-
-    bool& InEnum() { return inenum_; }
-    bool InEnum() const { return inenum_; }
-
-    void LeftParen()  { paren_++; }
-    void RightParen() { paren_--; }
-    bool WithinParen() const { return paren_; }
-    void DumpParen();
-    void ClearParen();
 
     void EnterScope();
     void LeaveScope();
@@ -47,11 +38,7 @@ public:
 
 private:
     bool within_{};
-    bool inenum_{};
-    bool instruct_{};
-    int paren_{};
-    std::vector<std::string> thingsinparen_{};
-    std::vector<std::unordered_map<std::string, int>> scopes_{};
+    std::vector<std::map<std::string, int>> scopes_{};
 };
 
 
@@ -63,6 +50,7 @@ private:
 %define api.value.type variant
 %define parse.error detailed
 %define parse.trace
+%define lr.type ielr
 
 %parse-param { TransUnit& transunit }
 // don't want to inherit from yy::parser.
@@ -137,6 +125,7 @@ unlabeled_statement primary_block secondary_block label
 %precedence ':'
 
 %precedence '{'
+%precedence ENUMERATION_CONSTANT
 %precedence LOWER_THAN_SPEC
 %precedence VOID %precedence BOOL %precedence CHAR
 %precedence SHORT %precedence INT %precedence LONG
@@ -144,7 +133,7 @@ unlabeled_statement primary_block secondary_block label
 %precedence DOUBLE %precedence COMPLEX %precedence IMAGINARY
 %precedence ENUM %precedence STRUCT %precedence UNION
 %precedence CONST %precedence RESTRICT %precedence VOLATILE
-%precedence ATOMIC %precedence TYPEDEF_NAME
+%precedence ATOMIC %precedence ALIGNAS %precedence TYPEDEF_NAME 
 
 %precedence LOWER_THAN_ELSE
 %precedence ELSE
@@ -250,10 +239,21 @@ postfix_expression
     { $$ = std::make_unique<CallExpr>(std::move($1)); }
 	| postfix_expression '(' argument_expression_list ')'
     { $$ = std::make_unique<CallExpr>(std::move($1), std::move($3)); }
+
 	| postfix_expression '.' IDENTIFIER
     { $$ = std::make_unique<AccessExpr>(std::move($1), Tag::dot, $3); }
+	| postfix_expression '.' TYPEDEF_NAME
+    { $$ = std::make_unique<AccessExpr>(std::move($1), Tag::dot, $3); }
+	| postfix_expression '.' ENUMERATION_CONSTANT
+    { $$ = std::make_unique<AccessExpr>(std::move($1), Tag::dot, $3); }
+
 	| postfix_expression PTR_OP IDENTIFIER
     { $$ = std::make_unique<AccessExpr>(std::move($1), $2, $3); }
+    | postfix_expression PTR_OP TYPEDEF_NAME
+    { $$ = std::make_unique<AccessExpr>(std::move($1), $2, $3); }
+    | postfix_expression PTR_OP ENUMERATION_CONSTANT
+    { $$ = std::make_unique<AccessExpr>(std::move($1), $2, $3); }
+
 	| postfix_expression INC_OP
     { $$ = std::make_unique<UnaryExpr>(Tag::postfix_inc, std::move($1)); }
 	| postfix_expression DEC_OP
@@ -466,7 +466,16 @@ declaration
     {
         std::shared_ptr<DeclSpec> ds = std::move($1);
         for (auto& initdecl : *$2)
+        {
+            auto name = initdecl->declarator_->ToObjDef()->Name();
+            if (ds->Storage().IsTypedef())
+                checktype.AddIdentifier(
+                    name, yy::parser::token::TYPEDEF_NAME);
+            else
+                checktype.AddIdentifier(
+                    name, yy::parser::token::IDENTIFIER);
             initdecl->declarator_->InnerMost()->SetChild(ds);
+        }
         $$ = std::make_unique<DeclStmt>(std::move($2));
     }
 	| static_assert_declaration { $$ = nullptr; }
@@ -566,85 +575,37 @@ storage_class_specifier
 
 type_specifier
 	: VOID
-    {
-        checktype.WithinScope() = true;
-        $$ = std::make_unique<TypeSpec>(Tag::_void);
-    }
+    { $$ = std::make_unique<TypeSpec>(Tag::_void); }
 	| CHAR
-    {
-        checktype.WithinScope() = true;
-        $$ = std::make_unique<TypeSpec>(Tag::_char);
-    }
+    { $$ = std::make_unique<TypeSpec>(Tag::_char); }
 	| SHORT
-    {
-        checktype.WithinScope() = true;
-        $$ = std::make_unique<TypeSpec>(Tag::_short);
-    }
+    { $$ = std::make_unique<TypeSpec>(Tag::_short); }
 	| INT
-    {
-        checktype.WithinScope() = true;
-        $$ = std::make_unique<TypeSpec>(Tag::_int);
-    }
+    { $$ = std::make_unique<TypeSpec>(Tag::_int); }
 	| LONG
-    {
-        checktype.WithinScope() = true;
-        $$ = std::make_unique<TypeSpec>(Tag::_long);
-    }
+    { $$ = std::make_unique<TypeSpec>(Tag::_long); }
 	| FLOAT
-    {
-        checktype.WithinScope() = true;
-        $$ = std::make_unique<TypeSpec>(Tag::_float);
-    }
+    { $$ = std::make_unique<TypeSpec>(Tag::_float); }
 	| DOUBLE
-    {
-        checktype.WithinScope() = true;
-        $$ = std::make_unique<TypeSpec>(Tag::_double);
-    }
+    { $$ = std::make_unique<TypeSpec>(Tag::_double); }
 	| SIGNED
-    {
-        checktype.WithinScope() = true;
-        $$ = std::make_unique<TypeSpec>(Tag::_signed);
-    }
+    { $$ = std::make_unique<TypeSpec>(Tag::_signed); }
 	| UNSIGNED
-    {
-        checktype.WithinScope() = true;
-        $$ = std::make_unique<TypeSpec>(Tag::_unsigned);
-    }
+    { $$ = std::make_unique<TypeSpec>(Tag::_unsigned); }
 	| BOOL
-    {
-        checktype.WithinScope() = true;
-        $$ = std::make_unique<TypeSpec>(Tag::_bool);
-    }
+    { $$ = std::make_unique<TypeSpec>(Tag::_bool); }
 	| COMPLEX
-    {
-        checktype.WithinScope() = true;
-        $$ = std::make_unique<TypeSpec>(Tag::_complex);
-    }
+    { $$ = std::make_unique<TypeSpec>(Tag::_complex); }
 	| IMAGINARY
-    {
-        checktype.WithinScope() = true;
-        $$ = std::make_unique<TypeSpec>(Tag::_imaginary);
-    }
+    { $$ = std::make_unique<TypeSpec>(Tag::_imaginary); }
 	| atomic_type_specifier
-    {
-        checktype.WithinScope() = true;
-        $$ = std::make_unique<TypeSpec>(Tag::_atomic);
-    }
+    { $$ = std::make_unique<TypeSpec>(Tag::_atomic); }
 	| struct_or_union_specifier
-    {
-        checktype.WithinScope() = true;
-        $$ = std::move($1);
-    }
+    { $$ = std::move($1); }
 	| enum_specifier
-    {
-        checktype.WithinScope() = true;
-        $$ = std::move($1);
-    }
+    { $$ = std::move($1); }
 	| TYPEDEF_NAME
-    {
-        checktype.WithinScope() = true;
-        $$ = std::make_unique<TypeSpec>(Tag::_typedef);
-    }
+    { $$ = std::make_unique<TypedefSpec>(std::move($1)); }
 	;
 
 struct_or_union_specifier
@@ -653,12 +614,28 @@ struct_or_union_specifier
         $$ = std::make_unique<HeterSpec>($1);
         $$->LoadHeterFields(std::move($3));
     }
+
 	| struct_or_union IDENTIFIER '{' member_declaration_list '}'
     {
         $$ = std::make_unique<HeterSpec>($1, $2);
         $$->LoadHeterFields(std::move($4));
     }
+	| struct_or_union TYPEDEF_NAME '{' member_declaration_list '}'
+    {
+        $$ = std::make_unique<HeterSpec>($1, $2);
+        $$->LoadHeterFields(std::move($4));
+    }
+    | struct_or_union ENUMERATION_CONSTANT '{' member_declaration_list '}'
+    {
+        $$ = std::make_unique<HeterSpec>($1, $2);
+        $$->LoadHeterFields(std::move($4));
+    }
+
 	| struct_or_union IDENTIFIER
+    { $$ = std::make_unique<HeterSpec>($1, $2); }
+    | struct_or_union TYPEDEF_NAME
+    { $$ = std::make_unique<HeterSpec>($1, $2); }
+    | struct_or_union ENUMERATION_CONSTANT
     { $$ = std::make_unique<HeterSpec>($1, $2); }
 	;
 
@@ -748,14 +725,27 @@ enum_specifier
     { $$ = std::make_unique<EnumSpec>(std::move($3)); }
 	| ENUM '{' enumerator_list ',' '}'
     { $$ = std::make_unique<EnumSpec>(std::move($3)); }
+
 	| ENUM IDENTIFIER '{' enumerator_list '}'
     { $$ = std::make_unique<EnumSpec>($2, std::move($4)); }
 	| ENUM IDENTIFIER '{' enumerator_list ',' '}'
     { $$ = std::make_unique<EnumSpec>($2, std::move($4)); }
+
+    | ENUM TYPEDEF_NAME '{' enumerator_list '}'
+    { $$ = std::make_unique<EnumSpec>($2, std::move($4)); }
+	| ENUM TYPEDEF_NAME '{' enumerator_list ',' '}'
+    { $$ = std::make_unique<EnumSpec>($2, std::move($4)); }
+
+    | ENUM ENUMERATION_CONSTANT '{' enumerator_list '}'
+    { $$ = std::make_unique<EnumSpec>($2, std::move($4)); }
+	| ENUM ENUMERATION_CONSTANT '{' enumerator_list ',' '}'
+    { $$ = std::make_unique<EnumSpec>($2, std::move($4)); }
+
 	| ENUM enum_type_specifier '{' enumerator_list '}'
     { $$ = std::make_unique<EnumSpec>(std::move($4), std::move($2)); }
 	| ENUM enum_type_specifier '{' enumerator_list ',' '}'
     { $$ = std::make_unique<EnumSpec>(std::move($4), std::move($2)); }
+
 	| ENUM IDENTIFIER enum_type_specifier '{' enumerator_list '}'
     { $$ = std::make_unique<EnumSpec>($2, std::move($5), std::move($3)); }
 	| ENUM IDENTIFIER enum_type_specifier '{' enumerator_list ',' '}'
@@ -763,6 +753,24 @@ enum_specifier
 	| ENUM IDENTIFIER
     { $$ = std::make_unique<EnumSpec>($2); }
     | ENUM IDENTIFIER enum_type_specifier
+    { $$ = std::make_unique<EnumSpec>($2, std::move($3)); }
+
+	| ENUM TYPEDEF_NAME enum_type_specifier '{' enumerator_list '}'
+    { $$ = std::make_unique<EnumSpec>($2, std::move($5), std::move($3)); }
+	| ENUM TYPEDEF_NAME enum_type_specifier '{' enumerator_list ',' '}'
+    { $$ = std::make_unique<EnumSpec>($2, std::move($5), std::move($3)); }
+	| ENUM TYPEDEF_NAME
+    { $$ = std::make_unique<EnumSpec>($2); }
+    | ENUM TYPEDEF_NAME enum_type_specifier
+    { $$ = std::make_unique<EnumSpec>($2, std::move($3)); }
+
+	| ENUM ENUMERATION_CONSTANT enum_type_specifier '{' enumerator_list '}'
+    { $$ = std::make_unique<EnumSpec>($2, std::move($5), std::move($3)); }
+	| ENUM ENUMERATION_CONSTANT enum_type_specifier '{' enumerator_list ',' '}'
+    { $$ = std::make_unique<EnumSpec>($2, std::move($5), std::move($3)); }
+	| ENUM ENUMERATION_CONSTANT
+    { $$ = std::make_unique<EnumSpec>($2); }
+    | ENUM ENUMERATION_CONSTANT enum_type_specifier
     { $$ = std::make_unique<EnumSpec>($2, std::move($3)); }
 	;
 
@@ -781,15 +789,9 @@ enumerator_list
 
 enumerator	/* identifiers must be flagged as ENUMERATION_CONSTANT */
 	: enumeration_constant '=' constant_expression
-    {
-        checktype.WithinScope() = true;
-        $$ = std::make_unique<EnumConst>(std::move($1), std::move($3));
-    }
+    { $$ = std::make_unique<EnumConst>(std::move($1), std::move($3)); }
 	| enumeration_constant
-    {
-        checktype.WithinScope() = true;
-        $$ = std::make_unique<EnumConst>(std::move($1));
-    }
+    { $$ = std::make_unique<EnumConst>(std::move($1)); }
 	;
 
 enum_type_specifier
@@ -831,6 +833,9 @@ declarator
 direct_declarator
 	: IDENTIFIER
     { $$ = std::make_unique<ObjDef>($1); }
+    | ENUMERATION_CONSTANT
+    { $$ = std::make_unique<ObjDef>($1); }
+
 	| '(' declarator ')'
     { $$ = std::move($2); }
 	| direct_declarator '[' ']'
@@ -1297,10 +1302,19 @@ external_declaration
 	;
 
 function_definition
-	: declaration_specifiers declarator compound_statement
+	: declaration_specifiers declarator
+    {
+        // Here we already have a new scope, since to
+        // reduce to this rule we must have the '{' read.
+        auto& paramlist = $2->Child()->ToFuncDef()->GetParamList();
+        for (auto& param : paramlist)
+            if (auto p = param->ToObjDef())
+                checktype.AddIdentifier(p->Name(), yy::parser::token::IDENTIFIER);
+    }
+    compound_statement
     {
         $2->InnerMost()->SetChild(std::move($1));
-        $2->ToObjDef()->SetCompound(std::move($3));
+        $2->ToObjDef()->SetCompound(std::move($4));
         $$ = std::move($2);
     }
 	;
@@ -1325,21 +1339,6 @@ void CheckType::LeaveScope()
     scopes_.pop_back();
 }
 
-void CheckType::DumpParen()
-{
-    if (thingsinparen_.empty())
-        return;
-    for (auto& s : thingsinparen_)
-        scopes_.back().emplace(s, yy::parser::token::IDENTIFIER);
-    thingsinparen_.clear();
-}
-
-void CheckType::ClearParen()
-{
-    if (!thingsinparen_.empty())
-        thingsinparen_.clear();
-}
-
 void CheckType::AddIdentifier(const std::string& name, int type)
 {
     // don't add enum const to current scope, since when
@@ -1354,32 +1353,6 @@ void CheckType::AddIdentifier(const std::string& name, int type)
 
 int CheckType::operator()(const std::string& name)
 {
-    // creating new variables in parens
-    // must be identifiers
-    if (WithinParen() && within_)
-    {
-        thingsinparen_.push_back(name);
-        within_ = false;
-        return yy::parser::token::IDENTIFIER;
-    }
-
-    if (within_)
-    {
-        auto result = scopes_.back().find(name);
-
-        int ty = 0;
-        if (result != scopes_.back().end())
-            ty = result->second;
-        else
-        {
-            if (!InEnum())
-                scopes_.back().emplace(name, yy::parser::token::IDENTIFIER);
-            ty = yy::parser::token::IDENTIFIER;
-        }
-        within_ = false;
-        return ty;
-    }
-
     // pick up the type of the first identifier with the given name
     for (auto it = scopes_.rbegin(); it != scopes_.rend(); ++it)
     {
