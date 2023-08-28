@@ -30,6 +30,7 @@ public:
     bool IsAtomic() const { return token_ & static_cast<unsigned>(QualTag::_atomic); }
 
     bool SetToken(Tag);
+    void UnsetToken(QualTag q) { token_ &= ~static_cast<unsigned>(q); }
 };
 
 
@@ -57,6 +58,7 @@ public:
     bool IsRegister() const { return token_ & static_cast<unsigned>(StorageTag::_register); }
 
     bool SetToken(Tag);
+    void UnsetToken(StorageTag s) { token_ &= ~static_cast<unsigned>(s); }
 };
 
 
@@ -76,6 +78,7 @@ public:
     bool IsNoreturn() const { return token_ & static_cast<unsigned>(FuncTag::_noreturn); }
 
     bool SetSpec(Tag);
+    void UnsetSpec(FuncTag f) { token_ &= ~static_cast<unsigned>(f); }
 };
 
 
