@@ -36,7 +36,6 @@ public:
     Func* AddFunc(const std::string&, const CFuncType*, const Register*);
     Label* AddLabel(const std::string&);
     Typedef* AddTypedef(const std::string&, const CType*);
-    Typedef* AddTypedef(const std::string&, const Typedef*);
     CustomedType* AddCustomed(const std::string&, const CType*);
     Member* AddMember(const std::string&, const CType*, const IntConst* = nullptr);
 

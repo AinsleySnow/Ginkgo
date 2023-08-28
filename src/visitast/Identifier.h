@@ -105,18 +105,11 @@ class Typedef : public Identifier
 {
 public:
     Typedef(const std::string& n, const CType* ty) :
-        Identifier(Identifier::IdentType::tydef, n, ty), type_(ty) {}
-    Typedef(const std::string& n, const Typedef* t) :
-        Identifier(Identifier::IdentType::tydef, n, nullptr), type_(t) {}
+        Identifier(Identifier::IdentType::tydef, n, ty) {}
 
     std::unique_ptr<Identifier> Clone() { return std::make_unique<Typedef>(*this); }
 
     Typedef* ToTypedef() override { return this; }
-    auto& Type() { return type_; }
-    auto Type() const { return type_; }
-
-private:
-    std::variant<const CType*, const Typedef*> type_{};
 };
 
 

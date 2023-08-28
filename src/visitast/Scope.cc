@@ -31,13 +31,13 @@ const Func* Scope::GetFunc(const std::string& name) const
 
 const Label* Scope::GetLabel(const std::string& name) const
 {
-    Identifier* ident = FindingHelper(name, Identifier::IdentType::obj);
+    Identifier* ident = FindingHelper(name, Identifier::IdentType::label);
     return ident ? ident->ToLabel() : nullptr;
 }
 
 const Typedef* Scope::GetTypedef(const std::string& name) const
 {
-    Identifier* ident = FindingHelper(name, Identifier::IdentType::obj);
+    Identifier* ident = FindingHelper(name, Identifier::IdentType::tydef);
     return ident ? ident->ToTypedef() : nullptr;
 }
 
@@ -83,14 +83,6 @@ Label* Scope::AddLabel(const std::string& name)
 Typedef* Scope::AddTypedef(const std::string& name, const CType* ty)
 {
     auto typedef_ = std::make_unique<Typedef>(name, ty);
-    auto ptypedef = typedef_.get();
-    identmap_.emplace(name, std::move(typedef_));
-    return ptypedef;
-}
-
-Typedef* Scope::AddTypedef(const std::string& name, const Typedef* def)
-{
-    auto typedef_ = std::make_unique<Typedef>(name, def);
     auto ptypedef = typedef_.get();
     identmap_.emplace(name, std::move(typedef_));
     return ptypedef;
@@ -180,16 +172,7 @@ const CType* ScopeStack::UnderlyingTydef(const std::string& name)
     {
         const Typedef* target = (*iter)->GetTypedef(n);
         if (target)
-        {
-            const auto& ty = target->Type();
-            if (std::holds_alternative<const CType*>(ty))
-                return std::get<const CType*>(ty);
-
-            // if the typedef is of another typedef
-            auto tydef = std::get<const Typedef*>(ty);
-            n = tydef->GetName();
-            continue; // stay in current scope
-        }
+            return target->GetCType();
         ++iter;
     }
     return nullptr;
