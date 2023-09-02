@@ -60,16 +60,18 @@ private:
 
 %token	<std::string> IDENTIFIER I_CONSTANT F_CONSTANT
 STRING_LITERAL FUNC_NAME TYPEDEF_NAME ENUMERATION_CONSTANT
+%token  <Tag> TRUE FALSE NULLPTR
 %token	<Tag> PTR_OP INC_OP DEC_OP LEFT_OP RIGHT_OP LE_OP GE_OP EQ_OP NE_OP
 %token	<Tag> AND_OP OR_OP MUL_ASSIGN DIV_ASSIGN MOD_ASSIGN ADD_ASSIGN
 %token	<Tag> SUB_ASSIGN LEFT_ASSIGN RIGHT_ASSIGN AND_ASSIGN
 %token	<Tag> XOR_ASSIGN OR_ASSIGN
 
-%token	<Tag> TYPEDEF EXTERN STATIC AUTO REGISTER
+%token	<Tag> TYPEDEF EXTERN STATIC AUTO REGISTER CONSTEXPR
 %token	<Tag> CONST RESTRICT VOLATILE ATOMIC
 %token  <Tag> INLINE NORETURN
-%token  <Tag> BOOL CHAR SHORT INT LONG SIGNED UNSIGNED FLOAT DOUBLE VOID
-%token	<Tag> COMPLEX IMAGINARY 
+%token  <Tag> BOOL BITINT CHAR SHORT INT LONG SIGNED UNSIGNED FLOAT DOUBLE VOID
+%token	<Tag> COMPLEX IMAGINARY DECIMAL32 DECIMAL64 DECIMAL128
+%token  <Tag> TYPEOF TYPEOF_UNQUAL
 %token	<Tag> STRUCT UNION ENUM ELLIPSIS
 
 %token	<Tag> CASE DEFAULT IF ELSE SWITCH WHILE DO FOR GOTO CONTINUE BREAK RETURN
@@ -87,7 +89,7 @@ additive_expression shift_expression relational_expression
 equality_expression and_expression exclusive_or_expression
 inclusive_or_expression logical_and_expression logical_or_expression
 conditional_expression assignment_expression expression constant_expression
-constant initializer initializer_list
+constant initializer initializer_list braced_initializer
 
 %type <std::unique_ptr<DeclList>> init_declarator_list
 %type <std::unique_ptr<HeterList>> member_declarator_list
@@ -101,11 +103,12 @@ constant initializer initializer_list
 %type <QualType> type_qualifier_list
 %type <std::unique_ptr<TypeSpec>> type_specifier enum_specifier
 %type <std::unique_ptr<HeterSpec>> struct_or_union_specifier
-%type <std::unique_ptr<DeclSpec>> declaration_specifiers specifier_qualifier_list type_specifier_qualifier
+%type <std::unique_ptr<DeclSpec>> declaration_specifiers specifier_qualifier_list type_specifier_qualifier declaration_specifier
 %type <std::unique_ptr<PtrDef>> pointer
 %type <std::unique_ptr<Declaration>> declarator direct_declarator function_definition
 parameter_declaration type_name enum_type_specifier member_declarator member_declaration
-direct_abstract_declarator abstract_declarator
+direct_abstract_declarator abstract_declarator array_declarator function_declarator
+array_abstract_declarator function_abstract_declarator
 %type <std::unique_ptr<TransUnit>> translation_unit
 
 %type <std::unique_ptr<DeclStmt>> declaration external_declaration
@@ -134,6 +137,11 @@ unlabeled_statement primary_block secondary_block label
 %precedence ENUM %precedence STRUCT %precedence UNION
 %precedence CONST %precedence RESTRICT %precedence VOLATILE
 %precedence ATOMIC %precedence ALIGNAS %precedence TYPEDEF_NAME 
+%precedence BITINT %precedence DECIMAL32 %precedence DECIMAL64
+%precedence DECIMAL128 %precedence TYPEOF %precedence TYPEOF_UNQUAL
+%precedence '('
+%precedence PREC_ATTR_SPEC
+%precedence '['
 
 %precedence LOWER_THAN_ELSE
 %precedence ELSE
@@ -145,7 +153,7 @@ primary_expression
 	| constant              { $$ = std::move($1); }
 	| string                { $$ = std::make_unique<StrExpr>($1); }
 	| '(' expression ')'    { $$ = std::move($2); }
-	| generic_selection     // TODO
+	| generic_selection     { $$ = nullptr; } // TODO
 	;
 
 constant
@@ -200,7 +208,13 @@ constant
     }
 	| ENUMERATION_CONSTANT	/* after it has been defined as such */
     { $$ = std::make_unique<EnumConst>($1); }
-	;
+	| TRUE
+    { $$ = std::make_unique<ConstExpr>($1); }
+    | FALSE
+    { $$ = std::make_unique<ConstExpr>($1); }
+    | NULLPTR
+    { $$ = std::make_unique<ConstExpr>($1); }
+    ;
 
 enumeration_constant		/* before it has been defined as such */
 	: IDENTIFIER
@@ -258,8 +272,8 @@ postfix_expression
     { $$ = std::make_unique<UnaryExpr>(Tag::postfix_inc, std::move($1)); }
 	| postfix_expression DEC_OP
     { $$ = std::make_unique<UnaryExpr>(Tag::postfix_dec, std::move($1)); }
-	| '(' type_name ')' '{' initializer_list '}' { $$ = nullptr; }
-	| '(' type_name ')' '{' initializer_list ',' '}' { $$ = nullptr; }
+    | compound_literal // TODO
+    { $$ = nullptr; }
 	;
 
 argument_expression_list
@@ -275,6 +289,17 @@ argument_expression_list
         $$ = std::move($1);
     }
 	;
+
+compound_literal
+    : '(' type_name ')' braced_initializer
+    | '(' storage_class_specifiers type_name ')' braced_initializer
+    ;
+
+storage_class_specifiers
+    : storage_class_specifier
+    | storage_class_specifiers storage_class_specifier
+    ;
+
 
 unary_expression
 	: postfix_expression   { $$ = std::move($1); }
@@ -479,58 +504,36 @@ declaration
         $$ = std::make_unique<DeclStmt>(std::move($2));
     }
 	| static_assert_declaration { $$ = nullptr; }
-	;
+	| attribute_declaration { $$ = nullptr; }
+    ;
 
 declaration_specifiers
-	: storage_class_specifier declaration_specifiers
+    : declaration_specifier attribute_specifier_sequence %prec PREC_ATTR_SPEC
+    { $$ = std::move($1); }
+    | declaration_specifier                              %prec PREC_ATTR_SPEC
+    { $$ = std::move($1); }
+    | declaration_specifier declaration_specifiers
     {
-        $2->SetStorage($1);
+        $2->Extend($1);
         $$ = std::move($2);
     }
-	| storage_class_specifier
+    ;
+
+declaration_specifier
+	: storage_class_specifier
     {
         $$ = std::make_unique<DeclSpec>();
         $$->SetStorage($1);
     }
-	| type_specifier declaration_specifiers
-    {
-        $2->AddTypeSpec(std::move($1));
-        $$ = std::move($2);
-    }
-	| type_specifier
+	| type_specifier_qualifier
     {
         $$ = std::make_unique<DeclSpec>();
         $$->AddTypeSpec(std::move($1));
-    }
-	| type_qualifier declaration_specifiers
-    {
-        $2->SetQual($1);
-        $$ = std::move($2);
-    }
-	| type_qualifier
-    {
-        $$ = std::make_unique<DeclSpec>();
-        $$->SetQual($1);
-    }
-	| function_specifier declaration_specifiers
-    {
-        $2->SetFuncSpec($1);
-        $$ = std::move($2);
     }
 	| function_specifier
     {
         $$ = std::make_unique<DeclSpec>();
         $$->SetFuncSpec($1);
-    }
-	| alignment_specifier declaration_specifiers
-    {
-        $2->AddAlignSpec(std::move($1));
-        $$ = std::move($2);
-    }
-	| alignment_specifier
-    {
-        $$ = std::make_unique<DeclSpec>();
-        $$->AddAlignSpec(std::move($1));
     }
 	;
 
@@ -564,6 +567,10 @@ init_declarator
     }
 	;
 
+attribute_declaration
+    : attribute_specifier_sequence ';'
+    ;
+
 storage_class_specifier
 	: TYPEDEF	/* identifiers must be flagged as TYPEDEF_NAME */
 	| EXTERN
@@ -571,6 +578,7 @@ storage_class_specifier
 	| THREAD_LOCAL
 	| AUTO
 	| REGISTER
+    | CONSTEXPR
 	;
 
 type_specifier
@@ -592,13 +600,21 @@ type_specifier
     { $$ = std::make_unique<TypeSpec>(Tag::_signed); }
 	| UNSIGNED
     { $$ = std::make_unique<TypeSpec>(Tag::_unsigned); }
-	| BOOL
+	| BITINT '(' constant_expression ')' // TODO
+    { $$ = nullptr; }
+    | BOOL
     { $$ = std::make_unique<TypeSpec>(Tag::_bool); }
 	| COMPLEX
     { $$ = std::make_unique<TypeSpec>(Tag::_complex); }
 	| IMAGINARY
     { $$ = std::make_unique<TypeSpec>(Tag::_imaginary); }
-	| atomic_type_specifier
+	| DECIMAL32 // No plan to support
+    { $$ = nullptr; }
+    | DECIMAL64 // No plan to support
+    { $$ = nullptr; }
+    | DECIMAL128 // No plan to support
+    { $$ = nullptr; }
+    | atomic_type_specifier
     { $$ = std::make_unique<TypeSpec>(Tag::_atomic); }
 	| struct_or_union_specifier
     { $$ = std::move($1); }
@@ -606,13 +622,20 @@ type_specifier
     { $$ = std::move($1); }
 	| TYPEDEF_NAME
     { $$ = std::make_unique<TypedefSpec>(std::move($1)); }
-	;
+	| typeof_specifier // TODO
+    { $$ = nullptr; }
+    ;
 
 struct_or_union_specifier
 	: struct_or_union '{' member_declaration_list '}'
     {
         $$ = std::make_unique<HeterSpec>($1);
         $$->LoadHeterFields(std::move($3));
+    }
+    | struct_or_union attribute_specifier_sequence '{' member_declaration_list '}'
+    {
+        $$ = std::make_unique<HeterSpec>($1);
+        $$->LoadHeterFields(std::move($4));
     }
 
 	| struct_or_union IDENTIFIER '{' member_declaration_list '}'
@@ -630,6 +653,21 @@ struct_or_union_specifier
         $$ = std::make_unique<HeterSpec>($1, $2);
         $$->LoadHeterFields(std::move($4));
     }
+	| struct_or_union attribute_specifier_sequence IDENTIFIER '{' member_declaration_list '}'
+    {
+        $$ = std::make_unique<HeterSpec>($1, $3);
+        $$->LoadHeterFields(std::move($5));
+    }
+	| struct_or_union attribute_specifier_sequence TYPEDEF_NAME '{' member_declaration_list '}'
+    {
+        $$ = std::make_unique<HeterSpec>($1, $3);
+        $$->LoadHeterFields(std::move($5));
+    }
+    | struct_or_union attribute_specifier_sequence ENUMERATION_CONSTANT '{' member_declaration_list '}'
+    {
+        $$ = std::make_unique<HeterSpec>($1, $3);
+        $$->LoadHeterFields(std::move($5));
+    }
 
 	| struct_or_union IDENTIFIER
     { $$ = std::make_unique<HeterSpec>($1, $2); }
@@ -637,6 +675,12 @@ struct_or_union_specifier
     { $$ = std::make_unique<HeterSpec>($1, $2); }
     | struct_or_union ENUMERATION_CONSTANT
     { $$ = std::make_unique<HeterSpec>($1, $2); }
+    | struct_or_union attribute_specifier_sequence IDENTIFIER
+    { $$ = std::make_unique<HeterSpec>($1, $3); }
+    | struct_or_union attribute_specifier_sequence TYPEDEF_NAME
+    { $$ = std::make_unique<HeterSpec>($1, $3); }
+    | struct_or_union attribute_specifier_sequence ENUMERATION_CONSTANT
+    { $$ = std::make_unique<HeterSpec>($1, $3); }
 	;
 
 struct_or_union
@@ -667,13 +711,24 @@ member_declaration
             decl->InnerMost()->SetChild(ds);
         $$ = std::move($2);
     }
+    | attribute_specifier_sequence specifier_qualifier_list ';' /* for anonymous struct/union */
+    { $$ = std::move($2); }
+    | attribute_specifier_sequence specifier_qualifier_list member_declarator_list ';'
+    {
+        std::shared_ptr<DeclSpec> ds = std::move($2);
+        for (auto& decl : *$3)
+            decl->InnerMost()->SetChild(ds);
+        $$ = std::move($3);
+    }
     | static_assert_declaration { $$ = nullptr; } // TODO
     ;
 
 specifier_qualifier_list
-    : type_specifier_qualifier                          %prec LOWER_THAN_SPEC
+    : type_specifier_qualifier                                  %prec LOWER_THAN_SPEC
     { $$ = std::move($1); }
-    | type_specifier_qualifier specifier_qualifier_list %prec LOWER_THAN_SPEC
+    | type_specifier_qualifier attribute_specifier_sequence     %prec LOWER_THAN_SPEC
+    { $$ = std::move($1); }
+    | type_specifier_qualifier specifier_qualifier_list         %prec LOWER_THAN_SPEC
     {
         $2->Extend($1);
         $$ = std::move($2);
@@ -725,32 +780,57 @@ enum_specifier
     { $$ = std::make_unique<EnumSpec>(std::move($3)); }
 	| ENUM '{' enumerator_list ',' '}'
     { $$ = std::make_unique<EnumSpec>(std::move($3)); }
+	| ENUM attribute_specifier_sequence '{' enumerator_list '}'
+    { $$ = std::make_unique<EnumSpec>(std::move($4)); }
+	| ENUM attribute_specifier_sequence '{' enumerator_list ',' '}'
+    { $$ = std::make_unique<EnumSpec>(std::move($4)); }
 
 	| ENUM IDENTIFIER '{' enumerator_list '}'
     { $$ = std::make_unique<EnumSpec>($2, std::move($4)); }
 	| ENUM IDENTIFIER '{' enumerator_list ',' '}'
     { $$ = std::make_unique<EnumSpec>($2, std::move($4)); }
+	| ENUM attribute_specifier_sequence IDENTIFIER '{' enumerator_list '}'
+    { $$ = std::make_unique<EnumSpec>($3, std::move($5)); }
+	| ENUM attribute_specifier_sequence IDENTIFIER '{' enumerator_list ',' '}'
+    { $$ = std::make_unique<EnumSpec>($3, std::move($5)); }
 
     | ENUM TYPEDEF_NAME '{' enumerator_list '}'
     { $$ = std::make_unique<EnumSpec>($2, std::move($4)); }
 	| ENUM TYPEDEF_NAME '{' enumerator_list ',' '}'
     { $$ = std::make_unique<EnumSpec>($2, std::move($4)); }
+    | ENUM attribute_specifier_sequence TYPEDEF_NAME '{' enumerator_list '}'
+    { $$ = std::make_unique<EnumSpec>($3, std::move($5)); }
+	| ENUM attribute_specifier_sequence TYPEDEF_NAME '{' enumerator_list ',' '}'
+    { $$ = std::make_unique<EnumSpec>($3, std::move($5)); }
 
     | ENUM ENUMERATION_CONSTANT '{' enumerator_list '}'
     { $$ = std::make_unique<EnumSpec>($2, std::move($4)); }
 	| ENUM ENUMERATION_CONSTANT '{' enumerator_list ',' '}'
     { $$ = std::make_unique<EnumSpec>($2, std::move($4)); }
+    | ENUM attribute_specifier_sequence ENUMERATION_CONSTANT '{' enumerator_list '}'
+    { $$ = std::make_unique<EnumSpec>($3, std::move($5)); }
+	| ENUM attribute_specifier_sequence ENUMERATION_CONSTANT '{' enumerator_list ',' '}'
+    { $$ = std::make_unique<EnumSpec>($3, std::move($5)); }
 
 	| ENUM enum_type_specifier '{' enumerator_list '}'
     { $$ = std::make_unique<EnumSpec>(std::move($4), std::move($2)); }
 	| ENUM enum_type_specifier '{' enumerator_list ',' '}'
     { $$ = std::make_unique<EnumSpec>(std::move($4), std::move($2)); }
+	| ENUM attribute_specifier_sequence enum_type_specifier '{' enumerator_list '}'
+    { $$ = std::make_unique<EnumSpec>(std::move($5), std::move($3)); }
+	| ENUM attribute_specifier_sequence enum_type_specifier '{' enumerator_list ',' '}'
+    { $$ = std::make_unique<EnumSpec>(std::move($5), std::move($3)); }
 
 	| ENUM IDENTIFIER enum_type_specifier '{' enumerator_list '}'
     { $$ = std::make_unique<EnumSpec>($2, std::move($5), std::move($3)); }
 	| ENUM IDENTIFIER enum_type_specifier '{' enumerator_list ',' '}'
     { $$ = std::make_unique<EnumSpec>($2, std::move($5), std::move($3)); }
-	| ENUM IDENTIFIER
+	| ENUM attribute_specifier_sequence IDENTIFIER enum_type_specifier '{' enumerator_list '}'
+    { $$ = std::make_unique<EnumSpec>($3, std::move($6), std::move($4)); }
+	| ENUM attribute_specifier_sequence IDENTIFIER enum_type_specifier '{' enumerator_list ',' '}'
+    { $$ = std::make_unique<EnumSpec>($3, std::move($6), std::move($4)); }
+
+    | ENUM IDENTIFIER
     { $$ = std::make_unique<EnumSpec>($2); }
     | ENUM IDENTIFIER enum_type_specifier
     { $$ = std::make_unique<EnumSpec>($2, std::move($3)); }
@@ -759,7 +839,12 @@ enum_specifier
     { $$ = std::make_unique<EnumSpec>($2, std::move($5), std::move($3)); }
 	| ENUM TYPEDEF_NAME enum_type_specifier '{' enumerator_list ',' '}'
     { $$ = std::make_unique<EnumSpec>($2, std::move($5), std::move($3)); }
-	| ENUM TYPEDEF_NAME
+	| ENUM attribute_specifier_sequence TYPEDEF_NAME enum_type_specifier '{' enumerator_list '}'
+    { $$ = std::make_unique<EnumSpec>($3, std::move($6), std::move($4)); }
+	| ENUM attribute_specifier_sequence TYPEDEF_NAME enum_type_specifier '{' enumerator_list ',' '}'
+    { $$ = std::make_unique<EnumSpec>($3, std::move($6), std::move($4)); }
+
+    | ENUM TYPEDEF_NAME
     { $$ = std::make_unique<EnumSpec>($2); }
     | ENUM TYPEDEF_NAME enum_type_specifier
     { $$ = std::make_unique<EnumSpec>($2, std::move($3)); }
@@ -768,7 +853,12 @@ enum_specifier
     { $$ = std::make_unique<EnumSpec>($2, std::move($5), std::move($3)); }
 	| ENUM ENUMERATION_CONSTANT enum_type_specifier '{' enumerator_list ',' '}'
     { $$ = std::make_unique<EnumSpec>($2, std::move($5), std::move($3)); }
-	| ENUM ENUMERATION_CONSTANT
+	| ENUM attribute_specifier_sequence ENUMERATION_CONSTANT enum_type_specifier '{' enumerator_list '}'
+    { $$ = std::make_unique<EnumSpec>($3, std::move($6), std::move($4)); }
+	| ENUM attribute_specifier_sequence ENUMERATION_CONSTANT enum_type_specifier '{' enumerator_list ',' '}'
+    { $$ = std::make_unique<EnumSpec>($3, std::move($6), std::move($4)); }
+
+    | ENUM ENUMERATION_CONSTANT
     { $$ = std::make_unique<EnumSpec>($2); }
     | ENUM ENUMERATION_CONSTANT enum_type_specifier
     { $$ = std::make_unique<EnumSpec>($2, std::move($3)); }
@@ -790,7 +880,12 @@ enumerator_list
 enumerator	/* identifiers must be flagged as ENUMERATION_CONSTANT */
 	: enumeration_constant '=' constant_expression
     { $$ = std::make_unique<EnumConst>(std::move($1), std::move($3)); }
-	| enumeration_constant
+	| enumeration_constant attribute_specifier_sequence '=' constant_expression
+    { $$ = std::make_unique<EnumConst>(std::move($1), std::move($4)); }
+
+    | enumeration_constant
+    { $$ = std::make_unique<EnumConst>(std::move($1)); }
+	| enumeration_constant attribute_specifier_sequence
     { $$ = std::make_unique<EnumConst>(std::move($1)); }
 	;
 
@@ -801,6 +896,16 @@ enum_type_specifier
 atomic_type_specifier
 	: ATOMIC '(' type_name ')'
 	;
+
+typeof_specifier
+    : TYPEOF '(' typeof_specifier_argument ')'
+    | TYPEOF_UNQUAL '(' typeof_specifier_argument ')'
+    ;
+
+typeof_specifier_argument
+    : expression
+    | type_name
+    ;
 
 type_qualifier
 	: CONST
@@ -835,10 +940,27 @@ direct_declarator
     { $$ = std::make_unique<ObjDef>($1); }
     | ENUMERATION_CONSTANT
     { $$ = std::make_unique<ObjDef>($1); }
+    | IDENTIFIER attribute_declaration
+    { $$ = std::make_unique<ObjDef>($1); }
+    | ENUMERATION_CONSTANT attribute_declaration
+    { $$ = std::make_unique<ObjDef>($1); }
 
 	| '(' declarator ')'
     { $$ = std::move($2); }
-	| direct_declarator '[' ']'
+
+    | array_declarator                                  %prec PREC_ATTR_SPEC
+    { $$ = std::move($1); }
+    | array_declarator attribute_specifier_sequence     %prec PREC_ATTR_SPEC
+    { $$ = std::move($1); }
+
+    | function_declarator                               %prec PREC_ATTR_SPEC
+    { $$ = std::move($1); }
+    | function_declarator attribute_specifier_sequence  %prec PREC_ATTR_SPEC
+    { $$ = std::move($1); }
+    ;
+
+array_declarator
+	: direct_declarator '[' ']'
     {
         $1->InnerMost()->SetChild(std::make_unique<ArrayDef>());
         $$ = std::move($1);
@@ -901,7 +1023,10 @@ direct_declarator
         $1->InnerMost()->SetChild(std::move(def));
         $$ = std::move($1);
     }
-	| direct_declarator '(' parameter_type_list ')'
+    ;
+
+function_declarator
+	: direct_declarator '(' parameter_type_list ')'
     {
         auto func = std::make_unique<FuncDef>(std::move($3));
         $1->InnerMost()->SetChild(std::move(func));
@@ -921,7 +1046,16 @@ pointer
 	{ $$ = std::make_unique<PtrDef>($2); }
 	| '*' pointer
     { $$ = std::make_unique<PtrDef>(std::move($2)); }
-	| '*'
+	| '*'                                                           %prec PREC_ATTR_SPEC
+    { $$ = std::make_unique<PtrDef>(); }
+
+    | '*' attribute_specifier_sequence type_qualifier_list pointer  %prec PREC_ATTR_SPEC
+	{ $$ = std::make_unique<PtrDef>($3, std::move($4)); }
+	| '*' attribute_specifier_sequence type_qualifier_list          %prec PREC_ATTR_SPEC
+	{ $$ = std::make_unique<PtrDef>($3); }
+	| '*' attribute_specifier_sequence pointer                      %prec PREC_ATTR_SPEC
+    { $$ = std::make_unique<PtrDef>(std::move($3)); }
+	| '*' attribute_specifier_sequence                              %prec PREC_ATTR_SPEC
     { $$ = std::make_unique<PtrDef>(); }
 	;
 
@@ -937,6 +1071,11 @@ parameter_type_list
 	: parameter_list ',' ELLIPSIS
     { $1->Variadic() = true; $$ = std::move($1); }
 	| parameter_list { $$ = std::move($1); }
+    | ELLIPSIS
+    {
+        $$ = std::make_unique<ParamList>();
+        $$->Variadic() = true;
+    }
 	;
 
 parameter_list
@@ -965,6 +1104,19 @@ parameter_declaration
     }
 	| declaration_specifiers
     { $$ = std::move($1); }
+
+    | attribute_specifier_sequence declaration_specifiers declarator
+    {
+        $3->InnerMost()->SetChild(std::move($2));
+        $$ = std::move($3);
+    }
+	| attribute_specifier_sequence declaration_specifiers abstract_declarator
+    {
+        $3->InnerMost()->SetChild(std::move($2));
+        $$ = std::move($3);
+    }
+	| attribute_specifier_sequence declaration_specifiers
+    { $$ = std::move($2); }
 	;
 
 type_name
@@ -992,7 +1144,18 @@ abstract_declarator
 direct_abstract_declarator
 	: '(' abstract_declarator ')'
     { $$ = std::move($2); }
-	| '[' ']'
+    | array_abstract_declarator                                 %prec PREC_ATTR_SPEC
+    { $$ = std::move($1); }
+    | array_abstract_declarator attribute_specifier_sequence    %prec PREC_ATTR_SPEC
+    { $$ = std::move($1); }
+    | function_abstract_declarator                              %prec PREC_ATTR_SPEC
+    { $$ = std::move($1); }
+    | function_abstract_declarator attribute_specifier_sequence %prec PREC_ATTR_SPEC
+    { $$ = std::move($1); }
+    ;
+
+array_abstract_declarator
+	: '[' ']'
     { $$ = std::make_unique<ArrayDef>(); }
 	| '[' '*' ']'
     {
@@ -1090,7 +1253,10 @@ direct_abstract_declarator
         $1->InnerMost()->SetChild(std::move(def));
         $$ = std::move($1);
     }
-	| '(' ')'
+    ;
+
+function_abstract_declarator
+	: '(' ')'
     { $$ = std::make_unique<FuncDef>(); }
 	| '(' parameter_type_list ')'
     { $$ = std::make_unique<FuncDef>(std::move($2)); }
@@ -1106,11 +1272,16 @@ direct_abstract_declarator
     }
 	;
 
-initializer
-	: '{' initializer_list '}'
-	| '{' initializer_list ',' '}'
-	| assignment_expression{ $$ = std::move($1); }
+braced_initializer
+    : '{' '}' { $$ = nullptr; }
+	| '{' initializer_list '}' { $$ = nullptr; }
+	| '{' initializer_list ',' '}' { $$ = nullptr; }
 	;
+
+initializer
+    : braced_initializer { $$ = nullptr; }
+    | assignment_expression { $$ = std::move($1); }
+    ;
 
 initializer_list
 	: designation initializer { $$ = nullptr; }
@@ -1135,7 +1306,58 @@ designator
 
 static_assert_declaration
 	: STATIC_ASSERT '(' constant_expression ',' STRING_LITERAL ')' ';'
-	;
+	| STATIC_ASSERT '(' constant_expression ')' ';'
+    ;
+
+attribute_specifier_sequence
+    : attribute_specifier_sequence attribute_specifier
+    | attribute_specifier
+    ;
+
+attribute_specifier
+    : '[' '[' attribute_list ']' ']'
+    | '[' '[' ']' ']'
+    ;
+
+attribute_list
+    : attribute
+    | attribute_list ',' attribute
+    ;
+
+attribute
+    : attribute_token attribute_argument_clause
+    | attribute_token
+    ;
+
+attribute_token
+    : IDENTIFIER
+    | attirbute_prefixed_token
+    ;
+
+attirbute_prefixed_token
+    : IDENTIFIER ':' ':' IDENTIFIER
+    ;
+
+attribute_argument_clause
+    : '(' ')'
+    | '(' balanced_token_sequence ')'
+    ;
+
+balanced_token_sequence
+    : balanced_token
+    | balanced_token_sequence balanced_token
+    ;
+
+balanced_token
+    : '(' balanced_token_sequence ')'
+    | '[' balanced_token_sequence ']'
+    | '{' balanced_token_sequence '}'
+    | '(' ')'
+    | '[' ']'
+    | '{' '}'
+    // | any token other than a parenthesis, a bracket, or a brace
+    // TODO; maybe we need recursive descent parser to tackle this
+    ;
 
 preprocess_instruction
     : '#' IDENTIFIER I_CONSTANT STRING_LITERAL '\n' // #line 123 "123.c"

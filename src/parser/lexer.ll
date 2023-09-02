@@ -57,12 +57,14 @@ static void comment(void);
 "case"					{ yylval->emplace<Tag>() = Tag::_case; return YYTOKEN::CASE; }
 "char"					{ yylval->emplace<Tag>() = Tag::_char; return YYTOKEN::CHAR; }
 "const"					{ yylval->emplace<Tag>() = Tag::_const; return YYTOKEN::CONST; }
+"constexpr"             { yylval->emplace<Tag>() = Tag::_constexpr; return YYTOKEN::CONSTEXPR; }
 "continue"				{ yylval->emplace<Tag>() = Tag::_continue; return YYTOKEN::CONTINUE; }
 "default"				{ yylval->emplace<Tag>() = Tag::_default; return YYTOKEN::DEFAULT; }
 "do"					{ yylval->emplace<Tag>() = Tag::_do; return YYTOKEN::DO; }
 "double"				{ yylval->emplace<Tag>() = Tag::_double; return YYTOKEN::DOUBLE; }
 "else"					{ yylval->emplace<Tag>() = Tag::_else; return YYTOKEN::ELSE; }
 "extern"				{ yylval->emplace<Tag>() = Tag::_extern; return YYTOKEN::EXTERN; }
+"false"                 { yylval->emplace<Tag>() = Tag::_false; return YYTOKEN::FALSE; }
 "float"					{ yylval->emplace<Tag>() = Tag::_float; return YYTOKEN::FLOAT; }
 "for"					{ yylval->emplace<Tag>() = Tag::_for; return YYTOKEN::FOR; }
 "goto"					{ yylval->emplace<Tag>() = Tag::_goto; return YYTOKEN::GOTO; }
@@ -70,6 +72,7 @@ static void comment(void);
 "inline"				{ yylval->emplace<Tag>() = Tag::_inline; return YYTOKEN::INLINE; }
 "int"					{ yylval->emplace<Tag>() = Tag::_int; return YYTOKEN::INT; }
 "long"					{ yylval->emplace<Tag>() = Tag::_long; return YYTOKEN::LONG; }
+"nullptr"               { yylval->emplace<Tag>() = Tag::_nullptr; return YYTOKEN::NULLPTR; }
 "register"				{ yylval->emplace<Tag>() = Tag::_register; return YYTOKEN::REGISTER; }
 "restrict"				{ yylval->emplace<Tag>() = Tag::_restrict; return YYTOKEN::RESTRICT; }
 "return"				{ yylval->emplace<Tag>() = Tag::_return; return YYTOKEN::RETURN; }
@@ -79,7 +82,10 @@ static void comment(void);
 "static"				{ yylval->emplace<Tag>() = Tag::_static; return YYTOKEN::STATIC; }
 "struct"				{ yylval->emplace<Tag>() = Tag::_struct; return YYTOKEN::STRUCT; }
 "switch"				{ return YYTOKEN::SWITCH; }
+"true"                  { yylval->emplace<Tag>() = Tag::_true; return YYTOKEN::TRUE; }
 "typedef"				{ yylval->emplace<Tag>() = Tag::_typedef; return YYTOKEN::TYPEDEF; }
+"typeof"                { yylval->emplace<Tag>() = Tag::_typeof; return YYTOKEN::TYPEOF; }
+"typeof_unqual"         { yylval->emplace<Tag>() = Tag::_typeof_unqual; return YYTOKEN::TYPEOF_UNQUAL; }
 "unsigned"				{ yylval->emplace<Tag>() = Tag::_unsigned; return YYTOKEN::UNSIGNED; }
 "void"					{ yylval->emplace<Tag>() = Tag::_void; return YYTOKEN::VOID; }
 "volatile"				{ yylval->emplace<Tag>() = Tag::_volatile; return YYTOKEN::VOLATILE; }
@@ -91,11 +97,14 @@ static void comment(void);
 "_Atomic"               { yylval->emplace<Tag>() = Tag::_atomic; return YYTOKEN::ATOMIC; }
 "_Bool"                 { yylval->emplace<Tag>() = Tag::_bool; return YYTOKEN::BOOL; }
 "bool"                  { yylval->emplace<Tag>() = Tag::_bool; return YYTOKEN::BOOL; }
+"_BitInt"               { return YYTOKEN::BITINT; }
 "_Complex"              { return YYTOKEN::COMPLEX; }
+"_Decimal32"            { yylval->emplace<Tag>() = Tag::_decimal32; return YYTOKEN::DECIMAL32; }
+"_Decimal64"            { yylval->emplace<Tag>() = Tag::_decimal64; return YYTOKEN::DECIMAL64; }
+"_Decimal128"           { yylval->emplace<Tag>() = Tag::_decimal128; return YYTOKEN::DECIMAL128; }
 "_Generic"              { return YYTOKEN::GENERIC; }
 "_Imaginary"            { return YYTOKEN::IMAGINARY; }
 "_Noreturn"             { yylval->emplace<Tag>() = Tag::_noreturn; return YYTOKEN::NORETURN; }
-"_Static_assert"        { return YYTOKEN::STATIC_ASSERT; }
 "static_assert"         { return YYTOKEN::STATIC_ASSERT; }
 "_Thread_local"         { yylval->emplace<Tag>() = Tag::_thread_local; return YYTOKEN::THREAD_LOCAL; }
 "thread_local"          { yylval->emplace<Tag>() = Tag::_thread_local; return YYTOKEN::THREAD_LOCAL; }
