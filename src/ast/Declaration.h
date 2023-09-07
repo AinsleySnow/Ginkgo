@@ -206,8 +206,8 @@ public:
     void Append(std::unique_ptr<Declaration> decl);
     void AppendType(const CType* ty);
 
-    const auto& GetParamList() { return paramlist_; }
-    const auto& GetParamType() { return paramtype_; }
+    const auto& GetParamList() const { return paramlist_; }
+    const auto& GetParamType() const { return paramtype_; }
 
 private:
     friend class IRGen;
@@ -317,8 +317,9 @@ public:
     FuncDef* ToFuncDef() override { return this; }
     const FuncDef* ToFuncDef() const override { return this; }
 
-    const auto& GetParamList() { return paramlist_->GetParamList(); }
-    const auto& GetParamType() { return paramlist_->GetParamType(); }
+    const auto RawParamList() const { return paramlist_.get(); }
+    const auto& GetParamList() const { return paramlist_->GetParamList(); }
+    const auto& GetParamType() const { return paramlist_->GetParamType(); }
 
 private:
     friend class IRGen;

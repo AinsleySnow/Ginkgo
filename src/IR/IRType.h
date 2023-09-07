@@ -200,6 +200,13 @@ public:
     static StructType* GetStructType(Pool<IRType>*, const std::string&, size_t, size_t);
     StructType(const std::string& n, size_t s, size_t a) :
         HeterType(TypeId::_struct, n, s, a) {}
+    StructType(const std::string& n, size_t s, size_t a,
+        std::initializer_list<std::pair<const IRType*, size_t>> l) :
+        HeterType(TypeId::_struct, n, s, a)
+    {
+        for (auto [ty, off] : l)
+            AddField(ty, off);
+    }
 
     std::string ToString() const override;
 };
@@ -214,6 +221,13 @@ public:
     static UnionType* GetUnionType(Pool<IRType>*, const std::string&, size_t, size_t);
     UnionType(const std::string& n, size_t s, size_t a) :
         HeterType(TypeId::_union, n, s, a) {}
+    UnionType(const std::string& n, size_t s, size_t a,
+        std::initializer_list<std::pair<const IRType*, size_t>> l) :
+        HeterType(TypeId::_union, n, s, a)
+    {
+        for (auto [ty, off] : l)
+            AddField(ty, off);
+    }
 
     std::string ToString() const override;
 };

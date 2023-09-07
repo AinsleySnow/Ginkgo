@@ -502,9 +502,16 @@ void TypeBuilder::VisitCallExpr(CallExpr* expr)
     if (expr->Postfix()->IsIdentifier())
     {
         auto name = expr->Postfix()->ToIdentifier()->Name();
-        if (name == "__Ginkgo_assert")
+        if (name == "__Ginkgo_assert" ||
+            name == "__Ginkgo_va_start" || name == "__Ginkgo_va_end")
         {
             expr->Type() = std::make_unique<CVoidType>();
+            return;
+        }
+        else if (name == "__Ginkgo_va_arg")
+        {
+            expr->Type() =
+                std::make_unique<CPtrType>(std::make_unique<CVoidType>());
             return;
         }
     }

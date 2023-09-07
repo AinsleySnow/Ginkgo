@@ -75,7 +75,7 @@ Function* IRGen::AllocaFunc(const CFuncType* raw, const std::string& name)
 }
 
 
-const FuncType* IRGen::HandleBuiltins(CallExpr* call)
+static const FuncType* GetAssertProto()
 {
     const static PtrType ptr{ IntType::GetInt8(true) };
     const static FuncType assert{
@@ -85,18 +85,148 @@ const FuncType* IRGen::HandleBuiltins(CallExpr* call)
         },
         false
     };
+    return &assert;
+}
 
+static const PtrType* GetVoidPtr()
+{
+    const static PtrType vptr{ VoidType::GetVoidType() };
+    return &vptr;
+}
+
+static const PtrType* GetVaElemPtr()
+{
+    const static StructType vaelem{
+        "__Ginkgo_va_elem", 24, 8, {
+            std::make_pair(IntType::GetInt8(true), 0),
+            std::make_pair(IntType::GetInt8(true), 4),
+            std::make_pair(GetVoidPtr(), 8),
+            std::make_pair(GetVoidPtr(), 16)
+        }
+    };
+    const static PtrType ptr{ &vaelem };
+    return &ptr;
+}
+
+static const FuncType* GetVaStartProto()
+{
+    const static FuncType vastart{
+        VoidType::GetVoidType(), { GetVaElemPtr() }, true
+    };
+    return &vastart;
+}
+
+static const FuncType* GetVaArgProto()
+{
+    const static FuncType vaarg{
+        GetVoidPtr(), {
+            GetVaElemPtr(),
+            IntType::GetInt32(true),
+            IntType::GetInt32(true)
+        },
+        false
+    };
+    return &vaarg;
+}
+
+static const FuncType* GetVaEndProto()
+{
+    const static FuncType vaend{
+        GetVoidPtr(), { GetVaElemPtr() },
+        false
+    };
+    return &vaend;
+}
+
+
+const FuncType* IRGen::HandleBuiltins(CallExpr* call)
+{
     if (!call->Postfix()->IsIdentifier())
         return nullptr;
 
     auto name = call->Postfix()->ToIdentifier()->Name();
     if (name == "__Ginkgo_assert")
     {
-        ibud_.InsertCallInstr("", &assert, '@' + name);
-        return &assert;
+        auto ptr = GetAssertProto();
+        ibud_.InsertCallInstr("", ptr, '@' + name);
+        return ptr;
+    }
+    else if (name == "__Ginkgo_va_end")
+    {
+        auto ptr = GetVaEndProto();
+        ibud_.InsertCallInstr("", ptr, '@' + name);
+        return ptr;
     }
 
     return nullptr;
+}
+
+void IRGen::HandleVaStart(CallExpr* call)
+{
+    // Only evaluate the first argument of va_start.
+    auto first = call->ArgvList()->begin();
+    (*first)->Accept(this);
+
+    // Directly generate the instruction and
+    // append the processed arguments.
+    auto casted = ibud_.InsertBitcastInstr(
+        env_.GetRegName(), GetVaElemPtr(), (*first)->Val()->As<Register>());
+    ibud_.InsertCallInstr("", GetVaStartProto(), "@__Ginkgo_va_start");
+
+    auto callinstr = ibud_.LastInstr()->As<CallInstr>();
+    callinstr->AddArgv(casted);
+
+    // What if __Ginkgo_va_start takes more than two arguments?
+    auto second = std::next(first);
+    if (second == call->ArgvList()->end())
+    // We are done if no more arguments
+        return;
+
+    auto& paramlist = env_.GetParamList()->GetParamList();
+    for (auto i = paramlist.crbegin(); i != paramlist.crend(); ++i)
+    {
+        // (Will be) Guaranteed by CodeChk. If i is not the
+        // last argument with known address, CodeChk (will)
+        // should have reported it as a warning.
+        if ((*i)->ToObjDef()->Name() == (*second)->ToIdentifier()->Name())
+        {
+            auto offset = std::distance(paramlist.begin(), i.base()) - 1;
+            (*second)->Val() = env_.GetFunction()->Params()[offset];
+            break;
+        }
+    }
+    callinstr->AddArgv((*second)->Val());
+}
+
+void IRGen::HandleVaArg(CallExpr* call)
+{
+    call->TypeName()->Accept(this);
+    auto ty = call->TypeName()->RawType();
+    std::string name = "";
+    if (ty->Is<CArithmType>())
+    {
+        auto aty = ty->As<CArithmType>();
+        if (aty->IsFloat())
+            name = "@__Ginkgo_va_arg_fp";
+        else
+            name = "@__Ginkgo_va_arg_gp";
+    }
+    else
+        name = "@__Ginkgo_va_arg_mem";
+
+    call->ArgvList()->Accept(this);
+
+    auto casted = ibud_.InsertBitcastInstr(env_.GetRegName(),
+        GetVaElemPtr(), LoadVal(call->ArgvList()->begin()->get())->As<Register>());
+    call->Val() = ibud_.InsertCallInstr(
+        env_.GetRegName(), GetVaArgProto(), name);
+
+    auto callinstr = ibud_.LastInstr()->As<CallInstr>();        
+    callinstr->AddArgv(casted);
+    callinstr->AddArgv(
+        IntConst::CreateIntConst(ibud_.Container(), ty->Size()));
+    callinstr->AddArgv(
+        IntConst::CreateIntConst(ibud_.Container(), ty->Align()));
 }
 
 
@@ -244,6 +374,8 @@ void IRGen::VisitDeclList(DeclList* list)
 
 void IRGen::VisitFuncDef(FuncDef* def)
 {
+    // Note: function body is translated in
+    // VisitObjDef below
     tbud_.VisitFuncDef(def);
 }
 
@@ -283,7 +415,9 @@ void IRGen::VisitObjDef(ObjDef* def)
             ibud_.InsertAllocaInstr(env_.GetRegName(), rety);
     }
 
-    for (auto& param : def->Child()->ToFuncDef()->GetParamList())
+    auto funcdef = def->Child()->ToFuncDef();
+    env_.SetParamList(funcdef->RawParamList());
+    for (auto& param : funcdef->GetParamList())
     {
         if (param->RawType()->As<CVoidType>())
             continue;
@@ -629,6 +763,20 @@ void IRGen::VisitBinaryExpr(BinaryExpr* bin)
 
 void IRGen::VisitCallExpr(CallExpr* call)
 {
+    tbud_.VisitCallExpr(call);
+
+    auto pi = call->Postfix()->ToIdentifier();
+    if (pi && pi->Name() == "__Ginkgo_va_start")
+    {
+        HandleVaStart(call);
+        return; // Done; No need of code below
+    }
+    else if (pi && pi->Name() == "__Ginkgo_va_arg")
+    {
+        HandleVaArg(call);
+        return; // No need of code below as well
+    }
+
     if (call->argvlist_)
     {
         call->argvlist_->Accept(this);
@@ -643,13 +791,13 @@ void IRGen::VisitCallExpr(CallExpr* call)
 
     call->postfix_->Accept(&tbud_);
 
-    if (call->postfix_->IsIdentifier())
+    if (pi)
     {
-        auto name = call->postfix_->ToIdentifier()->name_;
+        auto name = pi->Name();
         auto func = scopestack_.File().GetFunc(name);
 
-        if (!func) goto pointercall;
-
+        if (!func)
+            goto pointercall;
         proto = transunit_->GetFunction('@' + name)->Type();
         bool isvoid = proto->ReturnType()->Is<VoidType>();
         call->Val() = ibud_.InsertCallInstr(
@@ -684,8 +832,6 @@ end:
             for (; argv != call->ArgvList()->end(); ++argv)
                 callinstr->AddArgv((*argv)->Val());
     }
-
-    tbud_.VisitCallExpr(call);
 }
 
 
