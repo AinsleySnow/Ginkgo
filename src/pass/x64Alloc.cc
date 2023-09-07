@@ -12,6 +12,9 @@ void x64Alloc::LoadParam()
     auto& params = CurFunc()->Params();
     SysVConv conv{ CurFunc()->Type() };
     conv.MapArgv();
+    auto [ic, vc] = conv.CountRegs();
+    intcnt_ = ic;
+    veccnt_ = vc;
 
     for (int i = params.size() - 1; i >= 0; --i)
     {

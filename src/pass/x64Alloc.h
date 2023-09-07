@@ -82,6 +82,9 @@ public:
     const x64* GetIROpMap(const IROperand* op) const;
     long RspOffset() const { return info_.rspoffset_; }
 
+    int IntRegCount() const { return intcnt_; }
+    int VecRegCount() const { return veccnt_; }
+
     RegSet UsedCallerSaved() const;
     RegSet UsedCalleeSaved() const;
     RegSet UsedIntReg() const;
@@ -102,6 +105,9 @@ protected:
     void MarkLoadTwice(const IROperand*);
 
 private:
+    int intcnt_{};
+    int veccnt_{};
+
     x64Stack info_{};
     RegX64Map ir_{};
     RegSet reg_{};
