@@ -940,10 +940,16 @@ direct_declarator
     { $$ = std::make_unique<ObjDef>($1); }
     | ENUMERATION_CONSTANT
     { $$ = std::make_unique<ObjDef>($1); }
+
+    /* If the parser is a recursive descent one,
+     * parsing these snippets would be super
+     * easy. But, unfortunately it's not.
+
     | IDENTIFIER attribute_declaration
     { $$ = std::make_unique<ObjDef>($1); }
     | ENUMERATION_CONSTANT attribute_declaration
     { $$ = std::make_unique<ObjDef>($1); }
+    */
 
 	| '(' declarator ')'
     { $$ = std::move($2); }
