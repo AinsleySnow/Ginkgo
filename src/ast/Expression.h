@@ -106,22 +106,29 @@ private:
 
 
 class ExprList;
+class IdentExpr;
 class CallExpr : public Expr
 {
 public:
     CallExpr(std::unique_ptr<Expr> e) : postfix_(std::move(e)) {}
     CallExpr(std::unique_ptr<Expr> e, std::unique_ptr<ExprList> el) :
         postfix_(std::move(e)), argvlist_(std::move(el)) {}
+    CallExpr(std::unique_ptr<Expr> e, std::unique_ptr<ExprList> el,
+        std::unique_ptr<Declaration> tn) :
+        postfix_(std::move(e)), argvlist_(std::move(el)), typename_(std::move(tn)) {} 
 
     void Accept(ASTVisitor* v) override;
 
     const auto& Postfix() const { return postfix_; }
     const auto& ArgvList() const { return argvlist_; }
+    const auto& TypeName() const { return typename_; }
 
 private:
     friend class IRGen;
     std::unique_ptr<Expr> postfix_{};
     std::unique_ptr<ExprList> argvlist_{};
+    // For __Ginkgo_va_arg
+    std::unique_ptr<Declaration> typename_{};
 };
 
 

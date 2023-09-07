@@ -109,6 +109,7 @@ static void comment(void);
 "_Thread_local"         { yylval->emplace<Tag>() = Tag::_thread_local; return YYTOKEN::THREAD_LOCAL; }
 "thread_local"          { yylval->emplace<Tag>() = Tag::_thread_local; return YYTOKEN::THREAD_LOCAL; }
 "__func__"              { return YYTOKEN::FUNC_NAME; }
+"__Ginkgo_va_arg"       { return YYTOKEN::GKVAARG; }
 
 
 ({L}|{U8})({A}|{U8})*		{

@@ -77,6 +77,7 @@ STRING_LITERAL FUNC_NAME TYPEDEF_NAME ENUMERATION_CONSTANT
 %token	<Tag> CASE DEFAULT IF ELSE SWITCH WHILE DO FOR GOTO CONTINUE BREAK RETURN
 
 %token	<Tag> ALIGNAS ALIGNOF SIZEOF GENERIC STATIC_ASSERT THREAD_LOCAL
+%token  GKVAARG
 
 
 %type <Tag> unary_operator assignment_operator
@@ -253,6 +254,14 @@ postfix_expression
     { $$ = std::make_unique<CallExpr>(std::move($1)); }
 	| postfix_expression '(' argument_expression_list ')'
     { $$ = std::make_unique<CallExpr>(std::move($1), std::move($3)); }
+    | GKVAARG '(' assignment_expression ',' type_name ')'
+    {
+        auto list = std::make_unique<ExprList>();
+        list->Append(std::move($3));
+        $$ = std::make_unique<CallExpr>(
+            std::make_unique<IdentExpr>("__Ginkgo_va_arg"),
+            std::move(list), std::move($5));
+    }
 
 	| postfix_expression '.' IDENTIFIER
     { $$ = std::make_unique<AccessExpr>(std::move($1), Tag::dot, $3); }
