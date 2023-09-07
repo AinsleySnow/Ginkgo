@@ -57,6 +57,8 @@ private:
     OutputType outputype_{};
     std::string cppath_{};
     std::string libpath_{};
+    std::string libc23path_{};
+    std::string includepath_{};
 
     bool link2gk_{};
     std::string inputname_{};

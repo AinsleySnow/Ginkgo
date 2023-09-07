@@ -38,15 +38,17 @@ Driver::Driver(const char* e)
     if (!std::filesystem::exists(absolute / "gkcpp"))
     {
         cppath_ = "gkcpp";
-        libpath_ = "/usr/lib/Ginkgo/gklib.a";
+        libpath_ = "/usr/lib/Ginkgo/gkcommon.a";
+        libc23path_ = "/usr/lib/Ginkgo/gkc23.a";
+        includepath_ = "/usr/include/Ginkgo";
     }
     else
     {
-        absolute.append("gkcpp");
-        cppath_ = absolute.string();
-        absolute.remove_filename();
-        absolute.append("../lib/gklib.a");
-        libpath_ = absolute.string();
+        auto path = absolute.string();
+        cppath_ = path + "gkcpp";
+        libpath_ = path + "../lib/gkcommon.a";
+        libc23path_ = path + "../lib/gkc23.a";
+        includepath_ = path + "../../include";
     }
 }
 
@@ -90,8 +92,9 @@ std::string Driver::Preprocess(const std::string& input)
     // -V: not showing version information
     // -H: output blank lines
     // -b: output unbalanced braces, brackets, etc.
-    system(fmt::format("{} -V -H -b {} > {}",
-        cppath_, input, afterpp).c_str());
+    // -I: add a directory to the search list of gkcpp
+    system(fmt::format("{} -V -H -b -I{} {} > {}",
+        cppath_, includepath_, input, afterpp).c_str());
     return afterpp;
 }
 
@@ -99,6 +102,7 @@ void Driver::Parse(const std::string& name)
 {
     yyin = fopen(name.c_str(), "r");
     yy::parser parser(transunit_, CheckType());
+    // parser.set_debug_level(1);
     parser.parse();
 }
 
@@ -176,11 +180,12 @@ void Driver::Link(const std::string& input)
         "/usr/lib/x86_64-linux-gnu/crt1.o "
         "/usr/lib/x86_64-linux-gnu/crti.o "
         "-lc "
+        "{} "
         "{} ",
-        outputname_, input);
+        outputname_, input, libpath_);
 
     if (link2gk_)
-        basic += libpath_ + ' ';
+        basic += libc23path_ + ' ';
 
     system(fmt::format(
             "{} "
