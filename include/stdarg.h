@@ -7,46 +7,26 @@ typedef struct
 {
     unsigned int gp_offset;
     unsigned int fp_offset;
-    void *overflow_arg_area;
-    void *reg_save_area;
+    void* overflow_arg_area;
+    void* reg_save_area;
 } __Ginkgo_va_elem;
 
 typedef __Ginkgo_va_elem va_list[1];
 
+void* __Ginkgo_va_arg_mem(__Ginkgo_va_elem* ap, int sz, int align);
+void* __Ginkgo_va_arg_gp(__Ginkgo_va_elem* ap, int sz, int align);
+void* __Ginkgo_va_arg_fp(__Ginkgo_va_elem* ap, int sz, int align);
 
-static void *__va_arg_mem(__va_elem *ap, int sz, int align)
-{
-    void *p = ap->overflow_arg_area;
-    if (align > 8)
-        p = (p + 15) / 16 * 16;
-    ap->overflow_arg_area = ((unsigned long)p + sz + 7) / 8 * 8;
-    return p;
-}
+// In C23, va_start is a variadic macro, and only the first
+// argument passed to va_start is evaluated. (7.16.1.4[4])
+// I used a trick to avoid copying the __Ginkgo_va_elem struct.
+#define va_start(ap, ...)   \
+    __Ginkgo_va_start(&ap __VA_OPT__(,) __VA_ARGS__)
 
-static void *__va_arg_gp(__va_elem *ap, int sz, int align)
-{
-    if (ap->gp_offset >= 48)
-        return __va_arg_mem(ap, sz, align);
-
-    void *r = ap->reg_save_area + ap->gp_offset;
-    ap->gp_offset += 8;
-    return r;
-}
-
-static void *__va_arg_fp(__va_elem *ap, int sz, int align)
-{
-    if (ap->fp_offset >= 112)
-        return __va_arg_mem(ap, sz, align);
-
-    void *r = ap->reg_save_area + ap->fp_offset;
-    ap->fp_offset += 8;
-    return r;
-}
-
-
-#define va_arg(ap, ty)      (*(ty*)__Ginkgo_va_arg(ap, ty))
+// __Ginkgo_va_arg is marked as built-in function and will
+// be replaced by a variant above
+#define va_arg(ap, ty)      (*(ty*)__Ginkgo_va_arg(&ap, ty))
 #define va_copy(from, to)   ((from)[0] = (to)[0])
-#define va_end(ap)          __Ginkgo_va_end(ap)
-#define va_start(ap, param) __Ginkgo_va_start(ap, param)
+#define va_end(ap)          __Ginkgo_va_end(&ap)
 
 #endif // __GINKGO_STDARG_H
