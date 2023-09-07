@@ -8,6 +8,10 @@ enum class Tag
     _unsigned = 128, _signed = 256, _bool = 512,
     _void = 1024, _enum = 2048, _struct = 4096,
     _union = 8192, _typedef = 16384, _atomic = 32768,
+    _typeof = 65536, _typeof_unqual = 131072, _decimal32 = 262144,
+    _decimal64 = 524288, _decimal128 = 1048576,
+
+    _true, _false, _nullptr, 
 
     // _typedef and _atomic can be used in two
     // different scenarios.
@@ -21,7 +25,7 @@ enum class Tag
     
     _const, _restrict, _volatile,
 
-    _inline, _noreturn,
+    _inline, _noreturn, _constexpr,
 
     inc, dec, postfix_inc, postfix_dec,
     arrow,  dot,
