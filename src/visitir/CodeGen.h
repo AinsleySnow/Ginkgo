@@ -92,6 +92,7 @@ public:
 
     void VisitPtrtoIInstr(PtrtoIInstr*) override;
     void VisitItoPtrInstr(ItoPtrInstr*) override;
+    void VisitBitcastInstr(BitcastInstr*) override;
 
     void VisitIcmpInstr(IcmpInstr*) override;
     void VisitFcmpInstr(FcmpInstr*) override;
@@ -160,12 +161,14 @@ private:
     void MapFltParam2Reg(const x64*, const x64Reg*);
     void MapOtherParam2Mem(const x64*);
     void MapOtherParam2Reg(const x64*, const x64Reg*);
-    void PassParam(const SysVConv&, const std::vector<const IROperand*>&);
+    void PassParam(const SysVConv&, int, const std::vector<const IROperand*>&);
 
     void SaveCalleeSaved();
     void RestoreCalleeSaved();
     void SaveCallerSaved();
     void RestoreCallerSaved();
+
+    void HandleVaStart(CallInstr*);
 
     void Copy8Bytes(const x64*, RegTag, RegTag, size_t);
     void Copy8Bytes(RegTag, const x64Mem*, size_t);

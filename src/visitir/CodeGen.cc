@@ -291,9 +291,9 @@ void CodeGen::MapOtherParam2Reg(const x64* param, const x64Reg* loc)
 // PassParam must correctly adjust the value of rsp, as the VisitCallInstr method
 // will add rsp by the size of the parameters and padding directly.
 void CodeGen::PassParam(
-    const SysVConv& conv, const std::vector<const IROperand*>& param)
+    const SysVConv& conv, int count, const std::vector<const IROperand*>& param)
 {
-    long prevoffset = 0;    
+    long prevoffset = 0;
     for (int i = param.size() - 1; i >= 0; --i)
     {
         auto load2reg = conv.PlaceOfArgv(i);
@@ -329,7 +329,9 @@ void CodeGen::PassParam(
 
         if (param[i]->Type()->Is<HeterType>())
         {
-            if (auto size = param[i]->Type()->Size(); size > 64)
+            // i >= count: if the function is variadic,
+            // pass struct/union on the stack
+            if (auto size = param[i]->Type()->Size(); size > 64 || i >= count)
             {
                 AdjustRsp(-size);
                 asmfile_.EmitPush(RegTag::rcx, 8);
@@ -344,6 +346,8 @@ void CodeGen::PassParam(
                 asmfile_.EmitPop(RegTag::rdi, 8);
                 asmfile_.EmitPop(RegTag::rsi, 8);
                 asmfile_.EmitPop(RegTag::rcx, 8);
+
+                prevoffset = conv.OffsetOfArgv(i);
             }
             else
                 MapHeterParam(alloc_->GetIROpMap(param[i])->As<x64Mem>(),
@@ -417,6 +421,71 @@ void CodeGen::RestoreCallerSaved()
         else
             PopEmitHelper(X64Phys2RegTag(*i), 8);
     }
+}
+
+
+void CodeGen::HandleVaStart(CallInstr* inst)
+{
+    auto& argvs = inst->ArgvList();
+    auto addr = LoadPointer(argvs[0]->As<Register>())->As<x64Mem>();
+    auto oldoff = addr->Offset();
+    x64Reg rax{ RegTag::rax, 8 };
+
+    if (argvs.size() == 1) // Only one argument?
+    {
+        // Supposed the function has prototype func(...).
+        // An error should have reported by CodeChk if not so.
+        // gp_offset = 0
+        asmfile_.EmitInstr(fmt::format("    movl $0, {}\n", addr->ToString()));
+        // fp_offset = 0
+        const_cast<x64Mem*>(addr)->Offset() += 4;
+        asmfile_.EmitInstr(fmt::format("    movl $0, {}\n", addr->ToString()));
+        // overflow_arg_area = 16(%rbp)
+        const_cast<x64Mem*>(addr)->Offset() += 4;
+        asmfile_.EmitInstr(fmt::format("    leaq 16(%rbp), %rax\n"));
+        asmfile_.EmitMov(&rax, addr, 0);
+    }
+    else
+    {
+        // gp_offset = count of used GP registers * 8
+        asmfile_.EmitInstr(fmt::format(
+            "    movl ${}, {}\n", alloc_->IntRegCount() * 8, addr->ToString()));
+        // fp_offset = 48 + count of used vector registers * 8
+        const_cast<x64Mem*>(addr)->Offset() += 4;
+        asmfile_.EmitInstr(fmt::format(
+            "    movl ${}, {}\n", 48 + alloc_->VecRegCount() * 8, addr->ToString()));
+        // overflow_arg_area = address of the last address-known argument
+        // plus its size; 16(%rbp) if it is passed in the register
+        const_cast<x64Mem*>(addr)->Offset() += 4;
+        auto last = alloc_->GetIROpMap(argvs[1]);
+        if (last->Is<x64Reg>())
+        {
+            asmfile_.EmitInstr(fmt::format("    leaq 16(%rbp), %rax\n"));
+            asmfile_.EmitMov(&rax, addr, 0);
+        }
+        else // if (last->Is<x64Mem>())
+        {
+            auto mem = last->As<x64Mem>();
+            auto oldmem = mem->Offset();
+            auto size = mem->Size();
+            if (size < 8)
+                size = 8;
+            else if (size > 8)
+                size += size % 8;
+            const_cast<x64Mem*>(mem)->Offset() += size;
+            asmfile_.EmitInstr(fmt::format("    leaq {}, %rax\n", mem->ToString()));
+            asmfile_.EmitMov(&rax, addr, 0);
+            const_cast<x64Mem*>(mem)->Offset() = oldmem;
+        }
+    }
+
+    // reg_save_area = -(112 + size of stack vars)(%rbp)
+    const_cast<x64Mem*>(addr)->Offset() += 8;
+    auto offset = -(alloc_->RspOffset() + 112);
+    asmfile_.EmitInstr(fmt::format("    leaq {}(%rbp), %rax\n", offset));
+    asmfile_.EmitMov(&rax, addr, 0);
+
+    const_cast<x64Mem*>(addr)->Offset() = oldoff;
 }
 
 
@@ -968,6 +1037,7 @@ void CodeGen::PushEmitHelper(const x64* reg)
     if (reg->Is<x64Imm>())
     {
         asmfile_.EmitInstr("    pushq " + reg->ToString() + '\n');
+        stacksize_ += 8;
         return;
     }
 
@@ -1240,28 +1310,27 @@ void CodeGen::VisitFunction(Function* func)
     if (func->Variadic())
     {
         AlignRspBy(0, 8);
-        auto baseline = stacksize_;
-        AdjustRsp(-176);
-        asmfile_.EmitMov(RegTag::rdi, baseline);
-        asmfile_.EmitMov(RegTag::rsi, baseline + 8);
-        asmfile_.EmitMov(RegTag::rdx, baseline + 16);
-        asmfile_.EmitMov(RegTag::rcx, baseline + 24);
-        asmfile_.EmitMov(RegTag::r8, baseline + 32);
-        asmfile_.EmitMov(RegTag::r9, baseline + 40);
+        AdjustRsp(-112);
+        asmfile_.EmitMov(RegTag::rdi, (long)0);
+        asmfile_.EmitMov(RegTag::rsi, 8);
+        asmfile_.EmitMov(RegTag::rdx, 16);
+        asmfile_.EmitMov(RegTag::rcx, 24);
+        asmfile_.EmitMov(RegTag::r8, 32);
+        asmfile_.EmitMov(RegTag::r9, 40);
 
         auto rax = x64Reg(RegTag::rax, 1);
         auto label = GetLabel();
         asmfile_.EmitTest(&rax, &rax);
         asmfile_.EmitJmp("e", label);
 
-        asmfile_.EmitVmov(RegTag::xmm0, baseline + 48);
-        asmfile_.EmitVmov(RegTag::xmm1, baseline + 64);
-        asmfile_.EmitVmov(RegTag::xmm2, baseline + 80);
-        asmfile_.EmitVmov(RegTag::xmm3, baseline + 96);
-        asmfile_.EmitVmov(RegTag::xmm4, baseline + 112);
-        asmfile_.EmitVmov(RegTag::xmm5, baseline + 128);
-        asmfile_.EmitVmov(RegTag::xmm6, baseline + 144);
-        asmfile_.EmitVmov(RegTag::xmm7, baseline + 160);
+        asmfile_.EmitVmov(RegTag::xmm0, 48);
+        asmfile_.EmitVmov(RegTag::xmm1, 56);
+        asmfile_.EmitVmov(RegTag::xmm2, 64);
+        asmfile_.EmitVmov(RegTag::xmm3, 72);
+        asmfile_.EmitVmov(RegTag::xmm4, 80);
+        asmfile_.EmitVmov(RegTag::xmm5, 88);
+        asmfile_.EmitVmov(RegTag::xmm6, 96);
+        asmfile_.EmitVmov(RegTag::xmm7, 104);
 
         asmfile_.EmitLabel(label);
     }
@@ -1446,6 +1515,12 @@ void CodeGen::VisitSwitchInstr(SwitchInstr* inst)
 
 void CodeGen::VisitCallInstr(CallInstr* inst)
 {
+    if (inst->FuncName() == "@__Ginkgo_va_start")
+    {
+        HandleVaStart(inst);
+        return;
+    }
+
     // Layout of the stack:
     //         high address
     // +------------------------+
@@ -1466,7 +1541,8 @@ void CodeGen::VisitCallInstr(CallInstr* inst)
         inst->Proto() :
         // Call through a function pointer?
         inst->FuncAddr()->Type()->As<PtrType>()->Point2()->As<FuncType>();
-    SysVConv conv{ proto };
+
+    SysVConv conv{ proto, &inst->ArgvList() };
     conv.MapArgv();
 
     auto [_, vec] = conv.CountRegs();
@@ -1483,7 +1559,10 @@ void CodeGen::VisitCallInstr(CallInstr* inst)
 
     if (proto->ReturnType()->Is<HeterType>() && proto->ReturnType()->Size() > 16)
         asmfile_.EmitLeaq(alloc_->GetIROpMap(inst->Result()), RegTag::rdi);
-    PassParam(conv, inst->ArgvList());
+
+    // If an SysVConv object is constructured by the two-parameter ctor,
+    // the size of variadic part will be included in conv.StackSize() as well.
+    PassParam(conv, proto->ParamType().size(), inst->ArgvList());
 
     if (inst->FuncAddr())
         asmfile_.EmitCall(alloc_->GetIROpMap(inst->FuncAddr()));
@@ -1880,6 +1959,30 @@ void CodeGen::VisitItoPtrInstr(ItoPtrInstr* inst)
     }
     else // if (from->Size() == 1 || from->Size() == 2)
         MovzEmitHelper(from, to);
+}
+
+void CodeGen::VisitBitcastInstr(BitcastInstr* inst)
+{
+    auto from = alloc_->GetIROpMap(inst->Value());
+    auto to = alloc_->GetIROpMap(inst->Dest());
+    if (from->Is<x64Reg>() && to->Is<x64Reg>())
+    {
+        auto f = from->As<x64Reg>();
+        auto t = to->As<x64Reg>();
+        if (f->Tag() != t->Tag())
+            asmfile_.EmitMov(from, to);
+        return;
+    }
+    else if (from->Is<x64Reg>())
+    {
+        asmfile_.EmitMov(from, to);
+        return;
+    }
+    auto m = from->As<x64Mem>();
+    if (m->LoadTwice())
+        MovEmitHelper(m, to);
+    else
+        LeaqEmitHelper(m, to);
 }
 
 
