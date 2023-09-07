@@ -25,6 +25,8 @@ public:
     static bool HasFloat(const IRType*, size_t, size_t, size_t);
 
     SysVConv(const FuncType*);
+    SysVConv(const FuncType*, const std::vector<const IROperand*>*);
+
     void MapArgv();
     const x64* PlaceOfArgv(int) const;
     long OffsetOfArgv(int) const;
@@ -39,7 +41,8 @@ public:
 
 private:
     void AlignStackBy(size_t, size_t);
-    void CheckParamClass(const IRType*);
+    void CheckParamClass(const IRType*, bool = false);
+    const IRType* GetType(int) const;
     void Emplace(int, const IRType*, RegTag);
     void Emplace(x64Heter*, RegTag);
     RegTag GetIntReg();
@@ -50,6 +53,7 @@ private:
     int veccnt_{};
 
     const FuncType* functype_{};
+    const std::vector<const IROperand*>* paramlist_{};
     // class of every eight bytes
     std::vector<ParamClass> wordclass_{};
     // how many bytes of parameters are passed in the stack

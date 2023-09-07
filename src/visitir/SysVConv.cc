@@ -10,7 +10,7 @@ void SysVConv::AlignStackBy(size_t add, size_t align)
     stacksize_ += align - (stacksize_ + add) % align;
 }
 
-void SysVConv::CheckParamClass(const IRType* t)
+void SysVConv::CheckParamClass(const IRType* t, bool var)
 {
     if (t->Is<IntType>())
         wordclass_.push_back(ParamClass::integer);
@@ -32,7 +32,7 @@ void SysVConv::CheckParamClass(const IRType* t)
 
     // if a struct or union is greater than 64 bytes,
     // then it is passed on the stack
-    else if (t->Is<HeterType>() && t->Size() > 64)
+    else if (t->Is<HeterType>() && (t->Size() > 64 || var))
         wordclass_.push_back(ParamClass::memory);
 
     else if (t->Is<HeterType>())
@@ -45,6 +45,13 @@ void SysVConv::CheckParamClass(const IRType* t)
                 wordclass_.push_back(ParamClass::integer);
         }
     }
+}
+
+const IRType* SysVConv::GetType(int i) const
+{
+    if (i >= functype_->ParamType().size())
+        return paramlist_->at(i)->Type();
+    return functype_->ParamType().at(i);
 }
 
 void SysVConv::Emplace(int i, const IRType* p, RegTag t)
@@ -132,18 +139,31 @@ SysVConv::SysVConv(const FuncType* f) : functype_(f)
         CheckParamClass(f->ParamType()[i]);
 }
 
+SysVConv::SysVConv(const FuncType* f, const std::vector<const IROperand*>* l) :
+    functype_(f), paramlist_(l)
+{
+    if (f->ReturnType()->Is<HeterType>() && f->ReturnType()->Size() > 16)
+        intcnt_ = 1;
+    for (int i = 0; i < f->ParamType().size(); ++i)
+        CheckParamClass(f->ParamType()[i]);
+    for (int i = f->ParamType().size(); i < l->size(); ++i)
+        CheckParamClass((*l)[i]->Type(), true);
+}
+
+
 void SysVConv::MapArgv()
 {
     auto size = functype_->ParamType().size();
+    auto count = paramlist_ ? paramlist_->size() : size;
 
     // index for wordclass_
     int windex = 0;
-    for (int i = 0; i < size; ++i)
+    for (int i = 0; i < count; ++i)
     {
-        if (functype_->ParamType()[i]->Is<HeterType>() &&
-            functype_->ParamType()[i]->Size() <= 64)
+        if (GetType(i)->Is<HeterType>() && i < size &&
+            GetType(i)->Size() <= 64)
         {
-            auto sz = functype_->ParamType()[i]->Size();
+            auto sz = GetType(i)->Size();
             auto heter = std::make_unique<x64Heter>(sz);
             for (int index = 0; index < sz; index += 8)
             {
@@ -160,11 +180,11 @@ void SysVConv::MapArgv()
         switch (wordclass_[windex])
         {
         case ParamClass::integer:
-            Emplace(i, functype_->ParamType()[i], GetIntReg());
+            Emplace(i, GetType(i), GetIntReg());
             windex++;
             break;
         case ParamClass::sse:
-            Emplace(i, functype_->ParamType()[i], GetVecReg());
+            Emplace(i, GetType(i), GetVecReg());
             windex++;
             break;
 
@@ -188,13 +208,13 @@ void SysVConv::MapArgv()
         // ignore the case for now.
         case ParamClass::x87:
         case ParamClass::memory:
-            if (auto ty = functype_->ParamType()[i];
+            if (auto ty = GetType(i);
                 ty->Is<HeterType>() && ty->Align() > 8)
                 AlignStackBy(0, ty->Align());
             else
                 AlignStackBy(0, 8);
             memoffset_[i] = static_cast<long>(stacksize_);
-            stacksize_ += functype_->ParamType()[i]->Size();
+            stacksize_ += GetType(i)->Size();
 
             if (wordclass_[windex] == ParamClass::x87)
                 windex += 2; // since x87up always follows behind x87
@@ -263,7 +283,9 @@ std::pair<int, int> SysVConv::CountRegs() const
 {
     int gp = 0, vec = 0;
     int windex = 0;
-    for (int i = 0; i < functype_->ParamType().size(); ++i)
+    int size = paramlist_ ?
+        paramlist_->size() : functype_->ParamType().size();
+    for (int i = 0; i < size; ++i)
     {
         switch (wordclass_[windex])
         {
@@ -278,5 +300,9 @@ std::pair<int, int> SysVConv::CountRegs() const
         }
     }
 
+    if (gp > 6)
+        gp = 6;
+    if (vec > 8)
+        vec = 8;
     return std::make_pair(gp, vec);
 }
