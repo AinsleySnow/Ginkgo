@@ -82,7 +82,9 @@ std::string Function::ToString() const
         }
     }
 
-    if (Variadic())
+    if (Variadic() && Params().empty())
+        func += "...)";
+    else if (Variadic())
         func += ", ...)";
     else
         func += ')';

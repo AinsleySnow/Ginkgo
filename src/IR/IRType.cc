@@ -221,7 +221,9 @@ std::string FuncType::ToString() const
             paramlist += (*t)->ToString() + ", ";
         paramlist += param_.back()->ToString();
     }
-    if (variadic_)
+    if (variadic_ && param_.empty())
+        paramlist += "...)";
+    else if (variadic_)
         paramlist += ", ...)";
     else
         paramlist += ')';
