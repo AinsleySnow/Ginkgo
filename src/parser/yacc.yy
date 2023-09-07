@@ -209,11 +209,11 @@ constant
 	| ENUMERATION_CONSTANT	/* after it has been defined as such */
     { $$ = std::make_unique<EnumConst>($1); }
 	| TRUE
-    { $$ = std::make_unique<ConstExpr>($1); }
+    { $$ = std::make_unique<ConstExpr>(true); }
     | FALSE
-    { $$ = std::make_unique<ConstExpr>($1); }
-    | NULLPTR
-    { $$ = std::make_unique<ConstExpr>($1); }
+    { $$ = std::make_unique<ConstExpr>(false); }
+    | NULLPTR // temporary workaround
+    { $$ = std::make_unique<ConstExpr>(static_cast<uint64_t>(0)); }
     ;
 
 enumeration_constant		/* before it has been defined as such */
