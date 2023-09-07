@@ -582,6 +582,14 @@ void TypeBuilder::VisitEnumList(EnumList* list)
 }
 
 
+void TypeBuilder::VisitExprList(ExprList* expr)
+{
+    if (expr->Type()) return;
+    expr->Back()->Accept(this);
+    expr->Type() = expr->Back()->Type()->Clone();
+}
+
+
 void TypeBuilder::VisitIdentExpr(IdentExpr* expr)
 {
     if (expr->Type()) return;

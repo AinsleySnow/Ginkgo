@@ -33,6 +33,7 @@ public:
     void VisitSzAlgnExpr(SzAlgnExpr*) override;
     void VisitEnumConst(EnumConst*) override;
     void VisitEnumList(EnumList*) override;
+    void VisitExprList(ExprList*) override;
     void VisitIdentExpr(IdentExpr*) override;
     void VisitLogicalExpr(LogicalExpr*) override;
     void VisitStrExpr(StrExpr*) override;

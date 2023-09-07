@@ -147,6 +147,11 @@ const IROperand* IRGen::LoadVal(Expr* expr)
             env_.GetRegName(), expr->Val()->As<Register>());
         return expr->Val();
     }
+    else if (expr->IsExprList())
+    {
+        expr->Val() = LoadVal(expr->ToExprList()->Back().get());
+        return expr->Val();
+    }
     else
         return expr->Val();
 }
@@ -157,6 +162,8 @@ const Register* IRGen::LoadAddr(Expr* expr)
         return expr->ToIdentifier()->Addr();
     else if (expr->IsSubscript())
         return expr->ToSubscript()->Addr();
+    else if (expr->IsExprList())
+        return LoadAddr(expr->ToExprList()->Back().get());
     // else if (expr->IsUnary() && expr->ToUnary()->Op() == Tag::_and)
     // else if (expr->IsAccess())
     // no Addr method in UnaryExpr and AccessExpr; if address-of is used,
@@ -910,6 +917,11 @@ void IRGen::VisitExprList(ExprList* list)
 {
     for (auto& expr : list->exprlist_)
         expr->Accept(this);
+
+    // The left operand of a comma operator is evaluated as a void
+    // expression; there is a sequence point between its evaluation
+    // and that of the right operand. Then the right operand is
+    // evaluated; the result has its type and value. (6.5.17[2])
 }
 
 

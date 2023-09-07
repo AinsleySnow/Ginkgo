@@ -264,9 +264,16 @@ class ExprList : public Expr
 public:
     void Accept(ASTVisitor* v) override;
 
+    bool IsExprList() const override { return true; }
+    ExprList* ToExprList() override { return this; }
+    const ExprList* ToExprList() const override { return this; }
+
     void Append(std::unique_ptr<Expr> expr);
     auto begin() { return exprlist_.begin(); }
     auto end() { return exprlist_.end(); }
+
+    const auto& Front() const { return exprlist_.front(); }
+    const auto& Back() const { return exprlist_.back(); }
 
 private:
     friend class IRGen;
