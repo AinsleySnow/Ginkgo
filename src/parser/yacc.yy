@@ -458,20 +458,19 @@ assignment_operator
 	;
 
 expression
-	: assignment_expression{ $$ = std::move($1); }
+	: assignment_expression { $$ = std::move($1); }
 	| expression ',' assignment_expression
     {
-        auto assign = dynamic_cast<AssignExpr*>($1.get());
-        if (assign)
+        auto list = dynamic_cast<ExprList*>($1.get());
+        if (!list)
         {
-            auto list = std::make_unique<ExprList>();
-            list->Append(std::move($3));
-            list->Append(std::move($1));
-            $$ = std::move(list);
+            auto el = std::make_unique<ExprList>();
+            el->Append(std::move($1));
+            el->Append(std::move($3));
+            $$ = std::move(el);
         }
         else
         {
-            auto list = static_cast<ExprList*>($1.get());
             list->Append(std::move($3));
             $$ = std::move($1);
         }
@@ -528,7 +527,7 @@ declaration_specifier
 	| type_specifier_qualifier
     {
         $$ = std::make_unique<DeclSpec>();
-        $$->AddTypeSpec(std::move($1));
+        $$->Extend($1);
     }
 	| function_specifier
     {
