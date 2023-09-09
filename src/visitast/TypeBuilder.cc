@@ -297,6 +297,24 @@ std::unique_ptr<CType> TypeBuilder::TypedefHelper(const TypedefSpec* spec, size_
     return std::move(ty);
 }
 
+std::unique_ptr<CType> TypeBuilder::TypeofHelper(const TypeofSpec* spec, size_t align)
+{
+    std::unique_ptr<CType> ty = nullptr;
+    if (spec->TypeName())
+    {
+        spec->TypeName()->Accept(this);
+        ty = spec->TypeName()->Type()->Clone();
+    }
+    else // if spec->Expression()
+    {
+        spec->Expression()->Accept(this);
+        ty = spec->Expression()->Type()->Clone();
+    }
+    if (align > ty->Align())
+        ty->Align() = align;
+    return std::move(ty);
+}
+
 
 void TypeBuilder::VisitDeclSpec(DeclSpec* spec)
 {
@@ -365,6 +383,13 @@ void TypeBuilder::VisitDeclSpec(DeclSpec* spec)
     {
         auto ty = TypedefHelper(spec->GetTypedefSpec(), align);
         ty->Qual() = spec->Qual();
+        ty->Storage() = spec->Storage();
+        spec->Type() = std::move(ty);
+    }
+    else if (tag == TypeTag::_typeof || tag == TypeTag::tyunqual)
+    {
+        auto ty = TypeofHelper(spec->GetTypeofSpec(), align);
+        ty->Qual() = tag == TypeTag::_typeof ? spec->Qual() : QualType();
         ty->Storage() = spec->Storage();
         spec->Type() = std::move(ty);
     }

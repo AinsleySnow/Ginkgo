@@ -8,6 +8,7 @@
 class EnumSpec;
 class HeterSpec;
 class TypedefSpec;
+class TypeofSpec;
 class ScopeStack;
 
 
@@ -43,6 +44,7 @@ private:
     std::unique_ptr<CEnumType> EnumHelper(const EnumSpec*, size_t);
     template <class T> std::unique_ptr<T> HeterHelper(const HeterSpec*, size_t);
     std::unique_ptr<CType> TypedefHelper(const TypedefSpec*, size_t);
+    std::unique_ptr<CType> TypeofHelper(const TypeofSpec*, size_t);
 
     std::shared_ptr<CType> EnlargeCType(std::shared_ptr<CType>, int);
     std::shared_ptr<CType> GetCTypeByValue(std::shared_ptr<CType>, std::shared_ptr<CType>, uint64_t);

@@ -48,6 +48,12 @@ const TypedefSpec* DeclSpec::GetTypedefSpec() const
         speclist_.front().get());
 }
 
+const TypeofSpec* DeclSpec::GetTypeofSpec() const
+{
+    return static_cast<const TypeofSpec*>(
+        speclist_.front().get());
+}
+
 
 void DeclSpec::Extend(std::unique_ptr<DeclSpec>& ds)
 {
@@ -132,8 +138,17 @@ TypeTag DeclSpec::GetTypeTag()
     case int(Tag::_union):
         return TypeTag::_union;
 
+    // typedef
     case int(Tag::_typedef):
         return TypeTag::_typedef;
+
+    // typeof
+    case int(Tag::_typeof):
+        return TypeTag::_typeof;
+
+    // typeof_unqual
+    case int(Tag::_typeof_unqual):
+        return TypeTag::tyunqual;
 
     // others
     default: return TypeTag::customed;

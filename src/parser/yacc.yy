@@ -103,6 +103,7 @@ constant initializer initializer_list braced_initializer
 %type <AlignSpec> alignment_specifier
 %type <QualType> type_qualifier_list
 %type <std::unique_ptr<TypeSpec>> type_specifier enum_specifier
+%type <std::unique_ptr<TypeofSpec>> typeof_specifier
 %type <std::unique_ptr<HeterSpec>> struct_or_union_specifier
 %type <std::unique_ptr<DeclSpec>> declaration_specifiers specifier_qualifier_list type_specifier_qualifier declaration_specifier
 %type <std::unique_ptr<PtrDef>> pointer
@@ -630,8 +631,8 @@ type_specifier
     { $$ = std::move($1); }
 	| TYPEDEF_NAME
     { $$ = std::make_unique<TypedefSpec>(std::move($1)); }
-	| typeof_specifier // TODO
-    { $$ = nullptr; }
+	| typeof_specifier
+    { $$ = std::move($1); }
     ;
 
 struct_or_union_specifier
@@ -906,13 +907,14 @@ atomic_type_specifier
 	;
 
 typeof_specifier
-    : TYPEOF '(' typeof_specifier_argument ')'
-    | TYPEOF_UNQUAL '(' typeof_specifier_argument ')'
-    ;
-
-typeof_specifier_argument
-    : expression
-    | type_name
+    : TYPEOF '(' expression ')'
+    { $$ = std::make_unique<TypeofSpec>($1, std::move($3)); }
+    | TYPEOF '(' type_name ')'
+    { $$ = std::make_unique<TypeofSpec>($1, std::move($3)); }
+    | TYPEOF_UNQUAL '(' expression ')'
+    { $$ = std::make_unique<TypeofSpec>($1, std::move($3)); }
+    | TYPEOF_UNQUAL '(' type_name ')'
+    { $$ = std::make_unique<TypeofSpec>($1, std::move($3)); }
     ;
 
 type_qualifier
