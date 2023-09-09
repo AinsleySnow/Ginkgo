@@ -88,9 +88,10 @@ enum class TypeTag
     uint8 = 16, uint16 = 32, uint32 = 64, uint64 = 128,
     flt32 = 256, flt64 = 512, _void = 1024, _enum = 2048,
     _struct = 4096, _union = 8192, _typedef = 16384,
+    _typeof = 32768, tyunqual = 65536,
 
     integer = 255, unsign = 240, scalar = 1023,
-    customed = 31744
+    customed = 129024
 };
 
 

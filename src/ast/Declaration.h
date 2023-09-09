@@ -119,6 +119,7 @@ private:
     std::unique_ptr<EnumList> enumlist_{};
 };
 
+
 class TypedefSpec : public TypeSpec
 {
 public:
@@ -127,6 +128,21 @@ public:
 
 private:
     std::string name_{};
+};
+
+
+class TypeofSpec : public TypeSpec
+{
+public:
+    TypeofSpec(Tag t, std::unique_ptr<Declaration> d) : TypeSpec(t), typename_(std::move(d)) {}
+    TypeofSpec(Tag t, std::unique_ptr<Expr> e) : TypeSpec(t), expr_(std::move(e)) {}
+
+    const auto& TypeName() const { return typename_; }
+    const auto& Expression() const { return expr_; }
+
+private:
+    std::unique_ptr<Declaration> typename_{};
+    std::unique_ptr<Expr> expr_{};
 };
 
 
@@ -149,6 +165,7 @@ public:
     const EnumSpec* GetEnumSpec() const;
     const HeterSpec* GetHeterSpec() const;
     const TypedefSpec* GetTypedefSpec() const;
+    const TypeofSpec* GetTypeofSpec() const;
 
     void AddAlignSpec(AlignSpec a) { aligns_.push_back(std::move(a)); }
     const auto& AlignSpecs() const { return aligns_; }
