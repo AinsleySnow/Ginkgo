@@ -167,15 +167,17 @@ public:
     const TypedefSpec* GetTypedefSpec() const;
     const TypeofSpec* GetTypeofSpec() const;
 
+    bool NeedInference() const { return speclist_.empty() && Storage().IsAuto(); }
+
     void AddAlignSpec(AlignSpec a) { aligns_.push_back(std::move(a)); }
     const auto& AlignSpecs() const { return aligns_; }
 
     void Extend(std::unique_ptr<DeclSpec>&);
 
     TypeTag GetTypeTag();
-    QualType Qual();
-    StorageType Storage();
-    FuncSpec Func();
+    QualType Qual() const;
+    StorageType Storage() const;
+    FuncSpec Func() const;
 
 private:
     bool SetRawSpec(Tag);

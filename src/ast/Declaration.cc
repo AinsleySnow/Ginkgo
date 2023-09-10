@@ -155,7 +155,7 @@ TypeTag DeclSpec::GetTypeTag()
     }
 }
 
-QualType DeclSpec::Qual()
+QualType DeclSpec::Qual() const
 {
     QualType qual{};
     for (auto tag : quallist_)
@@ -163,7 +163,7 @@ QualType DeclSpec::Qual()
     return qual;
 }
 
-StorageType DeclSpec::Storage()
+StorageType DeclSpec::Storage() const
 {
     StorageType storage{};
     for (auto tag : storagelist_)
@@ -171,7 +171,7 @@ StorageType DeclSpec::Storage()
     return storage;
 }
 
-FuncSpec DeclSpec::Func()
+FuncSpec DeclSpec::Func() const
 {
     FuncSpec func{};
     for (auto tag : funcspeclist_)
