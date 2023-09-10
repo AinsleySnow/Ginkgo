@@ -170,9 +170,19 @@ void TypeBuilder::VisitArrayDef(ArrayDef* def)
 std::unique_ptr<CEnumType> TypeBuilder::EnumHelper(const EnumSpec* spec, size_t align)
 {
     // empty; the enum must have been defined somewhere
+    // or it's just a forward declaration
     if (!spec->EnumeratorList())
     {
         auto enumty = scopestack_.SearchCustomed(spec->Name());
+        if (!enumty && spec->EnumeratorType()) // forward declaration
+        {
+            spec->EnumeratorType()->Accept(&visitor_);
+            return std::make_unique<CEnumType>(
+                spec->Name(), std::move(spec->EnumeratorType()->Type()));
+        }
+        else if (!enumty) // no underlying is just no underlying
+            return std::make_unique<CEnumType>(spec->Name());
+
         auto enumcty = enumty->GetCType();
         auto ty = enumcty->Clone();
         if (align != 0)
@@ -180,7 +190,7 @@ std::unique_ptr<CEnumType> TypeBuilder::EnumHelper(const EnumSpec* spec, size_t 
         return std::unique_ptr<CEnumType>(static_cast<CEnumType*>(ty.release()));
     }
 
-    // not empty; we're declaring a new enum
+    // not empty; we're declaring a new enum or filling a forward declaration
     std::unique_ptr<CType> underlying = nullptr;
     if (spec->EnumeratorType())
     {
@@ -204,7 +214,7 @@ std::unique_ptr<CEnumType> TypeBuilder::EnumHelper(const EnumSpec* spec, size_t 
     ty->Reserve(spec->EnumeratorList()->Count());
 
     for (auto& mem : *spec->EnumeratorList())
-    {        
+    {
         auto pmem = scopestack_.Top().AddMember(
             mem->Name(), ty.get(), mem->Val()->As<IntConst>());        
         ty->AddMember(pmem);
@@ -218,10 +228,14 @@ std::unique_ptr<T> TypeBuilder::HeterHelper(const HeterSpec* spec, size_t align)
 {
     auto& fields = spec->GetHeterFields();
 
-    // if the struct is declared else where
+    // if the struct is declared else where or it's a forward declaration
     if (fields.empty())
     {
-        auto ty = scopestack_.SearchCustomed(spec->Name())->GetCType()->As<T>();
+        auto nullable = scopestack_.SearchCustomed(spec->Name());
+        if (!nullable) // forward declaration
+            return std::make_unique<T>(spec->Name());
+
+        auto ty = nullable->GetCType()->As<T>();
         auto cty = std::make_unique<T>(*ty);
         if (align)
             cty->Align() = align;
@@ -229,7 +243,7 @@ std::unique_ptr<T> TypeBuilder::HeterHelper(const HeterSpec* spec, size_t align)
     }
 
     int fieldindex = 0;
-    auto ty = std::make_unique<T>();
+    auto ty = std::make_unique<T>(spec->Name());
     scopestack_.LoadNewScope(const_cast<HeterSpec*>(spec)->GetScope());
     for (auto& decl : fields)
     {

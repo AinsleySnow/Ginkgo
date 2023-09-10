@@ -92,7 +92,7 @@ CustomedType* Scope::AddCustomed(const std::string& name, const CType* ty)
 {
     auto customed = std::make_unique<CustomedType>(name, ty);
     auto pcustomed = customed.get();
-    identmap_.emplace(name, std::move(customed));
+    identmap_[name] = std::move(customed);
     return pcustomed;
 }
 
