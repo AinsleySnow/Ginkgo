@@ -294,8 +294,6 @@ std::unique_ptr<T> TypeBuilder::HeterHelper(const HeterSpec* spec, size_t align)
     }
     const_cast<HeterSpec*>(spec)->LoadScope(std::move(scopestack_.RestoreScope()));
 
-    if (!spec->Name().empty())
-        scopestack_.Top().AddCustomed(spec->Name(), ty.get());
     if (align > ty->Align())
         ty->Align() = align;
     return std::move(ty);
@@ -381,7 +379,8 @@ void TypeBuilder::VisitDeclSpec(DeclSpec* spec)
         ty->Qual() = spec->Qual();
         ty->Storage() = spec->Storage();
 
-        scopestack_.Top().AddCustomed(ty->Name(), ty.get());
+        if (!ty->Name().empty())
+            scopestack_.Top().AddCustomed(ty->Name(), ty.get());
         spec->Type() = std::move(ty);
     }
     else if (tag == TypeTag::_union)
@@ -390,7 +389,8 @@ void TypeBuilder::VisitDeclSpec(DeclSpec* spec)
         ty->Qual() = spec->Qual();
         ty->Storage() = spec->Storage();
 
-        scopestack_.Top().AddCustomed(ty->Name(), ty.get());
+        if (!ty->Name().empty())
+            scopestack_.Top().AddCustomed(ty->Name(), ty.get());
         spec->Type() = std::move(ty);
     }
     else if (tag == TypeTag::_typedef)
