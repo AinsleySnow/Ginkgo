@@ -26,14 +26,14 @@ void scope()
     // expression, with the a to the right of the equal sign
     // referring to the a declared in the outer scope.
     // This is invalid in C++ and violates the meaning of
-    // example 2 in 6.7.9[5] of n3054.
+    // example 2 in 6.7.9[5] of n3096.
     // Things like auto a = &a with the a not being declared
     // in the outer scope, is still invalid, though.
     double a = 7;
     double b = 9;
     {
         double b = b * b;
-        assert(b == 49);
+        assert(b == 81);
         assert(a == 7);
         auto a = a * a;
         assert(a == 49);
@@ -42,7 +42,7 @@ void scope()
         auto b = a * a;
         assert(b == 49);
         auto a = b;
-        assert(a == 9);
+        assert(a == 49);
     }
 }
 
@@ -76,6 +76,13 @@ void func()
     assert(pfunc(3) == 6);
 }
 
+
+// For such a declaration that is the definition of an object
+// the init-declarator shall have the form
+//     direct-declarator = assignment-expression (6.7.9[1])
+// That is, return type inference (i.e. auto func(int) { return 3; })
+// is not necessary in C23. Perhaps I will implement the feature someday.
+
 int main()
 {
     common();
@@ -84,6 +91,5 @@ int main()
     array();
     func();
 
-    printf("OK\n");
-    return 0;
+    SUCCESS;
 }
