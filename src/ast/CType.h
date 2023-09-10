@@ -115,6 +115,12 @@ public:
     virtual const IRType* ToIRType(Pool<IRType>*) const = 0;
     virtual std::string ToString() const = 0;
 
+    virtual CType* Child() { return nullptr; }
+    virtual const CType* Child() const { return nullptr; }
+    CType* InnerMost() { return Child() ? Child()->InnerMost() : this; }
+    const CType* InnerMost() const { return Child() ? Child()->InnerMost() : this; }
+    virtual void SetChild(std::unique_ptr<CType>) {}
+
     ENABLE_IS;
     ENABLE_AS;
 
@@ -250,6 +256,10 @@ public:
     std::string ToString() const override;
     const PtrType* ToIRType(Pool<IRType>*) const override;
 
+    CType* Child() override { return point2_.get(); }
+    const CType* Child() const override { return point2_.get(); }
+    void SetChild(std::unique_ptr<CType> p2) { point2_ = std::move(p2); }
+
     bool Compatible(const CType&) const { return false; }
     std::unique_ptr<CType> Clone() const override;
 
@@ -279,6 +289,10 @@ public:
 
     std::string ToString() const;
     const IRType* ToIRType(Pool<IRType>*) const override;
+
+    CType* Child() override { return arrayof_.get(); }
+    const CType* Child() const override { return arrayof_.get(); }
+    void SetChild(std::unique_ptr<CType> ao) { arrayof_ = std::move(ao); }
 
     bool Compatible(const CType&) const { return false; }
     std::unique_ptr<CType> Clone() const override;
