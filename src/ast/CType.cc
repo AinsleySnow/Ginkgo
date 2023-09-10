@@ -240,6 +240,9 @@ std::unique_ptr<CType> CPtrType::Clone() const
 
 const IRType* CArrayType::ToIRType(Pool<IRType>* pool) const
 {
+    if (!IsComplete())
+        return VoidType::GetVoidType();
+
     auto arrayof = arrayof_->ToIRType(pool);
     if (isparam_)
         return PtrType::GetPtrType(pool, arrayof);
@@ -279,8 +282,11 @@ std::string CEnumType::ToString() const
     return "";
 }
 
-const IntType* CEnumType::ToIRType(Pool<IRType>* pool) const
+const IRType* CEnumType::ToIRType(Pool<IRType>* pool) const
 {
+    if (!IsComplete())
+        return VoidType::GetVoidType();
+
     if (align_ != 0)
         underlying_->Align() = align_;
     return static_cast<const IntType*>(underlying_->ToIRType(pool));
@@ -317,8 +323,10 @@ static size_t FindLCM(size_t a, size_t b)
     return ty;                                                  \
 }
 
-IRType* CHeterType::ToIRType(Pool<IRType>* pool) const
+const IRType* CHeterType::ToIRType(Pool<IRType>* pool) const
 {
+    if (!IsComplete())
+        return VoidType::GetVoidType();
     if (id_ == CTypeId::_struct)
         TOIR_HELPER(StructType)
     else

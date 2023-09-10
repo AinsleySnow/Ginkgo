@@ -126,7 +126,7 @@ public:
 
     virtual bool Compatible(const CType& other) const = 0;
     virtual bool IsScalar() const { return false; }
-    virtual bool IsComplete() const { return false; }
+    virtual bool IsComplete() const { return true; }
     virtual std::unique_ptr<CType> Clone() const { return nullptr; }
 
     QualType Qual() const { return qual_; }
@@ -182,7 +182,6 @@ public:
     bool Compatible(const CType&) const override;
     std::unique_ptr<CType> Clone() const override { return std::make_unique<CArithmType>(*this); }
 
-    bool IsComplete() const override { return true; }
     bool IsInteger() const { return unsigned(type_) & unsigned(TypeTag::integer); }
     bool IsScalar() const override { return unsigned(type_) & unsigned(TypeTag::scalar); }
     bool IsFloat() const { return type_ == TypeTag::flt32 || type_ == TypeTag::flt64; }
@@ -229,7 +228,6 @@ public:
     bool& Noreturn() { return noreturn_; }
 
     size_t ParaCount() const { return paramlist_.size(); }
-    bool IsComplete() const override { return true; }
     void AddParam(const CType* t);
 
 private:
@@ -264,7 +262,6 @@ public:
     std::unique_ptr<CType> Clone() const override;
 
     bool IsScalar() const override { return true; }
-    bool IsComplete() const override { return true; }
 
     const CType* Point2() const { return point2_.get(); }
     auto& Point2() { return point2_; }
@@ -295,6 +292,7 @@ public:
     void SetChild(std::unique_ptr<CType> ao) { arrayof_ = std::move(ao); }
 
     bool Compatible(const CType&) const { return false; }
+    bool IsComplete() const override { return count_; }
     std::unique_ptr<CType> Clone() const override;
 
     auto Count() const { return count_; }
@@ -344,9 +342,10 @@ public:
         CType(CTypeId::_enum, ty->Size(), a), name_(n), underlying_(std::move(ty)) {}
 
     std::string ToString() const override;
-    const IntType* ToIRType(Pool<IRType>*) const override;
+    const IRType* ToIRType(Pool<IRType>*) const override;
 
     bool Compatible(const CType&) const override { return false; }
+    bool IsComplete() const override { members_.size(); }
     std::unique_ptr<CType> Clone() const override;
 
     void Reserve(size_t size) { members_.reserve(size); }
@@ -374,7 +373,8 @@ public:
     CHeterType(CTypeId i, const std::string& n) : CType(i), name_(n) {}
     CHeterType(CTypeId i, const std::string& n, size_t a) : CType(i, 0, a), name_(n) {}
 
-    IRType* ToIRType(Pool<IRType>*) const override;
+    const IRType* ToIRType(Pool<IRType>*) const override;
+    bool IsComplete() const override { return members_.size(); }
 
     auto Name() const { return name_; }
     auto IRName() const { return irname_; }
