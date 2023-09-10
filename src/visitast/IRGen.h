@@ -130,6 +130,8 @@ private:
     const Register* AllocaObject(const CType*, const std::string&);
     Function* AllocaFunc(const CFuncType*, const std::string&);
 
+    void TypeInferenceHelper(Declaration*, Expr*);
+
     const FuncType* HandleBuiltins(CallExpr*);
     void HandleVaStart(CallExpr*);
     void HandleVaArg(CallExpr*);

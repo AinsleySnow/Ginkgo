@@ -75,6 +75,32 @@ Function* IRGen::AllocaFunc(const CFuncType* raw, const std::string& name)
 }
 
 
+void IRGen::TypeInferenceHelper(Declaration* decl, Expr* init)
+{
+    // scenario one point five: int func(void); auto f = func;
+    // 'func' has CFuncType, and f should be a pointer to function.
+    // We treate it as a special case.
+    if (decl->Child()->IsDeclSpec() && init->Type()->Is<CFuncType>())
+        decl->Type() = std::make_unique<CPtrType>(init->Type()->Clone());
+
+    // scenario one: auto a = 3; (no TypeSpec at all)
+    else if (decl->Child()->IsDeclSpec())
+        decl->Type() = init->Type()->Clone();
+
+    // scenario two: int a = 3; auto* b = &a;
+    // (no TypeSpec as well, but have declared pointer or array)
+    // Note that CodeChk will consisder it as an error if the levels
+    // of pointers on either side of the equal sign do not match.
+    // Initializers are ignored for the time being, therefore only
+    // inference via expression is consisdered.
+    else
+    {
+        auto clone = init->Type()->InnerMost()->Clone();
+        decl->Type()->InnerMost()->SetChild(std::move(clone));
+    }
+}
+
+
 static const FuncType* GetAssertProto()
 {
     const static PtrType ptr{ IntType::GetInt8(true) };
@@ -341,6 +367,17 @@ void IRGen::VisitDeclList(DeclList* list)
     {
         initdecl->declarator_->Accept(this);
 
+        bool notfunc = !initdecl->declarator_->Child()->IsFuncDef();
+        bool tyinf = initdecl->declarator_->
+            InnerMost()->ToDeclSpec()->NeedInference();
+        if (notfunc && initdecl->initalizer_)
+            initdecl->initalizer_->Accept(this);
+        if (tyinf)
+        {
+            TypeInferenceHelper(
+                initdecl->declarator_.get(), initdecl->initalizer_.get());
+        }
+
         auto raw = initdecl->declarator_->RawType();
         auto name = initdecl->declarator_->ToObjDef()->Name();
         if (raw->Storage().IsTypedef())
@@ -349,13 +386,12 @@ void IRGen::VisitDeclList(DeclList* list)
             continue;
         }
 
-        if (!initdecl->declarator_->Child()->IsFuncDef())
+        if (notfunc)
         {
             initdecl->base_ = AllocaObject(raw, name);
 
             if (initdecl->initalizer_)
             {
-                initdecl->initalizer_->Accept(this);
                 // only insert store instr when we're translating
                 // a function. the expr tree will be directly add
                 // to the tree.
