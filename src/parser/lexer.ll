@@ -63,6 +63,7 @@ static void comment(void);
 "do"					{ yylval->emplace<Tag>() = Tag::_do; return YYTOKEN::DO; }
 "double"				{ yylval->emplace<Tag>() = Tag::_double; return YYTOKEN::DOUBLE; }
 "else"					{ yylval->emplace<Tag>() = Tag::_else; return YYTOKEN::ELSE; }
+"enum"                  { yylval->emplace<Tag>() = Tag::_enum; return YYTOKEN::ENUM; }
 "extern"				{ yylval->emplace<Tag>() = Tag::_extern; return YYTOKEN::EXTERN; }
 "false"                 { yylval->emplace<Tag>() = Tag::_false; return YYTOKEN::FALSE; }
 "float"					{ yylval->emplace<Tag>() = Tag::_float; return YYTOKEN::FLOAT; }
@@ -86,6 +87,7 @@ static void comment(void);
 "typedef"				{ yylval->emplace<Tag>() = Tag::_typedef; return YYTOKEN::TYPEDEF; }
 "typeof"                { yylval->emplace<Tag>() = Tag::_typeof; return YYTOKEN::TYPEOF; }
 "typeof_unqual"         { yylval->emplace<Tag>() = Tag::_typeof_unqual; return YYTOKEN::TYPEOF_UNQUAL; }
+"union"                 { yylval->emplace<Tag>() = Tag::_union; return YYTOKEN::UNION; }
 "unsigned"				{ yylval->emplace<Tag>() = Tag::_unsigned; return YYTOKEN::UNSIGNED; }
 "void"					{ yylval->emplace<Tag>() = Tag::_void; return YYTOKEN::VOID; }
 "volatile"				{ yylval->emplace<Tag>() = Tag::_volatile; return YYTOKEN::VOLATILE; }
