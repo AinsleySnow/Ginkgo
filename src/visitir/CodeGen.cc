@@ -1704,6 +1704,8 @@ void CodeGen::VisitLoadInstr(LoadInstr* inst)
         if (auto ptr2 = ptr->Point2()->As<PtrType>();
             ptr2 && ptr2->Point2()->Is<FuncType>())
             LeaqEmitHelper(mappedptr, alloc_->GetIROpMap(result));
+        else if (auto ptr2 = ptr->Point2()->As<FloatType>(); ptr2)
+            VecMovEmitHelper(mappedptr, alloc_->GetIROpMap(result));
         else
             MovEmitHelper(mappedptr, alloc_->GetIROpMap(result));
         return;
