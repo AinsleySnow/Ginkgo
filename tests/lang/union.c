@@ -9,23 +9,23 @@ union u
 
 void dot_assign()
 {
-    union u;
-    u.a = 5;
-    u.b = 6;
-    u.c = 7;
+    union u uu;
+    uu.a = 5;
+    uu.b = 6;
+    uu.c = 7;
 
-    assert(u.a == 7);
-    assert(u.b == 7);
-    assert(u.c == 7);
+    assert(uu.a == 7);
+    assert(uu.b == 7);
+    assert(uu.c == 7);
 }
 
 void dot_expr()
 {
-    union u;
-    u.a = 5;
-    int d = u.a * 5;
+    union u uu;
+    uu.a = 5;
+    int d = uu.a * 5;
 
-    assert(u.a == 5);
+    assert(uu.a == 5);
     assert(d == 25);
 }
 
@@ -37,9 +37,9 @@ void arrow_assign()
     p->b = 6;
     p->c = 7;
 
-    assert(u.a == 7);
-    assert(u.b == 7);
-    assert(u.c == 7);
+    assert(uu.a == 7);
+    assert(uu.b == 7);
+    assert(uu.c == 7);
 }
 
 void arrow_expr()
@@ -49,7 +49,7 @@ void arrow_expr()
     p->a = 5;
     int d = p->a * 5;
 
-    assert(u.a == 5);
+    assert(uu.a == 5);
     assert(d == 25);
 }
 
@@ -94,6 +94,5 @@ int main()
     size();
     cast();
 
-    printf("OK\n");
-    return 0;
+    SUCCESS;
 }
