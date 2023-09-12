@@ -211,7 +211,6 @@ std::unique_ptr<CEnumType> TypeBuilder::EnumHelper(const EnumSpec* spec, size_t 
         ty = std::make_unique<CEnumType>(spec->Name(), std::move(underlying), align);
     else
         ty = std::make_unique<CEnumType>(spec->Name(), std::move(underlying));
-    ty->Reserve(spec->EnumeratorList()->Count());
 
     for (auto& mem : *spec->EnumeratorList())
     {
@@ -220,6 +219,8 @@ std::unique_ptr<CEnumType> TypeBuilder::EnumHelper(const EnumSpec* spec, size_t 
         ty->AddMember(pmem);
     }
 
+    if (!ty->Name().empty())
+        scopestack_.Top().AddCustomed(ty->Name(), ty.get());
     return std::move(ty);
 }
 
@@ -296,6 +297,8 @@ std::unique_ptr<T> TypeBuilder::HeterHelper(const HeterSpec* spec, size_t align)
 
     if (align > ty->Align())
         ty->Align() = align;
+    if (!ty->Name().empty())
+        scopestack_.Top().AddCustomed(ty->Name(), ty.get());
     return std::move(ty);
 }
 
@@ -369,8 +372,6 @@ void TypeBuilder::VisitDeclSpec(DeclSpec* spec)
         auto ty = EnumHelper(spec->GetEnumSpec(), align);
         ty->Qual() = spec->Qual();
         ty->Storage() = spec->Storage();
-
-        scopestack_.Top().AddCustomed(ty->Name(), ty.get());
         spec->Type() = std::move(ty);
     }
     else if (tag == TypeTag::_struct)
@@ -378,9 +379,6 @@ void TypeBuilder::VisitDeclSpec(DeclSpec* spec)
         auto ty = HeterHelper<CStructType>(spec->GetHeterSpec(), align);
         ty->Qual() = spec->Qual();
         ty->Storage() = spec->Storage();
-
-        if (!ty->Name().empty())
-            scopestack_.Top().AddCustomed(ty->Name(), ty.get());
         spec->Type() = std::move(ty);
     }
     else if (tag == TypeTag::_union)
@@ -388,9 +386,6 @@ void TypeBuilder::VisitDeclSpec(DeclSpec* spec)
         auto ty = HeterHelper<CUnionType>(spec->GetHeterSpec(), align);
         ty->Qual() = spec->Qual();
         ty->Storage() = spec->Storage();
-
-        if (!ty->Name().empty())
-            scopestack_.Top().AddCustomed(ty->Name(), ty.get());
         spec->Type() = std::move(ty);
     }
     else if (tag == TypeTag::_typedef)
