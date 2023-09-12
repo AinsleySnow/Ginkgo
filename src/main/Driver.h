@@ -22,6 +22,7 @@ class Driver
 public:
     Driver(const char* e);
 
+    void AddIncludeDir(const std::string& d) { extrainclude_ += "-I" + d + ' '; }
     void SetOutputType(OutputType ty) { outputype_ = ty; }
     void SetLink2Ginkgo(bool l) { link2gk_ = l; }
     void SetInputName(const std::string& n) { inputname_ = n; }
@@ -59,6 +60,7 @@ private:
     std::string libpath_{};
     std::string libc23path_{};
     std::string includepath_{};
+    std::string extrainclude_{};
 
     bool link2gk_{};
     std::string inputname_{};

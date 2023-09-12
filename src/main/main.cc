@@ -34,6 +34,8 @@ int main(int argc, char* argv[])
             driver.SetOutputType(OutputType::intermediate);
         else if (strcmp(argv[i], "-S") == 0)
             driver.SetOutputType(OutputType::assembly);
+        else if (strcmp(argv[i], "-I") == 0)
+            driver.AddIncludeDir(argv[++i]);
         else if (strcmp(argv[i], "-lgk") == 0)
             driver.SetLink2Ginkgo(true);
         else if (strcmp(argv[i], "-pass-summary") == 0)

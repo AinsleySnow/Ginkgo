@@ -93,8 +93,8 @@ std::string Driver::Preprocess(const std::string& input)
     // -H: output blank lines
     // -b: output unbalanced braces, brackets, etc.
     // -I: add a directory to the search list of gkcpp
-    system(fmt::format("{} -V -H -b -I{} {} > {}",
-        cppath_, includepath_, input, afterpp).c_str());
+    system(fmt::format("{} -V -H -b {} -I{} {} > {}",
+        cppath_, extrainclude_, includepath_, input, afterpp).c_str());
     return afterpp;
 }
 
