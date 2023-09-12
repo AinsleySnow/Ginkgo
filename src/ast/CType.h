@@ -345,17 +345,15 @@ public:
     const IRType* ToIRType(Pool<IRType>*) const override;
 
     bool Compatible(const CType&) const override { return false; }
-    bool IsComplete() const override { members_.size(); }
+    bool IsComplete() const override { return members_.size(); }
     std::unique_ptr<CType> Clone() const override;
 
-    void Reserve(size_t size) { members_.reserve(size); }
-    void AddMember(const Member* m) { members_[index_++] = m; }
+    void AddMember(const Member* m) { members_.push_back(m); }
 
     std::string Name() const { return name_; }
     const CType* Underlying() const { return underlying_.get(); }
 
 private:
-    int index_{};
     std::string name_{};
     std::unique_ptr<CType> underlying_{};
     std::vector<const Member*> members_{};
