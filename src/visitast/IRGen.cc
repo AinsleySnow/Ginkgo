@@ -24,24 +24,101 @@ void IRGen::CurrentEnv::Epilogue(BasicBlock* bb)
 }
 
 
+std::stack<std::unique_ptr<Node>> IRGen::CurrentEnv::stack_;
+
+void IRGen::CurrentEnv::Dump2Tree(const IRType* ty)
+{
+    tree_ = std::move(stack_.top());
+    stack_.pop();
+
+    if (tree_->Type()->Size() == ty->Size())
+        return;
+
+    // If the type sizes mismatch, the expression tree must
+    // be exactly an OpNode, since the address epxression,
+    // which may lead to UnaryNode and BinaryNode, can't be
+    // assigned to float point variables and can't be truncated,
+    // and other numbers in the original expression have been folded.
+    auto op = dynamic_cast<OpNode*>(tree_.get());
+    IROperand* irop = nullptr;
+    if (ty->Is<IntType>() && op->op_->Is<IntConst>())
+    {
+        irop = IntConst::CreateIntConst(
+            opool_.get(), op->op_->As<IntConst>()->Val(), ty->As<IntType>());
+    }
+    else if (ty->Is<IntType>() && op->op_->Is<FloatConst>())
+    {
+        irop = IntConst::CreateIntConst(
+            opool_.get(),
+            static_cast<unsigned long>(op->op_->As<FloatConst>()->Val()),
+            ty->As<IntType>());
+    }
+    else if (ty->Is<FloatType>() && op->op_->Is<FloatConst>())
+    {
+        irop = FloatConst::CreateFloatConst(
+            opool_.get(), op->op_->As<FloatConst>()->Val(), ty->As<FloatType>());
+    }
+    else // if (ty->Is<FloatType>() && op->op_->Is<IntConst>())
+    {
+        irop = FloatConst::CreateFloatConst(opool_.get(),
+            op->op_->As<IntConst>()->Val(), ty->As<FloatType>());
+    }
+    op->op_ = irop;
+}
+
+void IRGen::CurrentEnv::MergeNode(Instr::InstrId op)
+{
+    if (op == Instr::InstrId::geteleptr)
+    {
+        auto oper = std::move(stack_.top());
+        stack_.pop();
+        stack_.push(std::make_unique<UnaryNode>(op, std::move(oper)));
+    }
+    else
+    {
+        auto right = std::move(stack_.top());
+        stack_.pop();
+        auto left = std::move(stack_.top());
+        stack_.pop();
+        stack_.push(std::make_unique<BinaryNode>(
+            std::move(left), op, std::move(right)));
+    }
+}
+
+void IRGen::CurrentEnv::AddOpNode(const IROperand* op, int pop)
+{
+    // pop one element if pop == 1,
+    // two if pop == 2.
+    stack_.pop();
+    if (pop == 2)
+        stack_.pop();
+    stack_.push(std::make_unique<OpNode>(op));
+}
+
+void IRGen::CurrentEnv::AddOpNode(const IROperand* op)
+{
+    stack_.push(std::make_unique<OpNode>(op));
+}
+
+
 const Register* IRGen::AllocaObject(const CType* raw, const std::string& name)
 {
-    if (scopestack_.Top().GetScopeType() == Scope::ScopeType::file)
+    if (env_.InGlobalVar())
     {
         auto ty = raw->ToIRType(transunit_.get());
         auto regname = '@' + name;
         auto var = GlobalVar::CreateGlobalVar(transunit_.get(), regname, ty);
+        env_.EnterGlobalVar(var);
 
-        env_ = CurrentEnv(var);
         auto reg = Register::CreateRegister(
-            env_.GetGlobalVar(), regname,
-            PtrType::GetPtrType(env_.GetGlobalVar(), ty));
+            env_.GetOpPool(), regname,
+            PtrType::GetPtrType(env_.GetTypePool(), ty));
 
         var->Addr() = reg;
         scopestack_.Top().AddObject(name, raw, reg);
         return reg;
     }
-    else
+    else // if env_.InFunction()
     {
         auto reg = ibud_.InsertAllocaInstr(
             env_.GetRegName(), raw->ToIRType(ibud_.Container()));
@@ -367,6 +444,9 @@ void IRGen::VisitDeclList(DeclList* list)
     {
         initdecl->declarator_->Accept(this);
 
+        if (scopestack_.Top().GetScopeType() == Scope::ScopeType::file)
+            env_ = CurrentEnv(); // Evaluating a global variable?
+
         bool notfunc = !initdecl->declarator_->Child()->IsFuncDef();
         bool tyinf = initdecl->declarator_->
             InnerMost()->ToDeclSpec()->NeedInference();
@@ -390,18 +470,24 @@ void IRGen::VisitDeclList(DeclList* list)
         {
             initdecl->base_ = AllocaObject(raw, name);
 
-            if (initdecl->initalizer_)
+            if (!initdecl->initalizer_)
+                continue;
+
+            // only insert store instr when we're translating
+            // a function. the expr tree will be directly add
+            // to the tree.
+            if (env_.InFunction())
             {
-                // only insert store instr when we're translating
-                // a function. the expr tree will be directly add
-                // to the tree.
-                if (env_.InFunction())
-                {
-                    auto val = LoadVal(initdecl->initalizer_.get());
-                    ibud_.InsertStoreInstr(val, initdecl->base_, false);
-                }
-                else
-                    env_.GetGlobalVar()->Dump2Tree();
+                auto val = LoadVal(initdecl->initalizer_.get());
+                ibud_.InsertStoreInstr(val, initdecl->base_, false);
+            }
+            else // if env_.InGlobalVar()
+            {
+                auto var = env_.GetGlobalVar();
+                env_.Dump2Tree(var->Type());
+                var->AddExprTree(env_.GetExprTree());
+                var->Pool<IROperand>::Merge(env_.GetOpPool());
+                var->Pool<IRType>::Merge(env_.GetTypePool());
             }
         }
     }
@@ -665,7 +751,7 @@ void IRGen::VisitBinaryExpr(BinaryExpr* bin)
         Pool<IROperand>* container = nullptr;
         // if we're evaluating a global variable
         if (env_.InGlobalVar())
-            container = env_.GetGlobalVar();
+            container = env_.GetOpPool();
         else if (ibud_.Container())
             container = ibud_.Container();
         else
@@ -674,7 +760,7 @@ void IRGen::VisitBinaryExpr(BinaryExpr* bin)
         bin->Val() = Evaluator::EvalBinary(
             container, bin->op_, bin->left_->Val(), bin->right_->Val());
         if (env_.InGlobalVar())
-            env_.GetGlobalVar()->AddOpNode(bin->Val(), 2);
+            env_.AddOpNode(bin->Val(), 2);
         return;
     }
 
@@ -682,7 +768,7 @@ void IRGen::VisitBinaryExpr(BinaryExpr* bin)
     // Then bin->op_ must be eithor plus or minus
     if (env_.InGlobalVar())
     {
-        env_.GetGlobalVar()->MergeNode(
+        env_.MergeNode(
             bin->op_ == Tag::plus ? Instr::InstrId::add : Instr::InstrId::sub);
         return;
     }
@@ -991,7 +1077,7 @@ void IRGen::VisitConstant(ConstExpr* constant)
     auto ctype = constant->RawType();
     Pool<IROperand>* container = nullptr;
     if (env_.InGlobalVar())
-        container = env_.GetGlobalVar();
+        container = env_.GetOpPool();
     else if (ibud_.Container())
         container = ibud_.Container();
     else
@@ -1007,7 +1093,7 @@ void IRGen::VisitConstant(ConstExpr* constant)
             ctype->ToIRType(transunit_.get())->As<FloatType>());
 
     if (env_.InGlobalVar())
-        env_.GetGlobalVar()->AddOpNode(constant->Val());
+        env_.AddOpNode(constant->Val());
 }
 
 
@@ -1286,10 +1372,10 @@ void IRGen::VisitStrExpr(StrExpr* str)
     auto array = str->Type()->ToIRType(transunit_.get())->As<ArrayType>();
     auto global = GlobalVar::CreateGlobalVar(
         transunit_.get(), GetStrName(), array);
-    global->AddOpNode(
+    auto node = std::make_unique<OpNode>(
         StrConst::CreateStrConst(transunit_.get(), literal, array));
-    global->Dump2Tree();
 
+    global->AddExprTree(std::move(node));
     global->Addr() = Register::CreateRegister(
         global, global->Name(), PtrType::GetPtrType(global, array));
     str->Val() = global->Addr();
@@ -1305,7 +1391,7 @@ void IRGen::VisitUnaryExpr(UnaryExpr* unary)
     {
         Pool<IROperand>* container = nullptr;
         if (env_.InGlobalVar())
-            container = env_.GetGlobalVar();
+            container = env_.GetOpPool();
         else if (!ibud_.Container())
             container = transunit_.get();
         else
@@ -1315,7 +1401,7 @@ void IRGen::VisitUnaryExpr(UnaryExpr* unary)
             container, unary->op_, unary->content_->Val());
 
         if (env_.InGlobalVar())
-            env_.GetGlobalVar()->AddOpNode(unary->Val(), 1);
+            env_.AddOpNode(unary->Val(), 1);
         return;
     }
 
@@ -1354,7 +1440,7 @@ void IRGen::VisitUnaryExpr(UnaryExpr* unary)
     {
         unary->Val() = LoadAddr(unary->content_.get());
         if (env_.InGlobalVar())
-            env_.GetGlobalVar()->MergeNode(Instr::InstrId::geteleptr);
+            env_.MergeNode(Instr::InstrId::geteleptr);
     }
     else if (unary->op_ == Tag::asterisk)
     {

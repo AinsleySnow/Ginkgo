@@ -75,13 +75,16 @@ private:
     class CurrentEnv
     {
     public:
-        CurrentEnv() {}
-        CurrentEnv(std::variant<Function*, GlobalVar*> v) : env_(v) {}
+        CurrentEnv() : holdvar_(true),
+            opool_(std::make_unique<Pool<IROperand>>()),
+            typool_(std::make_unique<Pool<IRType>>()) {}
+        CurrentEnv(Function* v) : env_(v) {}
 
-        bool InFunction() const { return std::holds_alternative<Function*>(env_); }
-        bool InGlobalVar() const { return std::holds_alternative<GlobalVar*>(env_); }
+        bool InFunction() const { return !holdvar_; }
+        bool InGlobalVar() const { return holdvar_; }
 
         Function* GetFunction() { return std::get<0>(env_); }
+        void EnterGlobalVar(GlobalVar* v) { env_ = v; }
         GlobalVar* GetGlobalVar() { return std::get<1>(env_); }
 
         std::string GetRegName() { return '%' + std::to_string(index_++); }
@@ -104,7 +107,19 @@ private:
 
         void Epilogue(BasicBlock*);
 
+        // an elegant seperator -- methods for building global variable below
+
+        Pool<IRType>* GetTypePool() { return typool_.get(); }
+        Pool<IROperand>* GetOpPool() { return opool_.get(); }
+
+        void Dump2Tree(const IRType*);
+        std::unique_ptr<Node>&& GetExprTree() { return std::move(tree_); }
+        void MergeNode(Instr::InstrId);
+        void AddOpNode(const IROperand*, int);
+        void AddOpNode(const IROperand*);
+
     private:
+        bool holdvar_{};
         std::variant<Function*, GlobalVar*> env_{};
 
         // store pointers to statement nodes to make
@@ -123,6 +138,11 @@ private:
         const ParamList* paramlist_{};
 
         size_t index_{};
+
+        std::unique_ptr<Node> tree_{};
+        std::unique_ptr<Pool<IROperand>> opool_{};
+        std::unique_ptr<Pool<IRType>> typool_{};
+        static std::stack<std::unique_ptr<Node>> stack_;
     };
 
     std::string GetStrName() { return "@.str" + std::to_string(strindex_++); }

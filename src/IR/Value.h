@@ -132,18 +132,13 @@ public:
     auto& Addr() { return addr_; }
     const auto Addr() const { return addr_; }
 
-    void Dump2Tree();
-    Node* GetTree() { return tree_.get(); }
-    void MergeNode(Instr::InstrId);
-    void AddOpNode(const IROperand*, int);
-    void AddOpNode(const IROperand*);
-
+    void AddExprTree(std::unique_ptr<Node> t) { tree_ = std::move(t); }
+    Node* GetExprTree() { return tree_.get(); }
 
 private:
     const IRType* type_{};
     const Register* addr_{};
     std::unique_ptr<Node> tree_{};
-    static std::stack<std::unique_ptr<Node>> stack_;
 };
 
 

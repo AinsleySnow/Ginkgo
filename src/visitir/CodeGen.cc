@@ -1242,8 +1242,8 @@ void CodeGen::VisitGlobalVar(GlobalVar* var)
     auto name = var->Name().substr(1);
     auto size = var->Type()->Size();
 
-    var->GetTree()->Accept(this);
-    auto repr = var->GetTree()->repr_;
+    var->GetExprTree()->Accept(this);
+    auto repr = var->GetExprTree()->repr_;
     if (repr[0] == '"')
     {
         asmfile_.EmitPseudoInstr(".section .rodata");
@@ -1260,7 +1260,7 @@ void CodeGen::VisitGlobalVar(GlobalVar* var)
         asmfile_.EmitPseudoInstr(".size", { name, strsz });
         asmfile_.EmitLabel(name);
 
-        if (!var->GetTree())
+        if (!var->GetExprTree())
             asmfile_.EmitPseudoInstr(".zero", { strsz });
         else
         {
@@ -1272,7 +1272,7 @@ void CodeGen::VisitGlobalVar(GlobalVar* var)
             case 4: pseudo = ".long"; break;
             case 8: pseudo = ".quad"; break;
             }
-            asmfile_.EmitPseudoInstr(pseudo, { var->GetTree()->repr_ });
+            asmfile_.EmitPseudoInstr(pseudo, { var->GetExprTree()->repr_ });
         }
     }
     asmfile_.EmitBlankLine();
