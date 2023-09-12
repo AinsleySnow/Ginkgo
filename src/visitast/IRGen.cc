@@ -444,14 +444,16 @@ void IRGen::VisitDeclList(DeclList* list)
     {
         initdecl->declarator_->Accept(this);
 
-        if (scopestack_.Top().GetScopeType() == Scope::ScopeType::file)
-            env_ = CurrentEnv(); // Evaluating a global variable?
-
         bool notfunc = !initdecl->declarator_->Child()->IsFuncDef();
         bool tyinf = initdecl->declarator_->
             InnerMost()->ToDeclSpec()->NeedInference();
-        if (notfunc && initdecl->initalizer_)
-            initdecl->initalizer_->Accept(this);
+        if (notfunc)
+        {
+            if (scopestack_.Top().GetScopeType() == Scope::ScopeType::file)
+                env_ = CurrentEnv(true); // Evaluating a global variable?
+            if (initdecl->initalizer_)
+                initdecl->initalizer_->Accept(this);
+        }
         if (tyinf)
         {
             TypeInferenceHelper(

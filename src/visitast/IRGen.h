@@ -75,12 +75,16 @@ private:
     class CurrentEnv
     {
     public:
-        CurrentEnv() : holdvar_(true),
-            opool_(std::make_unique<Pool<IROperand>>()),
-            typool_(std::make_unique<Pool<IRType>>()) {}
-        CurrentEnv(Function* v) : env_(v) {}
+        CurrentEnv(bool h) : holdvar_(h)
+        {
+            if (!holdvar_)
+                return;
+            opool_ = std::make_unique<Pool<IROperand>>();
+            typool_ = std::make_unique<Pool<IRType>>();
+        }
+        CurrentEnv(Function* v) : env_(v), holdfunc_(true) {}
 
-        bool InFunction() const { return !holdvar_; }
+        bool InFunction() const { return holdfunc_; }
         bool InGlobalVar() const { return holdvar_; }
 
         Function* GetFunction() { return std::get<0>(env_); }
@@ -119,6 +123,7 @@ private:
         void AddOpNode(const IROperand*);
 
     private:
+        bool holdfunc_{};
         bool holdvar_{};
         std::variant<Function*, GlobalVar*> env_{};
 
@@ -167,7 +172,7 @@ private:
     TypeBuilder tbud_{ *this, scopestack_ };
     InstrBuilder ibud_{};
     BlockBuilder bbud_{};
-    CurrentEnv env_{};
+    CurrentEnv env_{ false };
     size_t strindex_{};
 
     std::unique_ptr<Module> transunit_{};
