@@ -240,7 +240,10 @@ std::unique_ptr<CType> CPtrType::Clone() const
 
 const IRType* CArrayType::ToIRType(Pool<IRType>* pool) const
 {
-    if (!IsComplete())
+    // if an array type occurs in a function's parameter list,
+    // it is possible to be incomplete since the parameter is
+    // passed as if it were a pointer.
+    if (!IsComplete() && !IsParam())
         return VoidType::GetVoidType();
 
     auto arrayof = arrayof_->ToIRType(pool);
