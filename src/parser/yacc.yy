@@ -735,8 +735,10 @@ member_declaration
 specifier_qualifier_list
     : type_specifier_qualifier                                  %prec LOWER_THAN_SPEC
     { $$ = std::move($1); }
+    /*
     | type_specifier_qualifier attribute_specifier_sequence     %prec LOWER_THAN_SPEC
     { $$ = std::move($1); }
+    */
     | type_specifier_qualifier specifier_qualifier_list         %prec LOWER_THAN_SPEC
     {
         $2->Extend($1);
@@ -966,8 +968,10 @@ direct_declarator
 
     | array_declarator                                  %prec PREC_ATTR_SPEC
     { $$ = std::move($1); }
+    /*
     | array_declarator attribute_specifier_sequence     %prec PREC_ATTR_SPEC
     { $$ = std::move($1); }
+    */
 
     | function_declarator                               %prec PREC_ATTR_SPEC
     { $$ = std::move($1); }
@@ -1065,6 +1069,7 @@ pointer
 	| '*'                                                           %prec PREC_ATTR_SPEC
     { $$ = std::make_unique<PtrDef>(); }
 
+    /*
     | '*' attribute_specifier_sequence type_qualifier_list pointer  %prec PREC_ATTR_SPEC
 	{ $$ = std::make_unique<PtrDef>($3, std::move($4)); }
 	| '*' attribute_specifier_sequence type_qualifier_list          %prec PREC_ATTR_SPEC
@@ -1073,6 +1078,7 @@ pointer
     { $$ = std::make_unique<PtrDef>(std::move($3)); }
 	| '*' attribute_specifier_sequence                              %prec PREC_ATTR_SPEC
     { $$ = std::make_unique<PtrDef>(); }
+    */
 	;
 
 type_qualifier_list
