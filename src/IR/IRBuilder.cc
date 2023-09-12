@@ -48,8 +48,16 @@ void InstrBuilder::MatchArithmType(
         if (target->Is<FloatType>() && val->Type()->Is<IntType>())
         {
             auto integer = static_cast<const IntConst*>(val);
+            auto sign = val->Type()->As<IntType>()->IsSigned();
+
+            double param = 0.0;
+            if (sign)
+                param = static_cast<long>(integer->Val());
+            else
+                param = integer->Val();
+
             val = FloatConst::CreateFloatConst(
-                Container(), integer->Val(), target->As<FloatType>());
+                Container(), param, target->As<FloatType>());
         }
         else if (target->Is<IntType>() && val->Type()->Is<FloatType>())
         {
