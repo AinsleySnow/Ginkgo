@@ -46,7 +46,7 @@ void expr()
     case 4: assert(a == 20); a = 30; break;
     }
 
-    assert(a == 30;)
+    assert(a == 30);
 }
 
 int with_return(int i)
@@ -84,7 +84,7 @@ void nest(int a)
             case 200:
                 break;
             case 38:
-                assert(a == 38);
+                assert(a == 8);
                 a = 40;
             case 500:
                 assert(a == 40);
