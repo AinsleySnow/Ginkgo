@@ -31,7 +31,9 @@ int main()
     int a = 10;
     int b = 20;
     int c = _restrict(&a, &b);
-    assert(*a == 5);
-    assert(*b == 6);
+    assert(a == 5);
+    assert(b == 6);
     assert(c == 30);
+
+    SUCCESS;
 }
