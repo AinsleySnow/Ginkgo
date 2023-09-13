@@ -101,27 +101,42 @@ void IRGen::CurrentEnv::AddOpNode(const IROperand* op)
 }
 
 
-const Register* IRGen::AllocaObject(const CType* raw, const std::string& name)
+const Register* IRGen::AllocaObject(
+    const CType* raw, const std::string& name, bool isextern)
 {
     if (env_.InGlobalVar())
     {
-        auto ty = raw->ToIRType(transunit_.get());
+        auto typool = isextern ? transunit_.get() : env_.GetTypePool();
+        auto opool = isextern ? transunit_.get() : env_.GetOpPool();
+        auto ty = raw->ToIRType(typool);
         auto regname = '@' + name;
+        auto reg = Register::CreateRegister(
+            opool, regname, PtrType::GetPtrType(typool, ty));
+
+        scopestack_.Top().AddObject(name, raw, reg);
+        if (isextern)
+            return reg;
+
         auto var = GlobalVar::CreateGlobalVar(transunit_.get(), regname, ty);
         env_.EnterGlobalVar(var);
-
-        auto reg = Register::CreateRegister(
-            env_.GetOpPool(), regname,
-            PtrType::GetPtrType(env_.GetTypePool(), ty));
-
         var->Addr() = reg;
-        scopestack_.Top().AddObject(name, raw, reg);
         return reg;
     }
     else // if env_.InFunction()
     {
-        auto reg = ibud_.InsertAllocaInstr(
-            env_.GetRegName(), raw->ToIRType(ibud_.Container()));
+        const Register* reg = nullptr;
+        auto ty = raw->ToIRType(ibud_.Container());
+        if (isextern)
+        {
+            reg = Register::CreateRegister(
+                ibud_.Container(), '@' + name,
+                PtrType::GetPtrType(ibud_.Container(), ty));
+        }
+        else
+        {
+            reg = ibud_.InsertAllocaInstr(
+                env_.GetRegName(), raw->ToIRType(ibud_.Container()));
+        }
         scopestack_.Top().AddObject(name, raw, reg);
         return reg;
     }
@@ -470,7 +485,8 @@ void IRGen::VisitDeclList(DeclList* list)
 
         if (notfunc)
         {
-            initdecl->base_ = AllocaObject(raw, name);
+            initdecl->base_ = AllocaObject(
+                raw, name, raw->Storage().IsExtern());
 
             if (!initdecl->initalizer_)
                 continue;

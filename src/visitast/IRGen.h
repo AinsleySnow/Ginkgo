@@ -152,7 +152,7 @@ private:
 
     std::string GetStrName() { return "@.str" + std::to_string(strindex_++); }
 
-    const Register* AllocaObject(const CType*, const std::string&);
+    const Register* AllocaObject(const CType*, const std::string&, bool = false);
     Function* AllocaFunc(const CFuncType*, const std::string&);
 
     void TypeInferenceHelper(Declaration*, Expr*);

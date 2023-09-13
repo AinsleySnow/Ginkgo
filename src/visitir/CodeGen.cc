@@ -1242,9 +1242,11 @@ void CodeGen::VisitGlobalVar(GlobalVar* var)
     auto name = var->Name().substr(1);
     auto size = var->Type()->Size();
 
-    var->GetExprTree()->Accept(this);
-    auto repr = var->GetExprTree()->repr_;
-    if (repr[0] == '"')
+    if (var->GetExprTree())
+        var->GetExprTree()->Accept(this);
+    auto repr = var->GetExprTree() ? var->GetExprTree()->repr_ : "";
+
+    if (repr[0] == '"') // A string?
     {
         asmfile_.EmitPseudoInstr(".section .rodata");
         asmfile_.EmitLabel(name);
@@ -1698,7 +1700,7 @@ void CodeGen::VisitLoadInstr(LoadInstr* inst)
     auto result = inst->Result();
     auto mappedptr = LoadPointer(inst->Pointer());
 
-    if (inst->Pointer()->Name()[0] == '@') // Global variable?
+    if (inst->Pointer()->Name()[0] == '@') // Global variable or extern symbol?
     {
         auto ptr = inst->Pointer()->Type()->As<PtrType>();
         if (auto ptr2 = ptr->Point2()->As<PtrType>();
