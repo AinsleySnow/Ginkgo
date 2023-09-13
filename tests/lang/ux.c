@@ -22,7 +22,7 @@ int main(void)
     free(array);
 
     array = calloc(sizeof(int), 100);
-    int sum = 0;
+    sum = 0;
     for (int i = 0; i < 100; ++i)
         array[i] = i + 1;
     for (int i = 0; i < 100; ++i)
