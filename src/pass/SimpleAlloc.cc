@@ -199,7 +199,11 @@ void SimpleAlloc::VisitCallInstr(CallInstr* i)
     if (i->FuncAddr()) // Call through a function pointer?
         Access(i->FuncAddr()->As<Register>(), curbb_, i);
     if (i->Result())
+    {
         Allocate(i->Result()->As<Register>());
+        if (i->Result()->Type()->Is<PtrType>())
+            MarkLoadTwice(i->Result());
+    }
 }
 
 
