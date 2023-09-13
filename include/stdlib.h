@@ -29,7 +29,7 @@ extern size_t __ctype_get_mb_cur_max();
 
 // define RAND_MAX as the maximum value of int,
 // since the rand() function returns an int value
-#define RAND_MAX (7fffffff)
+#define RAND_MAX (0x7fffffff)
 
 #define EXIT_FAILURE 1
 #define EXIT_SUCCESS 0
