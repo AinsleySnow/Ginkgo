@@ -512,6 +512,22 @@ declaration
         }
         $$ = std::make_unique<DeclStmt>(std::move($2));
     }
+    | attribute_specifier_sequence declaration_specifiers init_declarator_list ';'
+    {
+        std::shared_ptr<DeclSpec> ds = std::move($2);
+        for (auto& initdecl : *$3)
+        {
+            auto name = initdecl->declarator_->ToObjDef()->Name();
+            if (ds->Storage().IsTypedef())
+                checktype.AddIdentifier(
+                    name, yy::parser::token::TYPEDEF_NAME);
+            else
+                checktype.AddIdentifier(
+                    name, yy::parser::token::IDENTIFIER);
+            initdecl->declarator_->InnerMost()->SetChild(ds);
+        }
+        $$ = std::make_unique<DeclStmt>(std::move($3));
+    }
 	| static_assert_declaration { $$ = nullptr; }
 	| attribute_declaration { $$ = nullptr; }
     ;
@@ -1384,6 +1400,7 @@ balanced_token
 preprocess_instruction
     : '#' IDENTIFIER I_CONSTANT STRING_LITERAL '\n' // #line 123 "123.c"
     | '#' IDENTIFIER I_CONSTANT '\n'                // #line 123
+    | '#' IDENTIFIER STRING_LITERAL '\n'            // #warning or #error
     ;
 
 statement
