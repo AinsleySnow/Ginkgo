@@ -19,7 +19,7 @@ void IRGen::CurrentEnv::Epilogue(BasicBlock* bb)
         FillNullBlk(gotopair.first, labelmap_[gotopair.second]);
 
     for (auto blk : *GetFunction())
-        if (!blk->LastInstr()->IsControlInstr())
+        if (auto last = blk->LastInstr(); !last || !last->IsControlInstr())
             blk->Append(std::make_unique<BrInstr>(bb));
 }
 

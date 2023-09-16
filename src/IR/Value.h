@@ -155,8 +155,8 @@ public:
     std::string ToString() const override;
     void Accept(IRVisitor*) override;
 
-    Instr* LastInstr() { return *std::prev(end()); }
-    const Instr* LastInstr() const { return *std::prev(end()); }
+    Instr* LastInstr() { return Empty() ? nullptr : *std::prev(end()); }
+    const Instr* LastInstr() const { return Empty() ? nullptr : *std::prev(end()); }
 
     void MergePools(BasicBlock*);
 };
