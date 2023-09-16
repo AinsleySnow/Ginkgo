@@ -140,8 +140,11 @@ GlobalVar* GlobalVar::CreateGlobalVar(Module* mod, const std::string& name, cons
 
 std::string GlobalVar::ToString() const
 {
-    auto var = type_->ToString() + ' ' + Name() + " = ";
-    var += tree_->ToString() + ';';
+    auto var = type_->ToString() + ' ' + Name();
+    if (tree_)
+        var += " = " + tree_->ToString() + ';';
+    else
+        var += ';';
     return var;
 }
 

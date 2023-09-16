@@ -360,7 +360,10 @@ void TypeBuilder::VisitDeclSpec(DeclSpec* spec)
     auto tag = spec->GetTypeTag();
 
     if (tag == TypeTag::_void)
+    {
         spec->Type() = std::make_unique<CVoidType>();
+        spec->Type()->Storage() = spec->Storage();
+    }
     else if (int(tag) & int(TypeTag::scalar))
     {
         spec->Type() = std::make_unique<CArithmType>(tag, align);
