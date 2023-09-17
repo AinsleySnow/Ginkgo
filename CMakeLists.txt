@@ -67,3 +67,4 @@ add_subdirectory(third_party)
 
 add_custom_target(parser DEPENDS ${GINKGO_SRC_DIR}/parser/yacc.cc)
 add_custom_target(lexer DEPENDS ${GINKGO_SRC_DIR}/parser/lexer.cc)
+add_custom_target(test COMMAND cd ${PROJECT_SOURCE_DIR}/tests && bash test.sh && cd - > /dev/null)
