@@ -36,12 +36,12 @@ void quick_sort(int* arr, int begin, int end)
 int main(void)
 {
     srand(time(NULL));
-    int array[100];
-    for (int i = 0; i < 100; ++i)
-        array[i] = rand() % 1000 + 1;
+    int array[1000000];
+    for (int i = 0; i < 1000000; ++i)
+        array[i] = rand() % 1000000 + 1;
 
-    quick_sort(array, 0, 100);
-    for (int i = 0; i < 99; ++i)
+    quick_sort(array, 0, 1000000);
+    for (int i = 0; i < 999999; ++i)
         assert(array[i] <= array[i + 1]);
 
     printf("OK\n");
