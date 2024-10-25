@@ -1,9 +1,9 @@
-#include "scanner.h"
+#include "Lexer.h"
 
 #include <cctype>
 #include <climits>
 
-void Scanner::Tokenize(TokenSequence &ts)
+void Lexer::Tokenize(TokenSequence &ts)
 {
     while (true)
     {
@@ -28,7 +28,7 @@ void Scanner::Tokenize(TokenSequence &ts)
     }
 }
 
-std::string Scanner::ScanHeadName(const Token *lhs, const Token *rhs)
+std::string Lexer::ScanHeadName(const Token *lhs, const Token *rhs)
 {
     std::string str;
     const char *begin = lhs->loc_.Begin() + 1;
@@ -43,7 +43,7 @@ std::string Scanner::ScanHeadName(const Token *lhs, const Token *rhs)
     return str;
 }
 
-Token *Scanner::Scan(bool ws)
+Token *Lexer::Scan(bool ws)
 {
     tok_.ws_ = ws;
     SkipWhiteSpace();
@@ -196,7 +196,7 @@ Token *Scanner::Scan(bool ws)
     }
 }
 
-void Scanner::SkipWhiteSpace()
+void Lexer::SkipWhiteSpace()
 {
     while (isspace(Peek()) && Peek() != '\n')
     {
@@ -205,7 +205,7 @@ void Scanner::SkipWhiteSpace()
     }
 }
 
-void Scanner::SkipComment()
+void Lexer::SkipComment()
 {
     if (Try('/'))
     {
@@ -234,7 +234,7 @@ void Scanner::SkipComment()
     assert(false);
 }
 
-std::string Scanner::ScanIdentifier()
+std::string Lexer::ScanIdentifier()
 {
     std::string val;
     while (!Empty())
@@ -253,7 +253,7 @@ std::string Scanner::ScanIdentifier()
     return val;
 }
 
-Token *Scanner::SkipIdentifier()
+Token *Lexer::SkipIdentifier()
 {
     PutBack();
     auto c = Next();
@@ -268,7 +268,7 @@ Token *Scanner::SkipIdentifier()
 }
 
 // Scan PP-Number
-Token *Scanner::SkipNumber()
+Token *Lexer::SkipNumber()
 {
     PutBack();
     bool sawHexPrefix = false;
@@ -301,7 +301,7 @@ Token *Scanner::SkipNumber()
     return MakeToken(tag);
 }
 
-Encoding Scanner::ScanLiteral(std::string &val)
+Encoding Lexer::ScanLiteral(std::string &val)
 {
     auto enc = Test('\"') ? Encoding::NONE : ScanEncoding(Next());
     Next();
@@ -320,7 +320,7 @@ Encoding Scanner::ScanLiteral(std::string &val)
     return enc;
 }
 
-Token *Scanner::SkipLiteral()
+Token *Lexer::SkipLiteral()
 {
     auto c = Next();
     while (c != '\"' && c != '\n' && c != '\0')
@@ -334,7 +334,7 @@ Token *Scanner::SkipLiteral()
     return MakeToken(Token::LITERAL);
 }
 
-Encoding Scanner::ScanCharacter(int &val)
+Encoding Lexer::ScanCharacter(int &val)
 {
     auto enc = Test('\'') ? Encoding::NONE : ScanEncoding(Next());
     Next();
@@ -359,7 +359,7 @@ Encoding Scanner::ScanCharacter(int &val)
     return enc;
 }
 
-Token *Scanner::SkipCharacter()
+Token *Lexer::SkipCharacter()
 {
     auto c = Next();
     while (c != '\'' && c != '\n' && c != '\0')
@@ -373,7 +373,7 @@ Token *Scanner::SkipCharacter()
     return MakeToken(Token::C_CONSTANT);
 }
 
-int Scanner::ScanEscaped()
+int Lexer::ScanEscaped()
 {
     auto c = Next();
     switch (c)
@@ -414,7 +414,7 @@ int Scanner::ScanEscaped()
     return c; // Make compiler happy
 }
 
-int Scanner::ScanHexEscaped()
+int Lexer::ScanHexEscaped()
 {
     int val = 0, c = Peek();
     if (!isxdigit(c))
@@ -428,7 +428,7 @@ int Scanner::ScanHexEscaped()
     return val;
 }
 
-int Scanner::ScanOctEscaped(int c)
+int Lexer::ScanOctEscaped(int c)
 {
     int val = XDigit(c);
     c = Peek();
@@ -445,7 +445,7 @@ int Scanner::ScanOctEscaped(int c)
     return val;
 }
 
-int Scanner::ScanUCN(int len)
+int Lexer::ScanUCN(int len)
 {
     assert(len == 4 || len == 8);
     int val = 0;
@@ -459,7 +459,7 @@ int Scanner::ScanUCN(int len)
     return val;
 }
 
-int Scanner::XDigit(int c)
+int Lexer::XDigit(int c)
 {
     switch (c)
     {
@@ -475,7 +475,7 @@ int Scanner::XDigit(int c)
     }
 }
 
-Encoding Scanner::ScanEncoding(int c)
+Encoding Lexer::ScanEncoding(int c)
 {
     switch (c)
     {
@@ -504,7 +504,7 @@ std::string *ReadFile(const std::string &filename)
     return text;
 }
 
-int Scanner::Next()
+int Lexer::Next()
 {
     int c = Peek();
     ++p_;
@@ -521,7 +521,7 @@ int Scanner::Next()
     return c;
 }
 
-int Scanner::Peek()
+int Lexer::Peek()
 {
     int c = (uint8_t)(*p_);
     if (c == '\\' && p_[1] == '\n')
@@ -538,7 +538,7 @@ int Scanner::Peek()
 // There couldn't be more than one PutBack() that
 // cross two line, so just leave lineBegin, because
 // we never care about the pos of newline token
-void Scanner::PutBack()
+void Lexer::PutBack()
 {
     int c = *--p_;
     if (c == '\n' && p_[-1] == '\\')
@@ -557,7 +557,7 @@ void Scanner::PutBack()
     }
 }
 
-Token *Scanner::MakeToken(int tag)
+Token *Lexer::MakeToken(int tag)
 {
     tok_.tag_ = tag;
     auto &str = tok_.str_;
@@ -576,7 +576,7 @@ Token *Scanner::MakeToken(int tag)
 /*
  * New line is special, it is generated before reading the character '\n'
  */
-Token *Scanner::MakeNewLine()
+Token *Lexer::MakeNewLine()
 {
     tok_.tag_ = '\n';
     tok_.str_ = std::string(p_, p_ + 1);

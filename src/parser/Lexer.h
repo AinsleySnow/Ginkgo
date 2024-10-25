@@ -1,5 +1,5 @@
-#ifndef _WGTCC_SCANNER_H_
-#define _WGTCC_SCANNER_H_
+#ifndef _LEXER_H_
+#define _LEXER_H_
 
 #include "error.h"
 #include "encoding.h"
@@ -8,14 +8,14 @@
 #include <string>
 #include <cassert>
 
-class Scanner
+class Lexer
 {
 public:
-    explicit Scanner(const Token *tok)
-        : Scanner(&tok->str_, tok->loc_) {}
-    Scanner(const std::string *text, const SourceLocation &loc)
-        : Scanner(text, loc.filename_, loc.line_, loc.column_) {}
-    explicit Scanner(const std::string *text,
+    explicit Lexer(const Token *tok)
+        : Lexer(&tok->str_, tok->loc_) {}
+    Lexer(const std::string *text, const SourceLocation &loc)
+        : Lexer(text, loc.filename_, loc.line_, loc.column_) {}
+    explicit Lexer(const std::string *text,
                      const std::string *filename = nullptr,
                      unsigned line = 1, unsigned column = 1)
         : text_(text), tok_(Token::END)
@@ -25,9 +25,9 @@ public:
         loc_ = {filename, p_, line, 1};
     }
 
-    virtual ~Scanner() {}
-    Scanner(const Scanner &other) = delete;
-    Scanner &operator=(const Scanner &other) = delete;
+    virtual ~Lexer() {}
+    Lexer(const Lexer &other) = delete;
+    Lexer &operator=(const Lexer &other) = delete;
 
     // Scan plain text and generate tokens in ts.
     // The param 'ts' need not be empty, if so, the tokens
