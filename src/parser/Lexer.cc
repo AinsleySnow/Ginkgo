@@ -1,9 +1,9 @@
 #include "Lexer.h"
-
 #include <cctype>
 #include <climits>
 
-void Lexer::Tokenize(TokenSequence &ts)
+
+void Lexer::Tokenize(TokenSequence& ts)
 {
     while (true)
     {
@@ -28,11 +28,11 @@ void Lexer::Tokenize(TokenSequence &ts)
     }
 }
 
-std::string Lexer::ScanHeadName(const Token *lhs, const Token *rhs)
+std::string Lexer::ScanHeadName(const Token* lhs, const Token* rhs)
 {
     std::string str;
-    const char *begin = lhs->loc_.Begin() + 1;
-    const char *end = rhs->loc_.Begin();
+    const char* begin = lhs->loc_.Begin() + 1;
+    const char* end = rhs->loc_.Begin();
     for (; begin != end; ++begin)
     {
         if (*begin == '\n' && str.back() == '\\')
@@ -43,7 +43,7 @@ std::string Lexer::ScanHeadName(const Token *lhs, const Token *rhs)
     return str;
 }
 
-Token *Lexer::Scan(bool ws)
+Token* Lexer::Scan(bool ws)
 {
     tok_.ws_ = ws;
     SkipWhiteSpace();
@@ -246,14 +246,12 @@ std::string Lexer::ScanIdentifier()
             AppendUCN(val, c);
         }
         else
-        {
             val.push_back(c);
-        }
     }
     return val;
 }
 
-Token *Lexer::SkipIdentifier()
+Token* Lexer::SkipIdentifier()
 {
     PutBack();
     auto c = Next();
@@ -268,7 +266,7 @@ Token *Lexer::SkipIdentifier()
 }
 
 // Scan PP-Number
-Token *Lexer::SkipNumber()
+Token* Lexer::SkipNumber()
 {
     PutBack();
     bool sawHexPrefix = false;
@@ -284,24 +282,18 @@ Token *Lexer::SkipNumber()
                 tag = Token::F_CONSTANT;
         }
         else if (IsUCN(c))
-        {
             ScanEscaped();
-        }
         else if (c == '.')
-        {
             tag = Token::F_CONSTANT;
-        }
         else if (c == 'x' || c == 'X')
-        {
             sawHexPrefix = true;
-        }
         c = Next();
     }
     PutBack();
     return MakeToken(tag);
 }
 
-Encoding Lexer::ScanLiteral(std::string &val)
+Encoding Lexer::ScanLiteral(std::string& val)
 {
     auto enc = Test('\"') ? Encoding::NONE : ScanEncoding(Next());
     Next();
@@ -320,7 +312,7 @@ Encoding Lexer::ScanLiteral(std::string &val)
     return enc;
 }
 
-Token *Lexer::SkipLiteral()
+Token* Lexer::SkipLiteral()
 {
     auto c = Next();
     while (c != '\"' && c != '\n' && c != '\0')
@@ -334,7 +326,7 @@ Token *Lexer::SkipLiteral()
     return MakeToken(Token::LITERAL);
 }
 
-Encoding Lexer::ScanCharacter(int &val)
+Encoding Lexer::ScanCharacter(int& val)
 {
     auto enc = Test('\'') ? Encoding::NONE : ScanEncoding(Next());
     Next();
@@ -359,7 +351,7 @@ Encoding Lexer::ScanCharacter(int &val)
     return enc;
 }
 
-Token *Lexer::SkipCharacter()
+Token* Lexer::SkipCharacter()
 {
     auto c = Next();
     while (c != '\'' && c != '\n' && c != '\0')
@@ -397,7 +389,7 @@ int Lexer::ScanEscaped()
         return '\t';
     case 'v':
         return '\v';
-    // Non-standard GCC extention
+        // Non-standard GCC extention
     case 'e':
         return '\033';
     case 'x':
@@ -491,9 +483,9 @@ Encoding Lexer::ScanEncoding(int c)
     }
 }
 
-std::string *ReadFile(const std::string &filename)
+std::string* ReadFile(const std::string& filename)
 {
-    FILE *f = fopen(filename.c_str(), "r");
+    FILE* f = fopen(filename.c_str(), "r");
     if (!f)
         Error("%s: No such file or directory", filename.c_str());
     auto text = new std::string;
@@ -515,9 +507,7 @@ int Lexer::Next()
         loc_.lineBegin_ = p_;
     }
     else
-    {
         ++loc_.column_;
-    }
     return c;
 }
 
@@ -548,21 +538,17 @@ void Lexer::PutBack()
         return PutBack();
     }
     else if (c == '\n')
-    {
         --loc_.line_;
-    }
     else
-    {
         --loc_.column_;
-    }
 }
 
-Token *Lexer::MakeToken(int tag)
+Token* Lexer::MakeToken(int tag)
 {
     tok_.tag_ = tag;
-    auto &str = tok_.str_;
+    auto& str = tok_.str_;
     str.resize(0);
-    const char *p = tok_.loc_.lineBegin_ + tok_.loc_.column_ - 1;
+    const char* p = tok_.loc_.lineBegin_ + tok_.loc_.column_ - 1;
     for (; p < p_; ++p)
     {
         if (p[0] == '\n' && p[-1] == '\\')
@@ -576,7 +562,7 @@ Token *Lexer::MakeToken(int tag)
 /*
  * New line is special, it is generated before reading the character '\n'
  */
-Token *Lexer::MakeNewLine()
+Token* Lexer::MakeNewLine()
 {
     tok_.tag_ = '\n';
     tok_.str_ = std::string(p_, p_ + 1);
