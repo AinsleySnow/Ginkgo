@@ -113,8 +113,11 @@ public:
         DOUBLE,
         SIGNED,
         UNSIGNED,
-        BOOL,    // _Bool
+        BOOL,    // _Bool or bool
         COMPLEX, // _Complex
+        DEC32, // _Decimal32
+        DEC64, // _Decimal64
+        DEC128, // _Decimal128
         STRUCT,
         UNION,
         ENUM,
@@ -131,9 +134,16 @@ public:
         STATIC_ASSERT, // _Static_assert
                        // STORAGE CLASS SPECIFIER BEGIN
         TYPEDEF,
+        TYPEOF, // new in C23
+        TYPEOF_UNQUAL, // new in C23
+
+        TRUE, // new in C23
+        FALSE, // new in C23
+        NULLPTR, // new in C23
+
         EXTERN,
         STATIC,
-        THREAD, // _Thread_local
+        THREAD, // _Thread_local or thread_local
         AUTO,
         REGISTER,
         // STORAGE CLASS SPECIFIER END
@@ -153,6 +163,8 @@ public:
         ALIGNOF,   // _Alignof
         GENERIC,   // _Generic
         IMAGINARY, // _Imaginary
+        BITINT, // _BitInt, new in C23
+
                    // KEYWORD END
 
         IDENTIFIER,
