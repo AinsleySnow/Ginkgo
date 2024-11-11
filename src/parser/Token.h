@@ -2,6 +2,7 @@
 #define _TOKEN_H_
 
 #include "messages/Error.h"
+#include "utils/Pool.h"
 
 #include <cassert>
 #include <cstring>
@@ -27,16 +28,11 @@ struct SourceLocation
     unsigned line_;
     unsigned column_;
 
-    const char* Begin() const
-    {
-        return lineBegin_ + column_ - 1;
-    }
+    const char* Begin() const { return lineBegin_ + column_ - 1; }
 };
 
 class Token
 {
-    friend class Scanner;
-
 public:
     enum
     {
@@ -207,12 +203,19 @@ public:
         NOTOK = -1,
     };
 
-    static Token* New(int tag);
-    static Token* New(const Token& other);
-    static Token* New(int tag,
-        const SourceLocation& loc,
-        const std::string& str,
-        bool ws = false);
+    explicit Token(int tag) : tag_(tag) {}
+    Token(int tag, const SourceLocation& loc,
+        const std::string& str, bool ws = false)
+        : tag_(tag), ws_(ws), loc_(loc), str_(str) {
+    }
+    Token(const Token& other) { *this = other; }
+
+    static Token* GetToken(Pool<Token>*, int);
+    static Token* GetToken(Pool<Token>*, const Token&);
+    static Token* GetToken(Pool<Token>*, int,
+        const SourceLocation&, const std::string&,
+        bool = false);
+
     Token& operator=(const Token& other)
     {
         tag_ = other.tag_;
@@ -227,12 +230,12 @@ public:
     // Token::NOTOK represents not a kw.
     static int KeyWordTag(const std::string& key)
     {
-        auto kwIter = kwTypeMap_.find(key);
-        if (kwTypeMap_.end() == kwIter)
+        auto kwIter = kewordTypeMap_.find(key);
+        if (kewordTypeMap_.end() == kwIter)
             return Token::NOTOK; // Not a key word type
         return kwIter->second;
     }
-    static bool IsKeyWord(const std::string& name);
+
     static bool IsKeyWord(int tag) { return CONST <= tag && tag < IDENTIFIER; }
     bool IsKeyWord() const { return IsKeyWord(tag_); }
     bool IsPunctuator() const { return 0 <= tag_ && tag_ <= ELLIPSIS; }
@@ -262,18 +265,7 @@ public:
     HideSet* hs_{ nullptr };
 
 private:
-    explicit Token(int tag) : tag_(tag) {}
-    Token(int tag, const SourceLocation& loc,
-        const std::string& str, bool ws = false)
-        : tag_(tag), ws_(ws), loc_(loc), str_(str) {
-    }
-
-    Token(const Token& other)
-    {
-        *this = other;
-    }
-
-    static const std::unordered_map<std::string, int> kwTypeMap_;
+    static const std::unordered_map<std::string, int> kewordTypeMap_;
     static const std::unordered_map<int, const char*> tagLexemeMap_;
 };
 

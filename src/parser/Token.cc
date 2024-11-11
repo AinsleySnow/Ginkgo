@@ -1,9 +1,8 @@
 #include "parser/Token.h"
-#include "utils/Pool.h"
+#include <memory>
 
-static MemPoolImp<Token> tokenPool;
 
-const std::unordered_map<std::string, int> Token::kwTypeMap_{
+const std::unordered_map<std::string, int> Token::kewordTypeMap_{
     { "auto", Token::AUTO },
     { "break", Token::BREAK },
     { "case", Token::CASE },
@@ -176,20 +175,14 @@ const std::unordered_map<int, const char*> Token::tagLexemeMap_{
     { Token::LITERAL, "(string literal)" },
 };
 
-Token* Token::New(int tag)
-{
-    return new (tokenPool.Alloc()) Token(tag);
-}
 
-Token* Token::New(const Token& other)
-{
-    return new (tokenPool.Alloc()) Token(other);
-}
+#define GET_TOKEN_HELPER(...)                           \
+auto ptr = std::make_unique<Token>(__VA_ARGS__);        \
+auto raw = ptr.get();                                   \
+pool->Add(std::move(ptr));                              \
+return raw
 
-Token* Token::New(int tag,
-    const SourceLocation& loc,
-    const std::string& str,
-    bool ws)
-{
-    return new (tokenPool.Alloc()) Token(tag, loc, str, ws);
-}
+Token* Token::GetToken(Pool<Token>* pool, int tag)              { GET_TOKEN_HELPER(tag); }
+Token* Token::GetToken(Pool<Token>* pool, const Token& other)   { GET_TOKEN_HELPER(other); }
+Token* Token::GetToken(Pool<Token>* pool, int tag,
+    const SourceLocation& loc, const std::string& str, bool ws) { GET_TOKEN_HELPER(tag, loc, str, ws); }
