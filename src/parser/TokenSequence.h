@@ -6,8 +6,6 @@
 
 class TokenSequence
 {
-    friend class Preprocessor;
-
 public:
     TokenSequence() : tokList_(new TokenList()),
         begin_(tokList_->begin()), end_(tokList_->end()) {
