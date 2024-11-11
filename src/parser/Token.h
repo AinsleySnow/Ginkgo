@@ -18,16 +18,16 @@ class Token;
 class TokenSequence;
 
 using HideSet = std::set<std::string>;
-using TokenList = std::list<const Token *>;
+using TokenList = std::list<const Token*>;
 
 struct SourceLocation
 {
-    const std::string *filename_;
-    const char *lineBegin_;
+    const std::string* filename_;
+    const char* lineBegin_;
     unsigned line_;
     unsigned column_;
 
-    const char *Begin() const
+    const char* Begin() const
     {
         return lineBegin_ + column_ - 1;
     }
@@ -124,15 +124,15 @@ public:
         // TYPE SPECIFIER END
 
         ATTRIBUTE, // GNU extension __attribute__
-                   // FUNCTION SPECIFIER BEGIN
+        // FUNCTION SPECIFIER BEGIN
         INLINE,
         NORETURN, // _Noreturn
-                  // FUNCTION SPECIFIER END
+        // FUNCTION SPECIFIER END
 
         ALIGNAS, // _Alignas
-                 // For syntactic convenience
+        // For syntactic convenience
         STATIC_ASSERT, // _Static_assert
-                       // STORAGE CLASS SPECIFIER BEGIN
+        // STORAGE CLASS SPECIFIER BEGIN
         TYPEDEF,
         TYPEOF, // new in C23
         TYPEOF_UNQUAL, // new in C23
@@ -165,7 +165,7 @@ public:
         IMAGINARY, // _Imaginary
         BITINT, // _BitInt, new in C23
 
-                   // KEYWORD END
+        // KEYWORD END
 
         IDENTIFIER,
         CONSTANT,
@@ -207,13 +207,13 @@ public:
         NOTOK = -1,
     };
 
-    static Token *New(int tag);
-    static Token *New(const Token &other);
-    static Token *New(int tag,
-                      const SourceLocation &loc,
-                      const std::string &str,
-                      bool ws = false);
-    Token &operator=(const Token &other)
+    static Token* New(int tag);
+    static Token* New(const Token& other);
+    static Token* New(int tag,
+        const SourceLocation& loc,
+        const std::string& str,
+        bool ws = false);
+    Token& operator=(const Token& other)
     {
         tag_ = other.tag_;
         ws_ = other.ws_;
@@ -225,14 +225,14 @@ public:
     virtual ~Token() {}
 
     // Token::NOTOK represents not a kw.
-    static int KeyWordTag(const std::string &key)
+    static int KeyWordTag(const std::string& key)
     {
         auto kwIter = kwTypeMap_.find(key);
         if (kwTypeMap_.end() == kwIter)
             return Token::NOTOK; // Not a key word type
         return kwIter->second;
     }
-    static bool IsKeyWord(const std::string &name);
+    static bool IsKeyWord(const std::string& name);
     static bool IsKeyWord(int tag) { return CONST <= tag && tag < IDENTIFIER; }
     bool IsKeyWord() const { return IsKeyWord(tag_); }
     bool IsPunctuator() const { return 0 <= tag_ && tag_ <= ELLIPSIS; }
@@ -242,7 +242,7 @@ public:
     bool IsEOF() const { return tag_ == Token::END; }
     bool IsTypeSpecQual() const { return CONST <= tag_ && tag_ <= ENUM; }
     bool IsDecl() const { return CONST <= tag_ && tag_ <= REGISTER; }
-    static const char *Lexeme(int tag)
+    static const char* Lexeme(int tag)
     {
         auto iter = tagLexemeMap_.find(tag);
         if (iter == tagLexemeMap_.end())
@@ -255,25 +255,26 @@ public:
 
     // 'ws_' standards for weither there is preceding white space
     // This is to simplify the '#' operator(stringize) in macro expansion
-    bool ws_{false};
+    bool ws_{ false };
     SourceLocation loc_;
 
     std::string str_;
-    HideSet *hs_{nullptr};
+    HideSet* hs_{ nullptr };
 
 private:
     explicit Token(int tag) : tag_(tag) {}
-    Token(int tag, const SourceLocation &loc,
-          const std::string &str, bool ws = false)
-        : tag_(tag), ws_(ws), loc_(loc), str_(str) {}
+    Token(int tag, const SourceLocation& loc,
+        const std::string& str, bool ws = false)
+        : tag_(tag), ws_(ws), loc_(loc), str_(str) {
+    }
 
-    Token(const Token &other)
+    Token(const Token& other)
     {
         *this = other;
     }
 
     static const std::unordered_map<std::string, int> kwTypeMap_;
-    static const std::unordered_map<int, const char *> tagLexemeMap_;
+    static const std::unordered_map<int, const char*> tagLexemeMap_;
 };
 
 class TokenSequence
@@ -282,30 +283,33 @@ class TokenSequence
 
 public:
     TokenSequence() : tokList_(new TokenList()),
-                      begin_(tokList_->begin()), end_(tokList_->end()) {}
-    explicit TokenSequence(Token *tok)
+        begin_(tokList_->begin()), end_(tokList_->end()) {
+    }
+    explicit TokenSequence(Token* tok)
     {
         TokenSequence();
         InsertBack(tok);
     }
-    explicit TokenSequence(TokenList *tokList)
+    explicit TokenSequence(TokenList* tokList)
         : tokList_(tokList),
-          begin_(tokList->begin()),
-          end_(tokList->end()) {}
-    TokenSequence(TokenList *tokList,
-                  TokenList::iterator begin,
-                  TokenList::iterator end)
-        : tokList_(tokList), begin_(begin), end_(end) {}
+        begin_(tokList->begin()),
+        end_(tokList->end()) {
+    }
+    TokenSequence(TokenList* tokList,
+        TokenList::iterator begin,
+        TokenList::iterator end)
+        : tokList_(tokList), begin_(begin), end_(end) {
+    }
     ~TokenSequence() {}
-    TokenSequence(const TokenSequence &other) { *this = other; }
-    const TokenSequence &operator=(const TokenSequence &other)
+    TokenSequence(const TokenSequence& other) { *this = other; }
+    const TokenSequence& operator=(const TokenSequence& other)
     {
         tokList_ = other.tokList_;
         begin_ = other.begin_;
         end_ = other.end_;
         return *this;
     }
-    void Copy(const TokenSequence &other)
+    void Copy(const TokenSequence& other)
     {
         tokList_ = new TokenList(other.begin_, other.end_);
         begin_ = tokList_->begin();
@@ -313,28 +317,28 @@ public:
         for (auto iter = begin_; iter != end_; ++iter)
             *iter = Token::New(**iter);
     }
-    void UpdateHeadLocation(const SourceLocation &loc)
+    void UpdateHeadLocation(const SourceLocation& loc)
     {
         assert(!Empty());
-        auto tok = const_cast<Token *>(Peek());
+        auto tok = const_cast<Token*>(Peek());
         tok->loc_ = loc;
     }
-    void FinalizeSubst(bool leadingWS, const HideSet &hs)
+    void FinalizeSubst(bool leadingWS, const HideSet& hs)
     {
         auto ts = *this;
         while (!ts.Empty())
         {
-            auto tok = const_cast<Token *>(ts.Next());
+            auto tok = const_cast<Token*>(ts.Next());
             if (!tok->hs_)
                 tok->hs_ = new HideSet(hs);
             else
                 tok->hs_->insert(hs.begin(), hs.end());
         }
         // Even if the token sequence is empty
-        const_cast<Token *>(Peek())->ws_ = leadingWS;
+        const_cast<Token*>(Peek())->ws_ = leadingWS;
     }
 
-    const Token *Expect(int expect);
+    const Token* Expect(int expect);
     bool Try(int tag)
     {
         if (Peek()->tag_ == tag)
@@ -345,7 +349,7 @@ public:
         return false;
     }
     bool Test(int tag) { return Peek()->tag_ == tag; }
-    const Token *Next()
+    const Token* Next()
     {
         auto ret = Peek();
         if (!ret->IsEOF())
@@ -373,8 +377,8 @@ public:
                 PutBack();
         }
     }
-    const Token *Peek() const;
-    const Token *Peek2()
+    const Token* Peek() const;
+    const Token* Peek2()
     {
         if (Empty())
             return Peek(); // Return the Token::END
@@ -383,7 +387,7 @@ public:
         PutBack();
         return ret;
     }
-    const Token *Back() const
+    const Token* Back() const
     {
         auto back = end_;
         return *--back;
@@ -401,7 +405,7 @@ public:
     TokenList::iterator Mark() { return begin_; }
     void ResetTo(TokenList::iterator mark) { begin_ = mark; }
     bool Empty() const { return Peek()->tag_ == Token::END; }
-    void InsertBack(TokenSequence &ts)
+    void InsertBack(TokenSequence& ts)
     {
         auto pos = tokList_->insert(end_, ts.begin_, ts.end_);
         if (begin_ == end_)
@@ -409,7 +413,7 @@ public:
             begin_ = pos;
         }
     }
-    void InsertBack(const Token *tok)
+    void InsertBack(const Token* tok)
     {
         auto pos = tokList_->insert(end_, tok);
         if (begin_ == end_)
@@ -419,20 +423,20 @@ public:
     }
 
     // If there is preceding newline
-    void InsertFront(TokenSequence &ts)
+    void InsertFront(TokenSequence& ts)
     {
         auto pos = GetInsertFrontPos();
         begin_ = tokList_->insert(pos, ts.begin_, ts.end_);
     }
-    void InsertFront(const Token *tok)
+    void InsertFront(const Token* tok)
     {
         auto pos = GetInsertFrontPos();
         begin_ = tokList_->insert(pos, tok);
     }
     bool IsBeginOfLine() const;
     TokenSequence GetLine();
-    void SetParser(Parser *parser) { parser_ = parser; }
-    void Print(FILE *fp = stdout) const;
+    void SetParser(Parser* parser) { parser_ = parser; }
+    void Print(FILE* fp = stdout) const;
 
 private:
     // Find a insert position with no preceding newline
@@ -447,11 +451,11 @@ private:
         return ++pos;
     }
 
-    TokenList *tokList_;
+    TokenList* tokList_;
     mutable TokenList::iterator begin_;
     TokenList::iterator end_;
-    Parser *parser_{nullptr};
-    int exceed_end{0};
+    Parser* parser_{ nullptr };
+    int exceed_end{ 0 };
 };
 
 #endif // _TOKEN_H_

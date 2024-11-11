@@ -64,7 +64,7 @@ const std::unordered_map<std::string, int> Token::kwTypeMap_{
     { "thread_local", Token::THREAD }
 };
 
-const std::unordered_map<int, const char *> Token::tagLexemeMap_{
+const std::unordered_map<int, const char*> Token::tagLexemeMap_{
     { '(', "(" },
     { ')', ")" },
     { '[', "[" },
@@ -176,20 +176,20 @@ const std::unordered_map<int, const char *> Token::tagLexemeMap_{
     { Token::LITERAL, "(string literal)" },
 };
 
-Token *Token::New(int tag)
+Token* Token::New(int tag)
 {
     return new (tokenPool.Alloc()) Token(tag);
 }
 
-Token *Token::New(const Token &other)
+Token* Token::New(const Token& other)
 {
     return new (tokenPool.Alloc()) Token(other);
 }
 
-Token *Token::New(int tag,
-                  const SourceLocation &loc,
-                  const std::string &str,
-                  bool ws)
+Token* Token::New(int tag,
+    const SourceLocation& loc,
+    const std::string& str,
+    bool ws)
 {
     return new (tokenPool.Alloc()) Token(tag, loc, str, ws);
 }
@@ -200,7 +200,7 @@ TokenSequence TokenSequence::GetLine()
     while (begin_ != end_ && (*begin_)->tag_ != Token::NEW_LINE)
         ++begin_;
     auto end = begin_;
-    return {tokList_, begin, end};
+    return { tokList_, begin, end };
 }
 
 /*
@@ -219,10 +219,10 @@ bool TokenSequence::IsBeginOfLine() const
     // Thus if two token have different filename, the second is
     // the begin of a line.
     return ((*pre)->tag_ == Token::NEW_LINE ||
-            (*pre)->loc_.filename_ != (*begin_)->loc_.filename_);
+        (*pre)->loc_.filename_ != (*begin_)->loc_.filename_);
 }
 
-const Token *TokenSequence::Peek() const
+const Token* TokenSequence::Peek() const
 {
     static auto eof = Token::New(Token::END);
     if (begin_ != end_ && (*begin_)->tag_ == Token::NEW_LINE)
@@ -238,7 +238,7 @@ const Token *TokenSequence::Peek() const
         return eof;
     }
     else if (parser_ && (*begin_)->tag_ == Token::IDENTIFIER &&
-             (*begin_)->str_ == "__func__")
+        (*begin_)->str_ == "__func__")
     {
         auto filename = Token::New(*(*begin_));
         filename->tag_ = Token::LITERAL;
@@ -248,18 +248,18 @@ const Token *TokenSequence::Peek() const
     return *begin_;
 }
 
-const Token *TokenSequence::Expect(int expect)
+const Token* TokenSequence::Expect(int expect)
 {
     auto tok = Peek();
     if (!Try(expect))
     {
         Error(tok, "'%s' expected, but got '%s'",
-              Token::Lexeme(expect), tok->str_.c_str());
+            Token::Lexeme(expect), tok->str_.c_str());
     }
     return tok;
 }
 
-void TokenSequence::Print(FILE *fp) const
+void TokenSequence::Print(FILE* fp) const
 {
     unsigned lastLine = 0;
     auto ts = *this;
