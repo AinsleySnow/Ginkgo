@@ -3,31 +3,6 @@
 #include <climits>
 
 
-void Lexer::Tokenize(TokenSequence& ts)
-{
-    while (true)
-    {
-        auto tok = Scan();
-        if (tok->tag_ == Token::END)
-        {
-            if (ts.Empty() || (ts.Back()->tag_ != Token::NEW_LINE))
-            {
-                auto t = Token::New(*tok);
-                t->tag_ = Token::NEW_LINE;
-                t->str_ = "\n";
-                ts.InsertBack(t);
-            }
-            break;
-        }
-        else
-        {
-            if (!ts.Empty() && ts.Back()->tag_ == Token::NEW_LINE)
-                tok->ws_ = true;
-            ts.InsertBack(tok);
-        }
-    }
-}
-
 std::string Lexer::ScanHeadName(const Token* lhs, const Token* rhs)
 {
     std::string str;
@@ -556,7 +531,7 @@ Token* Lexer::MakeToken(int tag)
         else
             str.push_back(p[0]);
     }
-    return Token::New(tok_);
+    return Token::GetToken(seq_, tok_);
 }
 
 /*
@@ -566,5 +541,5 @@ Token* Lexer::MakeNewLine()
 {
     tok_.tag_ = '\n';
     tok_.str_ = std::string(p_, p_ + 1);
-    return Token::New(tok_);
+    return Token::GetToken(seq_, tok_);
 }

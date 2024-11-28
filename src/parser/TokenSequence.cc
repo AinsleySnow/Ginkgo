@@ -18,7 +18,7 @@ void TokenSequence::Copy(const TokenSequence& other)
     begin_ = tokList_->begin();
     end_ = tokList_->end();
     for (auto iter = begin_; iter != end_; ++iter)
-        *iter = Token::New(**iter);
+        *iter = Token::GetToken(this, **iter);
 }
 
 void TokenSequence::UpdateHeadLocation(const SourceLocation& loc)
@@ -160,9 +160,9 @@ bool TokenSequence::IsBeginOfLine() const
         (*pre)->loc_.filename_ != (*begin_)->loc_.filename_);
 }
 
-const Token* TokenSequence::Peek() const
+const Token* TokenSequence::Peek()
 {
-    static auto eof = Token::New(Token::END);
+    static auto eof = Token::GetToken(this, Token::END);
     if (begin_ != end_ && (*begin_)->tag_ == Token::NEW_LINE)
     {
         ++begin_;
@@ -178,7 +178,7 @@ const Token* TokenSequence::Peek() const
     else if (parser_ && (*begin_)->tag_ == Token::IDENTIFIER &&
         (*begin_)->str_ == "__func__")
     {
-        auto filename = Token::New(*(*begin_));
+        auto filename = Token::GetToken(this, *(*begin_));
         filename->tag_ = Token::LITERAL;
         filename->str_ = "\"" + parser_->CurFunc()->Name() + "\"";
         *begin_ = filename;

@@ -2,9 +2,9 @@
 #define _TOKEN_SEQUENCE_H_
 
 #include "parser/Token.h"
+#include "utils/Pool.h"
 
-
-class TokenSequence
+class TokenSequence : public Pool<Token>
 {
 public:
     TokenSequence() : tokList_(new TokenList()),
@@ -43,14 +43,14 @@ public:
     bool Test(int tag) { return Peek()->tag_ == tag; }
     const Token* Next();
     void PutBack();
-    const Token* Peek() const;
+    const Token* Peek();
     const Token* Peek2();
     const Token* Back() const;
     void PopBack();
 
     TokenList::iterator Mark() { return begin_; }
     void ResetTo(TokenList::iterator mark) { begin_ = mark; }
-    bool Empty() const { return Peek()->tag_ == Token::END; }
+    bool Empty() { return Peek()->tag_ == Token::END; }
     void InsertBack(TokenSequence& ts);
     void InsertBack(const Token* tok);
 

@@ -1,24 +1,25 @@
 #ifndef _LEXER_H_
 #define _LEXER_H_
 
-#include "ast/Tag.h"
 #include "messages/Error.h"
 #include "parser/Token.h"
 #include "parser/Encoding.h"
+#include "parser/TokenSequence.h"
 #include <string>
 #include <cassert>
 
 class Lexer
 {
 public:
-    explicit Lexer(const Token* tok)
-        : Lexer(&tok->str_, tok->loc_) {}
-    Lexer(const std::string* text, const SourceLocation& loc)
-        : Lexer(text, loc.filename_, loc.line_, loc.column_) {}
-    explicit Lexer(const std::string* text,
+    explicit Lexer(TokenSequence* seq, const Token* tok)
+        : Lexer(seq, &tok->str_, tok->loc_) {}
+    Lexer(TokenSequence* seq, const std::string* text, const SourceLocation& loc)
+        : Lexer(seq, text, loc.filename_, loc.line_, loc.column_) {}
+    explicit Lexer(TokenSequence* seq,
+                   const std::string* text,
                    const std::string* filename = nullptr,
                    unsigned line = 1, unsigned column = 1)
-        : text_(text), tok_(Token::END)
+        : text_(text), tok_(Token::END), seq_(seq)
     {
         // TODO(wgtdkp): initialization
         p_ = &(*text_)[0];
@@ -36,13 +37,14 @@ public:
     // before this token. It is only SkipComment() that will
     // set this param.
     Token* Scan(bool ws = false);
-    void Tokenize(TokenSequence& ts);
     static std::string ScanHeadName(const Token* lhs, const Token* rhs);
     Encoding ScanCharacter(int& val);
     Encoding ScanLiteral(std::string& val);
     std::string ScanIdentifier();
 
 private:
+    friend class TokenSequence;
+
     Token* SkipIdentifier();
     Token* SkipNumber();
     Token* SkipLiteral();
@@ -75,7 +77,8 @@ private:
     };
     void Mark() { tok_.loc_ = loc_; };
 
-    const std::string* text_;
+    const std::string* text_{};
+    TokenSequence* seq_{};
     SourceLocation loc_;
     Token tok_;
     const char* p_;
